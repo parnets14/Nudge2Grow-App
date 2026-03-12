@@ -1,0 +1,909 @@
+/**
+ * Subjects List Screen - Shows all learning subjects with progress
+ */
+
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Svg, { Circle } from 'react-native-svg';
+import { getAllSubjects, getNudgesBySubject } from '../data/nudgesData';
+
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
+const isSmallDevice = width < 375;
+
+// Circular Progress Component
+const CircularProgress = ({ percentage, color, size = 40 }) => {
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E5E7EB"
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <Text style={{
+          fontSize: isSmallDevice ? 10 : 12,
+          fontWeight: '700',
+          color: color,
+          fontFamily: 'Montserrat-Bold',
+        }}>
+          {percentage}%
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const allSubjects = getAllSubjects();
+  const child = userData?.children?.[0];
+
+  const subjectConfig = {
+    'Math': {
+      icon: 'calculator',
+      color: '#3B82F6',
+      bgColor: '#EFF6FF',
+      iconBg: '#DBEAFE',
+    },
+    'Science / EVS': {
+      icon: 'leaf',
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      iconBg: '#D1FAE5',
+    },
+    'English': {
+      icon: 'book-open-variant',
+      color: '#F59E0B',
+      bgColor: '#FFFBEB',
+      iconBg: '#FEF3C7',
+    },
+    'Social Studies': {
+      icon: 'earth',
+      color: '#EC4899',
+      bgColor: '#FDF2F8',
+      iconBg: '#FCE7F3',
+    },
+    'Artificial Intelligence': {
+      icon: 'brain',
+      color: '#8B5CF6',
+      bgColor: '#F5F3FF',
+      iconBg: '#EDE9FE',
+    },
+  };
+
+  // Calculate overall progress
+  const totalNudges = allSubjects.reduce((sum, subject) => {
+    return sum + getNudgesBySubject(subject.name).length;
+  }, 0);
+  const completedNudges = Math.floor(totalNudges * 0.68); // 68% completion for demo
+  const overallProgress = 68;
+  const activeSubjects = 5;
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Icon name="arrow-back" size={isSmallDevice ? 22 : 24} color="#1A1A1A" />
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Learning Subjects</Text>
+          <Text style={styles.headerSubtitle}>
+            {child?.name || 'Zues'} · Grade {child?.grade || '3'} · {allSubjects.length} subjects
+          </Text>
+        </View>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Overall Progress Card */}
+        <View style={styles.overallProgressCard}>
+          <View style={styles.progressLeft}>
+            <CircularProgress percentage={overallProgress} color="#10B981" size={isSmallDevice ? 50 : 55} />
+          </View>
+          <View style={styles.progressRight}>
+            <Text style={styles.progressTitle}>Overall Progress</Text>
+            <Text style={styles.progressSubtitle}>
+              {completedNudges} of {totalNudges} activities done
+            </Text>
+            <View style={styles.progressGrowth}>
+              <Icon name="trending-up" size={isSmallDevice ? 14 : 16} color="#10B981" />
+              <Text style={styles.progressGrowthText}>+12% from last week</Text>
+            </View>
+          </View>
+          <View style={styles.activeCount}>
+            <Text style={styles.activeNumber}>{activeSubjects}</Text>
+            <Text style={styles.activeLabel}>Active</Text>
+          </View>
+        </View>
+
+        {/* Filter Tabs */}
+        <View style={styles.filterTabs}>
+          <TouchableOpacity
+            style={[styles.filterTab, selectedFilter === 'all' && styles.filterTabActive]}
+            onPress={() => setSelectedFilter('all')}
+          >
+            <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
+              All
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterTab, selectedFilter === 'progress' && styles.filterTabActive]}
+            onPress={() => setSelectedFilter('progress')}
+          >
+            <Text style={[styles.filterTabText, selectedFilter === 'progress' && styles.filterTabTextActive]}>
+              In Progress
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterTab, selectedFilter === 'premium' && styles.filterTabActive]}
+            onPress={() => setSelectedFilter('premium')}
+          >
+            <Text style={[styles.filterTabText, selectedFilter === 'premium' && styles.filterTabTextActive]}>
+              Premium
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Subjects List */}
+        <View style={styles.subjectsContainer}>
+          {(selectedFilter === 'all' || selectedFilter === 'progress') && allSubjects.map((subject, index) => {
+            const config = subjectConfig[subject.name] || {
+              icon: 'book-outline',
+              color: '#6B7280',
+              bgColor: '#F9FAFB',
+              iconBg: '#E5E7EB',
+            };
+            const nudgesCount = getNudgesBySubject(subject.name).length;
+            
+            // Set specific progress for certain subjects
+            let completedCount;
+            if (subject.name === 'English') {
+              completedCount = Math.floor(nudgesCount * 0.65); // 65% progress
+            } else if (subject.name === 'Social Studies') {
+              completedCount = Math.floor(nudgesCount * 0.55); // 55% progress
+            } else if (subject.name === 'Artificial Intelligence') {
+              completedCount = Math.floor(nudgesCount * 0.45); // 45% progress
+            } else {
+              completedCount = Math.floor(nudgesCount * (0.6 + Math.random() * 0.3));
+            }
+            
+            const progress = Math.floor((completedCount / nudgesCount) * 100);
+            const streak = index === 0 ? 5 : 0; // First subject has streak
+            const isActive = index === 0; // First subject is most active
+            const status = progress >= 80 ? 'On Track' : progress >= 50 ? 'In Progress' : 'Started';
+
+            return (
+              <TouchableOpacity
+                key={subject.name}
+                style={styles.subjectCard}
+                onPress={() => {
+                  const subjectNudges = getNudgesBySubject(subject.name);
+                  if (subjectNudges.length > 0) {
+                    onNavigate && onNavigate('topicDetail', { 
+                      subjectName: subject.name,
+                      topicData: subjectNudges[0],
+                      allNudges: subjectNudges
+                    });
+                  }
+                }}
+              >
+                <View style={styles.subjectHeader}>
+                  <View style={styles.subjectLeft}>
+                    <View style={[styles.subjectIconContainer, { backgroundColor: '#E5E7EB' }]}>
+                      <MaterialIcon name={config.icon} size={isSmallDevice ? 22 : 24} color={config.color} />
+                    </View>
+                    <View style={styles.subjectInfo}>
+                      <View style={styles.subjectTitleRow}>
+                        <Text style={styles.subjectName}>{subject.name}</Text>
+                        {isActive && (
+                          <View style={styles.mostActiveBadge}>
+                            <Text style={styles.mostActiveText}>Most Active</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.subjectDescription}>
+                        {subject.name === 'Math' ? 'Numbers, logic & problem solving' :
+                         subject.name === 'Science / EVS' ? 'Nature, environment & exploration' :
+                         subject.name === 'English' ? 'Reading, writing & communication' :
+                         subject.name === 'Social Studies' ? 'History, culture & society' :
+                         subject.name === 'Artificial Intelligence' ? 'AI, machine learning & technology' :
+                         subject.name === 'Financial Literacy' ? 'Money management & financial skills' :
+                         subject.name === 'Sex & Safety' ? 'Health, safety & well-being' :
+                         'Learning & growth'}
+                      </Text>
+                    </View>
+                  </View>
+                  <CircularProgress percentage={progress} color="#10B981" size={isSmallDevice ? 32 : 36} />
+                </View>
+
+                {/* Progress Bar */}
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: '#10B981' }]} />
+                  </View>
+                  <View style={styles.progressTextContainer}>
+                    <Text style={styles.progressText}>{completedCount}/{nudgesCount}</Text>
+                    <TouchableOpacity style={styles.progressArrowButton}>
+                      <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.subjectFooter}>
+                  <View style={styles.subjectStats}>
+                    <View style={styles.statItem}>
+                      <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                      <Text style={styles.statText}>{nudgesCount} topics</Text>
+                    </View>
+                    {streak > 0 && (
+                      <View style={styles.statItem}>
+                        <Icon name="flame" size={isSmallDevice ? 14 : 16} color="#F59E0B" />
+                        <Text style={styles.statText}>{streak}-day streak</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={[styles.statusBadge, progress >= 80 && styles.statusBadgeSuccess]}>
+                    <Text style={[styles.statusText, progress >= 80 && styles.statusTextSuccess]}>
+                      {status} ✓
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+
+          {/* Premium Subjects Section */}
+          {(selectedFilter === 'all' || selectedFilter === 'premium') && (
+            <>
+              {/* Financial Literacy Subject Card */}
+              <TouchableOpacity style={styles.subjectCard}>
+                <View style={styles.subjectHeader}>
+                  <View style={styles.subjectLeft}>
+                    <View style={[styles.subjectIconContainer, { backgroundColor: '#E5E7EB' }]}>
+                      <MaterialIcon name="wallet" size={isSmallDevice ? 22 : 24} color="#10B981" />
+                    </View>
+                    <View style={styles.subjectInfo}>
+                      <View style={styles.subjectTitleRow}>
+                        <Text style={styles.subjectName}>Financial Literacy</Text>
+                        <View style={styles.premiumBadge}>
+                          <Icon name="lock-closed" size={isSmallDevice ? 10 : 12} color="#F59E0B" />
+                          <Text style={styles.premiumBadgeText}>Premium</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.subjectDescription}>
+                        Money management & financial skills
+                      </Text>
+                    </View>
+                  </View>
+                  <CircularProgress percentage={0} color="#10B981" size={isSmallDevice ? 32 : 36} />
+                </View>
+
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
+                  </View>
+                  <View style={styles.progressTextContainer}>
+                    <Text style={styles.progressText}>0/7</Text>
+                    <TouchableOpacity style={styles.progressArrowButton}>
+                      <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.subjectFooter}>
+                  <View style={styles.subjectStats}>
+                    <View style={styles.statItem}>
+                      <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                      <Text style={styles.statText}>7 topics</Text>
+                    </View>
+                  </View>
+                  <View style={styles.lockedBadge}>
+                    <Icon name="lock-closed" size={isSmallDevice ? 12 : 14} color="#F59E0B" />
+                    <Text style={styles.lockedText}>Locked</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Sex & Safety Subject Card */}
+              <TouchableOpacity style={styles.subjectCard}>
+                <View style={styles.subjectHeader}>
+                  <View style={styles.subjectLeft}>
+                    <View style={[styles.subjectIconContainer, { backgroundColor: '#E5E7EB' }]}>
+                      <MaterialIcon name="heart-check" size={isSmallDevice ? 22 : 24} color="#EF4444" />
+                    </View>
+                    <View style={styles.subjectInfo}>
+                      <View style={styles.subjectTitleRow}>
+                        <Text style={styles.subjectName}>Sex & Safety</Text>
+                        <View style={styles.premiumBadge}>
+                          <Icon name="lock-closed" size={isSmallDevice ? 10 : 12} color="#F59E0B" />
+                          <Text style={styles.premiumBadgeText}>Premium</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.subjectDescription}>
+                        Health, safety & well-being
+                      </Text>
+                    </View>
+                  </View>
+                  <CircularProgress percentage={0} color="#10B981" size={isSmallDevice ? 32 : 36} />
+                </View>
+
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBarBackground}>
+                    <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
+                  </View>
+                  <View style={styles.progressTextContainer}>
+                    <Text style={styles.progressText}>0/7</Text>
+                    <TouchableOpacity style={styles.progressArrowButton}>
+                      <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.subjectFooter}>
+                  <View style={styles.subjectStats}>
+                    <View style={styles.statItem}>
+                      <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                      <Text style={styles.statText}>7 topics</Text>
+                    </View>
+                  </View>
+                  <View style={styles.lockedBadge}>
+                    <Icon name="lock-closed" size={isSmallDevice ? 12 : 14} color="#F59E0B" />
+                    <Text style={styles.lockedText}>Locked</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Unlock Premium Subjects Card */}
+          {(selectedFilter === 'all' || selectedFilter === 'premium') && (
+            <View style={styles.premiumCard}>
+              <View style={styles.premiumHeader}>
+                <View style={styles.premiumIconContainer}>
+                  <Icon name="flash" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
+                </View>
+                <View style={styles.premiumHeaderText}>
+                  <Text style={styles.premiumTitle}>Unlock Premium Subjects</Text>
+                  <Text style={styles.premiumSubtitle}>
+                    Full access to <Text style={styles.premiumHighlight}>Financial Literacy</Text> and{' '}
+                    <Text style={styles.premiumHighlight}>Sex & Safety</Text> — designed for children aged 6-12.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.premiumSubjects}>
+                <View style={styles.premiumSubjectItem}>
+                  <View style={styles.premiumSubjectIcon}>
+                    <MaterialIcon name="wallet" size={isSmallDevice ? 20 : 22} color="#10B981" />
+                  </View>
+                  <View>
+                    <Text style={styles.premiumSubjectName}>Financial Literacy</Text>
+                    <Text style={styles.premiumSubjectActivities}>7 activities</Text>
+                  </View>
+                </View>
+
+                <View style={styles.premiumSubjectItem}>
+                  <View style={styles.premiumSubjectIcon}>
+                    <MaterialIcon name="heart-check" size={isSmallDevice ? 20 : 22} color="#EF4444" />
+                  </View>
+                  <View>
+                    <Text style={styles.premiumSubjectName}>Sex & Safety</Text>
+                    <Text style={styles.premiumSubjectActivities}>7 activities</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.premiumFeatures}>
+                <View style={styles.premiumFeature}>
+                  <Icon name="checkmark-circle" size={isSmallDevice ? 16 : 18} color="#10B981" />
+                  <Text style={styles.premiumFeatureText}>No ads</Text>
+                </View>
+                <View style={styles.premiumFeature}>
+                  <Icon name="checkmark-circle" size={isSmallDevice ? 16 : 18} color="#10B981" />
+                  <Text style={styles.premiumFeatureText}>All subjects</Text>
+                </View>
+                <View style={styles.premiumFeature}>
+                  <Icon name="checkmark-circle" size={isSmallDevice ? 16 : 18} color="#10B981" />
+                  <Text style={styles.premiumFeatureText}>Priority support</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.premiumButton}
+                onPress={() => onNavigate && onNavigate('subscription')}
+              >
+                <Icon name="star" size={isSmallDevice ? 18 : 20} color="#FFFFFF" />
+                <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    backgroundColor: '#F8F9FA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: isSmallDevice ? 42 : 50,
+    paddingBottom: isSmallDevice ? 12 : 16,
+    paddingHorizontal: isSmallDevice ? 16 : 20,
+  },
+  backButton: {
+    width: isSmallDevice ? 36 : 40,
+    height: isSmallDevice ? 36 : 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: isSmallDevice ? 8 : 12,
+  },
+  headerTitle: {
+    fontSize: isTablet ? 20 : isSmallDevice ? 17 : 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: 'Montserrat-Bold',
+  },
+  headerSubtitle: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+    fontFamily: 'Montserrat-Regular',
+  },
+  content: {
+    flex: 1,
+  },
+
+  // Overall Progress Card
+  overallProgressCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: isSmallDevice ? 16 : 20,
+    marginTop: isSmallDevice ? 12 : 16,
+    marginBottom: isSmallDevice ? 12 : 16,
+    padding: isSmallDevice ? 12 : 14,
+    borderRadius: isSmallDevice ? 14 : 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  progressLeft: {
+    marginRight: isSmallDevice ? 12 : 14,
+  },
+  progressRight: {
+    flex: 1,
+  },
+  progressTitle: {
+    fontSize: isTablet ? 18 : isSmallDevice ? 15 : 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: 'Montserrat-Bold',
+  },
+  progressSubtitle: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
+    color: '#9CA3AF',
+    marginBottom: 6,
+    fontFamily: 'Montserrat-Regular',
+  },
+  progressGrowth: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  progressGrowthText: {
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    fontWeight: '600',
+    color: '#10B981',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  activeCount: {
+    alignItems: 'center',
+  },
+  activeNumber: {
+    fontSize: isTablet ? 28 : isSmallDevice ? 24 : 26,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: 'Montserrat-Bold',
+  },
+  activeLabel: {
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Medium',
+  },
+
+  // Filter Tabs
+  filterTabs: {
+    flexDirection: 'row',
+    marginHorizontal: isSmallDevice ? 16 : 20,
+    marginBottom: isSmallDevice ? 16 : 20,
+    gap: isSmallDevice ? 8 : 10,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: isSmallDevice ? 10 : 12,
+    borderRadius: isSmallDevice ? 10 : 12,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  filterTabActive: {
+    backgroundColor: '#2C3E50',
+  },
+  filterTabText: {
+    fontSize: isTablet ? 14 : isSmallDevice ? 12 : 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  filterTabTextActive: {
+    color: '#FFFFFF',
+  },
+
+  // Subjects Container
+  subjectsContainer: {
+    paddingHorizontal: isSmallDevice ? 16 : 20,
+    gap: isSmallDevice ? 12 : 16,
+  },
+  subjectCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 14 : 16,
+    padding: isSmallDevice ? 12 : 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  subjectHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 8 : 10,
+  },
+  subjectLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subjectRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 8 : 10,
+  },
+  arrowButton: {
+    width: isSmallDevice ? 28 : 32,
+    height: isSmallDevice ? 28 : 32,
+    borderRadius: isSmallDevice ? 14 : 16,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subjectIconContainer: {
+    width: isSmallDevice ? 40 : 44,
+    height: isSmallDevice ? 40 : 44,
+    borderRadius: isSmallDevice ? 10 : 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: isSmallDevice ? 8 : 10,
+  },
+  subjectInfo: {
+    flex: 1,
+  },
+  subjectTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  subjectName: {
+    fontSize: isTablet ? 16 : isSmallDevice ? 14 : 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: 'Montserrat-Bold',
+  },
+  mostActiveBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  mostActiveText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    fontWeight: '600',
+    color: '#3B82F6',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  subjectDescription: {
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+  },
+
+  // Progress Bar
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 8 : 10,
+    gap: isSmallDevice ? 8 : 10,
+  },
+  progressBarBackground: {
+    flex: 1,
+    height: isSmallDevice ? 5 : 6,
+    backgroundColor: '#E5E7EB',
+    borderRadius: isSmallDevice ? 3 : 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: isSmallDevice ? 3 : 4,
+  },
+  progressTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  progressText: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  progressArrowButton: {
+    width: isSmallDevice ? 20 : 22,
+    height: isSmallDevice ? 20 : 22,
+    borderRadius: isSmallDevice ? 10 : 11,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Footer
+  subjectFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  subjectStats: {
+    flexDirection: 'row',
+    gap: isSmallDevice ? 10 : 12,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statText: {
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+  },
+  statusBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: isSmallDevice ? 8 : 10,
+    paddingVertical: isSmallDevice ? 4 : 5,
+    borderRadius: isSmallDevice ? 8 : 10,
+  },
+  statusBadgeSuccess: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusText: {
+    fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  statusTextSuccess: {
+    color: '#10B981',
+  },
+
+  bottomSpacing: {
+    height: 30,
+  },
+
+  // Premium Card
+  premiumCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 14 : 16,
+    padding: isSmallDevice ? 16 : 18,
+    marginTop: isSmallDevice ? 12 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  premiumHeader: {
+    flexDirection: 'row',
+    marginBottom: isSmallDevice ? 14 : 16,
+    gap: isSmallDevice ? 10 : 12,
+  },
+  premiumIconContainer: {
+    width: isSmallDevice ? 48 : 52,
+    height: isSmallDevice ? 48 : 52,
+    borderRadius: isSmallDevice ? 12 : 14,
+    backgroundColor: '#2C3E50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumHeaderText: {
+    flex: 1,
+  },
+  premiumTitle: {
+    fontSize: isTablet ? 17 : isSmallDevice ? 14 : 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    fontFamily: 'Montserrat-Bold',
+  },
+  premiumSubtitle: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
+    color: '#6B7280',
+    lineHeight: isSmallDevice ? 16 : 18,
+    fontFamily: 'Montserrat-Regular',
+  },
+  premiumHighlight: {
+    fontWeight: '600',
+    color: '#1A1A1A',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  premiumSubjects: {
+    flexDirection: 'row',
+    gap: isSmallDevice ? 12 : 16,
+    marginBottom: isSmallDevice ? 14 : 16,
+  },
+  premiumSubjectItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 10 : 12,
+    padding: isSmallDevice ? 10 : 12,
+    gap: isSmallDevice ? 8 : 10,
+  },
+  premiumSubjectIcon: {
+    width: isSmallDevice ? 36 : 40,
+    height: isSmallDevice ? 36 : 40,
+    borderRadius: isSmallDevice ? 10 : 12,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumSubjectName: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+    fontFamily: 'Montserrat-Bold',
+  },
+  premiumSubjectActivities: {
+    fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+  },
+  premiumFeatures: {
+    flexDirection: 'row',
+    gap: isSmallDevice ? 12 : 16,
+    marginBottom: isSmallDevice ? 14 : 16,
+  },
+  premiumFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  premiumFeatureText: {
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Medium',
+  },
+  premiumButton: {
+    backgroundColor: '#2C3E50',
+    borderRadius: isSmallDevice ? 10 : 12,
+    paddingVertical: isSmallDevice ? 12 : 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: isSmallDevice ? 6 : 8,
+  },
+  premiumButtonText: {
+    fontSize: isTablet ? 15 : isSmallDevice ? 13 : 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+  },
+
+  // Premium Badge
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  premiumBadgeText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    fontWeight: '600',
+    color: '#F59E0B',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+
+  // Locked Badge
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: isSmallDevice ? 8 : 10,
+    paddingVertical: isSmallDevice ? 4 : 5,
+    borderRadius: isSmallDevice ? 8 : 10,
+    gap: 4,
+  },
+  lockedText: {
+    fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
+    fontWeight: '600',
+    color: '#F59E0B',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+});
+
+export default SubjectsListScreen;

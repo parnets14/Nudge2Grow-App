@@ -1,0 +1,379 @@
+/**
+ * Assessment Screen - Step 1: Select Subjects
+ */
+
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { getAllSubjects } from '../data/nudgesData';
+
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
+const isSmallDevice = width < 375;
+
+const AssessmentScreen = ({ onBack, onNavigate, knownTopics, practiceTopics }) => {
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
+
+  const allSubjects = getAllSubjects();
+
+  // Subject configuration
+  const subjectConfig = {
+    'Math': { icon: 'calculator', color: '#3B82F6' },
+    'Science / EVS': { icon: 'leaf', color: '#10B981' },
+    'English': { icon: 'book-open-variant', color: '#F59E0B' },
+    'Social Studies': { icon: 'earth', color: '#EC4899' },
+    'Artificial Intelligence': { icon: 'brain', color: '#8B5CF6' },
+    'Financial Literacy': { icon: 'wallet', color: '#14B8A6' },
+    'Sex & Safety': { icon: 'heart-check', color: '#EF4444' },
+  };
+
+  const toggleSubject = (subjectName) => {
+    if (selectedSubjects.includes(subjectName)) {
+      setSelectedSubjects([]);
+    } else {
+      setSelectedSubjects([subjectName]);
+    }
+  };
+
+  const handleNext = () => {
+    if (selectedSubjects.length > 0 && onNavigate) {
+      onNavigate('selectTopics', { selectedSubjects, knownTopics, practiceTopics });
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Icon name="chevron-back" size={28} color="#333333" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Quiz</Text>
+        <View style={styles.headerRight} />
+      </View>
+
+      {/* Step Indicator */}
+      <View style={styles.stepIndicator}>
+        <View style={styles.stepItem}>
+          <View style={[styles.stepNumber, styles.stepNumberActive]}>
+            <Text style={styles.stepNumberText}>1</Text>
+          </View>
+          <Text style={[styles.stepLabel, styles.stepLabelActive]}>Subject</Text>
+        </View>
+        <View style={styles.stepItem}>
+          <View style={styles.stepNumber}>
+            <Text style={styles.stepNumberText}>2</Text>
+          </View>
+          <Text style={styles.stepLabel}>Topics</Text>
+        </View>
+        <View style={styles.stepItem}>
+          <View style={styles.stepNumber}>
+            <Text style={styles.stepNumberText}>3</Text>
+          </View>
+          <Text style={styles.stepLabel}>Q. Types</Text>
+        </View>
+        <View style={styles.stepItem}>
+          <View style={styles.stepNumber}>
+            <Text style={styles.stepNumberText}>4</Text>
+          </View>
+          <Text style={styles.stepLabel}>Settings</Text>
+        </View>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.stepBadgeWrapper}>
+          <View style={styles.stepBadgeContainer}>
+            <Text style={styles.stepBadge}>● STEP 1 OF 4</Text>
+          </View>
+        </View>
+        <View style={styles.instructionSection}>
+          <Text style={styles.instructionTitle}>Choose a Subject</Text>
+          <Text style={styles.instructionText}>
+            Pick the subject you want to quiz your child on.
+          </Text>
+        </View>
+
+        <View style={styles.subjectsGrid}>
+          {allSubjects.map((subject) => {
+            const config = subjectConfig[subject.name] || { icon: 'book-outline', color: '#666666' };
+            const isSelected = selectedSubjects.includes(subject.name);
+
+            return (
+              <TouchableOpacity
+                key={subject.name}
+                style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
+                onPress={() => toggleSubject(subject.name)}
+              >
+                {isSelected && (
+                  <View style={styles.checkmark}>
+                    <Icon name="checkmark" size={16} color="#FFFFFF" />
+                  </View>
+                )}
+                <View style={[styles.subjectIcon, { backgroundColor: `${config.color}20` }]}>
+                  <MaterialIcon name={config.icon} size={28} color={config.color} />
+                </View>
+                <Text style={styles.subjectName}>{subject.name}</Text>
+                <Text style={styles.topicCount}>{subject.topicCount} topics</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.nextButton, selectedSubjects.length === 0 && styles.nextButtonDisabled]}
+          onPress={handleNext}
+          disabled={selectedSubjects.length === 0}
+        >
+          <Text style={styles.nextButtonText}>Continue</Text>
+          <Icon name="arrow-forward" size={18} color="#FFFFFF" style={styles.buttonIcon} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: isTablet ? 22 : 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: 'Montserrat-Bold',
+  },
+  headerRight: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+  },
+  instructionCard: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  instructionSection: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  instructionTitle: {
+    fontSize: isTablet ? 20 : 18,
+    fontWeight: '800',
+    color: '#1A1F3A',
+    marginBottom: 6,
+    fontFamily: 'Montserrat-Bold',
+  },
+  instructionText: {
+    fontSize: isTablet ? 13 : 12,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    lineHeight: 18,
+    fontFamily: 'Montserrat-Regular',
+  },
+  subjectsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  subjectCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    alignItems: 'center',
+    width: (width - 52) / 2,
+    minHeight: 110,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  subjectCardSelected: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#F0FDF4',
+  },
+  checkmark: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#27AE60',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subjectIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  subjectName: {
+    fontSize: isTablet ? 14 : 13,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 3,
+  },
+  topicCount: {
+    fontSize: isTablet ? 11 : 10,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  bottomSpacing: {
+    height: 100,
+  },
+  footer: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  nextButton: {
+    backgroundColor: '#1A1F3A',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  nextButtonText: {
+    fontSize: isTablet ? 16 : 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+  },
+  buttonIcon: {
+    marginLeft: 10,
+  },
+  stepIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: isSmallDevice ? 10 : 16,
+    paddingVertical: 10,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  stepIndicatorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: isSmallDevice ? 12 : 16,
+    paddingVertical: 10,
+    gap: isSmallDevice ? 16 : 24,
+  },
+  stepItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: isSmallDevice ? 4 : 6,
+    flex: 1,
+  },
+  stepNumber: {
+    width: isSmallDevice ? 28 : 32,
+    height: isSmallDevice ? 28 : 32,
+    borderRadius: isSmallDevice ? 14 : 16,
+    backgroundColor: '#E8EAED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  stepNumberActive: {
+    backgroundColor: '#1A1F3A',
+  },
+  stepNumberText: {
+    fontSize: isSmallDevice ? 11 : 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+  },
+  stepLabel: {
+    fontSize: isSmallDevice ? 9 : 10,
+    fontWeight: '600',
+    color: '#B0B0B0',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  stepLabelActive: {
+    color: '#1A1F3A',
+    fontWeight: '800',
+  },
+  stepBadge: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 0.5,
+  },
+  stepBadgeWrapper: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  stepBadgeContainer: {
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  buttonIcon: {
+    marginLeft: 8,
+  },
+});
+
+export default AssessmentScreen;

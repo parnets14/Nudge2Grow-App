@@ -1,4 +1,7 @@
 {
   "name": "Nudge2grow",
-  "displayName": "Nudge2grow"
+  "displayName": "Nudge2grow",
+  "plugins": [
+    "expo-font"
+  ]
 }
