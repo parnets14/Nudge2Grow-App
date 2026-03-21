@@ -26,11 +26,13 @@ const AssessmentHubScreen = ({ onBack, onNavigate }) => {
 
   // Subject configuration with images
   const subjectConfig = {
-    'Math': { icon: 'calculator', color: '#3B82F6', image: require('../assets/images/Maths.png') },
-    'Science / EVS': { icon: 'leaf', color: '#10B981', image: require('../assets/images/Science.png') },
-    'English': { icon: 'book-open-variant', color: '#F59E0B', image: require('../assets/images/English.jpg') },
-    'Social Studies': { icon: 'earth', color: '#EC4899', image: require('../assets/images/social.png') },
-    'Artificial Intelligence': { icon: 'brain', color: '#8B5CF6', image: require('../assets/images/AI.jpg') },
+    'Math': { image: require('../assets/images/math.png'), color: '#3B82F6' },
+    'Science / EVS': { image: require('../assets/images/sci.png'), color: '#10B981' },
+    'English': { image: require('../assets/images/eng.png'), color: '#F59E0B' },
+    'Social Studies': { image: require('../assets/images/social s.png'), color: '#EC4899' },
+    'Artificial Intelligence': { image: require('../assets/images/Ai s.png'), color: '#8B5CF6' },
+    'Financial Literacy': { image: require('../assets/images/Fl.png'), color: '#14B8A6' },
+    'Sex & Safety': { image: require('../assets/images/ss.png'), color: '#EF4444' },
   };
 
   // Get recent quizzes (mock data)
@@ -42,7 +44,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate }) => {
       questions: 25,
       types: 'True/False, MCQ',
       status: 'Sent',
-      icon: 'calculator',
+      image: require('../assets/images/math.png'),
       color: '#3B82F6',
     },
     {
@@ -52,7 +54,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate }) => {
       questions: 10,
       types: 'Fill in Blanks',
       status: 'Sent',
-      icon: 'leaf',
+      image: require('../assets/images/sci.png'),
       color: '#10B981',
     },
   ];
@@ -125,8 +127,16 @@ const AssessmentHubScreen = ({ onBack, onNavigate }) => {
                   style={styles.subjectCard}
                   onPress={handleCreateQuiz}
                 >
-                  <View style={[styles.subjectIcon, { backgroundColor: `${config.color}15` }]}>
-                    <MaterialIcon name={config.icon} size={32} color={config.color} />
+                  <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
+                    {config.image ? (
+                      <Image 
+                        source={config.image}
+                        style={styles.subjectIconImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <MaterialIcon name={config.icon} size={32} color={config.color} />
+                    )}
                   </View>
                   <Text style={styles.subjectName}>{subject.name}</Text>
                 </TouchableOpacity>
@@ -141,8 +151,16 @@ const AssessmentHubScreen = ({ onBack, onNavigate }) => {
           {recentQuizzes.map((quiz) => (
             <TouchableOpacity key={quiz.id} style={styles.quizCard}>
               <View style={styles.quizLeft}>
-                <View style={[styles.quizIcon, { backgroundColor: `${quiz.color}20` }]}>
-                  <MaterialIcon name={quiz.icon} size={24} color={quiz.color} />
+                <View style={[styles.quizIcon, { backgroundColor: 'transparent' }]}>
+                  {quiz.image ? (
+                    <Image 
+                      source={quiz.image}
+                      style={styles.quizIconImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <MaterialIcon name={quiz.icon} size={24} color={quiz.color} />
+                  )}
                 </View>
                 <View style={styles.quizInfo}>
                   <Text style={styles.quizTitle}>{quiz.title}</Text>
@@ -322,6 +340,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: isSmallDevice ? 8 : 10,
   },
+  subjectIconImage: {
+    width: '75%',
+    height: '75%',
+  },
   subjectName: {
     fontSize: isSmallDevice ? 12 : 13,
     fontWeight: '700',
@@ -358,6 +380,10 @@ const styles = StyleSheet.create({
     borderRadius: isSmallDevice ? 14 : 16,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  quizIconImage: {
+    width: '75%',
+    height: '75%',
   },
   quizInfo: {
     flex: 1,

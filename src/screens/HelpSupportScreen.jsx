@@ -81,7 +81,7 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
   const quickActions = [
     {
       id: 1,
-      title: 'Learning Subjects',
+      title: 'Nudge Library',
       icon: 'book-open-variant',
       color: '#4A90E2',
       bgColor: '#E3F2FD',
@@ -89,7 +89,7 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
     },
     {
       id: 2,
-      title: 'Learning Summary',
+      title: 'Progress',
       icon: 'chart-line',
       color: '#27AE60',
       bgColor: '#E8F5E9',
@@ -97,19 +97,11 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
     },
     {
       id: 3,
-      title: 'Create Assessment',
+      title: 'Create Quiz',
       icon: 'file-document-edit',
       color: '#9C27B0',
       bgColor: '#F3E5F5',
       action: 'assessment',
-    },
-    {
-      id: 4,
-      title: 'Milestones',
-      icon: 'trophy',
-      color: '#FF9800',
-      bgColor: '#FFF3E0',
-      action: 'milestones',
     },
   ];
 
@@ -401,16 +393,15 @@ const styles = StyleSheet.create({
 
   quickActionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     paddingHorizontal: 20,
-    gap: 12,
+    gap: 10,
   },
 
   quickActionCard: {
-    width: '48%',
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',

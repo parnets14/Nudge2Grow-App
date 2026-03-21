@@ -377,18 +377,7 @@ const QACardsScreen = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Progress Dots */}
-          <View style={styles.dotsContainer}>
-            {qaCards.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index <= currentIndex && styles.dotActive,
-                ]}
-              />
-            ))}
-          </View>
+        
 
           <TouchableOpacity
             style={styles.nextBtn}
@@ -481,25 +470,24 @@ const styles = StyleSheet.create({
 
   deckContainer: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
     position: 'relative',
   },
 
   cardPositioned: {
     position: 'absolute',
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
   },
 
   glassCard: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
-    padding: 28,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.07,
@@ -702,21 +690,7 @@ const styles = StyleSheet.create({
   prevBtnTextDisabled: {
     color: '#D1D5DB',
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5E7EB',
-  },
-  dotActive: {
-    backgroundColor: '#27AE60',
-    width: 24,
-  },
+ 
   nextBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -33,6 +33,7 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
   const [showChildForm, setShowChildForm] = useState(false);
   const [showAvatarSelection, setShowAvatarSelection] = useState(false);
   const [showTopicPreferences, setShowTopicPreferences] = useState(false);
+  const [showLifeSkills, setShowLifeSkills] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState('');
@@ -58,6 +59,10 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [showFaithDropdown, setShowFaithDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showLevelModal, setShowLevelModal] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedLevel, setSelectedLevel] = useState('Intermediate');
+  const [subjectLevels, setSubjectLevels] = useState({}); // { subjectId: level }
 
   const grades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
   const boards = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other'];
@@ -81,7 +86,7 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
 
   const exploratoryAreas = [
     { id: 'ai', name: 'Artificial Intelligence', icon: 'brain' },
-    { id: 'financial', name: 'Financial Literacy', icon: 'currency-usd-circle' },
+    { id: 'financial', name: 'Financial Literacy', icon: 'wallet' },
     { id: 'humor', name: 'Britannica/ Did you know', icon: 'palette' },
     { id: 'safety', name: 'Sex & Safety Education', icon: 'shield-check' },
   ];
@@ -185,6 +190,8 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
     }
   };
 
+  const childrenRef = useRef([]);
+
   const handleTopicsComplete = () => {
     if (selectedTopics.length > 0) {
       const newChild = {
@@ -196,8 +203,11 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
         email: childEmail,
         avatar: selectedAvatar,
         topics: selectedTopics,
+        subjectLevels,
       };
-      setChildren([...children, newChild]);
+      const updatedChildren = [...children, newChild];
+      childrenRef.current = updatedChildren;
+      setChildren(updatedChildren);
       
       // Reset form
       setChildName('');
@@ -209,13 +219,14 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
       setSelectedAvatar('');
       setSelectedTopics([]);
       setShowTopicPreferences(false);
+      setShowLifeSkills(false);
       setShowSuccessScreen(true);
     }
   };
 
   const handleStartNudge = () => {
     if (onFinish) {
-      onFinish({ email, children });
+      onFinish({ email, children: childrenRef.current });
     }
   };
 
@@ -228,11 +239,14 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       {/* Back Button - Show on all screens except initial */}
-      {(showChildForm || showAvatarSelection || showTopicPreferences) && (
+      {(showChildForm || showAvatarSelection || showTopicPreferences || showLifeSkills) && (
         <TouchableOpacity 
           style={styles.backButton} 
           onPress={() => {
-            if (showTopicPreferences) {
+            if (showLifeSkills) {
+              setShowLifeSkills(false);
+              setShowTopicPreferences(true);
+            } else if (showTopicPreferences) {
               setShowTopicPreferences(false);
               setShowAvatarSelection(true);
             } else if (showAvatarSelection) {
@@ -248,13 +262,13 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
       )}
       
       {/* Back Button for initial screen - goes to previous screen */}
-      {!showChildForm && !showAvatarSelection && !showTopicPreferences && !showSuccessScreen && onBack && (
+      {!showChildForm && !showAvatarSelection && !showTopicPreferences && !showLifeSkills && !showSuccessScreen && onBack && (
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Icon name="chevron-back" size={28} color="#333333" />
         </TouchableOpacity>
       )}
       
-      {!showChildForm && !showAvatarSelection && !showTopicPreferences && !showSuccessScreen ? (
+      {!showChildForm && !showAvatarSelection && !showTopicPreferences && !showLifeSkills && !showSuccessScreen ? (
         // Initial Screen - Email and Add Child Button
         <>
           <ScrollView 
@@ -285,8 +299,7 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
               />
               <View style={styles.emailUnderline} />
               <Text style={styles.emailHint}>
-                For adoption level progress, olympiad test papers and weekly
-newsletters.
+                For adoption level progress, olympiad test papers and weekly newsletters. No Spamming!
               </Text>
               
               {/* Email Status Messages */}
@@ -453,43 +466,98 @@ newsletters.
           >
             {/* Header */}
             <View style={styles.headerContainer}>
-              <Text style={styles.topicHeaderTitle}>Topic Preferences</Text>
+              <Text style={styles.topicHeaderTitle}>Customize Learning (Step 1/2)</Text>
             </View>
 
-            {/* Core Area Section */}
+            {/* Foundation Skills Section */}
             <View style={styles.topicSection}>
-              <Text style={styles.topicSectionTitle}>Core Area</Text>
-              
-              <View style={styles.coreGrid}>
-                {coreAreas.map((area) => (
-                  <TouchableOpacity
-                    key={area.id}
-                    style={[
-                      styles.coreCard,
-                      selectedTopics.includes(area.id) && styles.coreCardSelected
-                    ]}
-                    onPress={() => toggleTopic(area.id)}
-                    activeOpacity={0.7}
-                  >
-                    <MaterialIcon 
-                      name={area.icon} 
-                      size={48} 
-                      color="#666666" 
-                      style={styles.coreIcon}
-                    />
-                    <Text style={styles.coreCardTitle}>{area.name}</Text>
-                    {area.recommended && (
-                      <Text style={styles.recommendedText}>Recommended</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
+              <Text style={styles.topicSectionTitle}>Foundation Skills · {grade || 'Grade'}</Text>
+              <Text style={styles.topicSectionHint}>Tap a subject to choose its level</Text>
+
+              <View style={styles.subjectGrid}>
+                {coreAreas.map((area) => {
+                  const chosenLevel = subjectLevels[area.id];
+                  const isSelected = !!chosenLevel;
+                  return (
+                    <TouchableOpacity
+                      key={area.id}
+                      style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
+                      onPress={() => {
+                        setSelectedSubject(area);
+                        setSelectedLevel(chosenLevel || 'Intermediate');
+                        setShowLevelModal(true);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcon name={area.icon} size={32} color={isSelected ? '#4A90E2' : '#555'} />
+                      <Text style={[styles.subjectCardName, isSelected && styles.subjectCardNameSelected]}>
+                        {area.name}
+                      </Text>
+                      <Text style={[styles.subjectCardBadge, isSelected && styles.subjectCardBadgeSelected]}>
+                        {isSelected ? chosenLevel : 'Recommended'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
-            {/* Exploratory Area Section */}
+            {/* Exploratory Area Section - moved to Step 2 */}
+          </ScrollView>
+
+          {/* Bottom Section */}
+          <View style={styles.bottomSection}>
+            <TouchableOpacity 
+              onPress={() => {
+                setShowTopicPreferences(false);
+                setShowLifeSkills(true);
+              }}
+              activeOpacity={0.8}
+              disabled={selectedTopics.length < coreAreas.length}
+            >
+              {selectedTopics.length >= coreAreas.length ? (
+                <LinearGradient
+                  colors={['#00CED1', '#45a578', '#90EE90']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.nextButton}
+                >
+                  <Text style={styles.nextButtonTextActive}>Next</Text>
+                </LinearGradient>
+              ) : (
+                <View style={styles.nextButton}>
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.privacyContainer}>
+              <Text style={styles.privacyText}>
+                We're committed to keeping your information safe. View our{' '}
+                <Text style={styles.privacyLink}>Privacy Policy</Text>.
+              </Text>
+            </View>
+          </View>
+        </>
+      ) : showLifeSkills ? (
+        // Beyond School Screen - Step 2/2
+        <>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+          >
+            {/* Header */}
+            <View style={styles.headerContainer}>
+              <Text style={styles.topicHeaderTitle}>Customize Learning (Step 2/2)</Text>
+            </View>
+
+            {/* Beyond School Section */}
             <View style={styles.topicSection}>
-              <Text style={styles.topicSectionTitle}>Life Skills</Text>
-              
+              <Text style={styles.topicSectionTitle}>Beyond School</Text>
+
               <View style={styles.exploratoryList}>
                 {exploratoryAreas.map((area) => (
                   <TouchableOpacity
@@ -507,11 +575,15 @@ newsletters.
                       styles.exploratoryCardText,
                       area.disabled && styles.exploratoryCardTextDisabled
                     ]}>{area.name}</Text>
-                    <MaterialIcon 
-                      name={area.icon} 
-                      size={22} 
-                      color={area.disabled ? "#CCCCCC" : "#666666"}
-                    />
+                    {selectedTopics.includes(area.id) ? (
+                      <Icon name="checkmark" size={20} color="#4A90E2" />
+                    ) : (
+                      <MaterialIcon
+                        name={area.icon}
+                        size={22}
+                        color={area.disabled ? "#CCCCCC" : "#666666"}
+                      />
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -520,25 +592,18 @@ newsletters.
 
           {/* Bottom Section */}
           <View style={styles.bottomSection}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleTopicsComplete}
               activeOpacity={0.8}
-              disabled={selectedTopics.length === 0}
             >
-              {selectedTopics.length > 0 ? (
-                <LinearGradient
-                  colors={['#00CED1', '#45a578', '#90EE90']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.nextButton}
-                >
-                  <Text style={styles.nextButtonTextActive}>Complete Setup</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.nextButton}>
-                  <Text style={styles.nextButtonText}>Complete Setup</Text>
-                </View>
-              )}
+              <LinearGradient
+                colors={['#00CED1', '#45a578', '#90EE90']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.nextButton}
+              >
+                <Text style={styles.nextButtonTextActive}>Complete Setup</Text>
+              </LinearGradient>
             </TouchableOpacity>
 
             <View style={styles.privacyContainer}>
@@ -552,157 +617,57 @@ newsletters.
       ) : showSuccessScreen ? (
         // Success Screen - You're Set to Begin
         <>
-          {isTablet ? (
-            // Large screens - No scroll
-            <View style={styles.successContent}>
-              {/* Success Icon */}
-              <View style={styles.successIconContainer}>
-                <View style={styles.successIcon}>
-                  <Icon name="checkmark" size={isTablet ? 40 : 35} color="#FFFFFF" />
-                </View>
+          <ScrollView
+            contentContainerStyle={styles.successScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Top Hero */}
+            <View style={styles.successHero}>
+              <View style={styles.successIcon}>
+                <Icon name="checkmark" size={38} color="#FFFFFF" />
               </View>
-
-              {/* Title */}
               <Text style={styles.successTitle}>You're Set to Begin 🌱</Text>
-
-              {/* Description */}
-              <Text style={styles.successDescription}>
-                Your parenting journey with intention starts here. You'll receive a few thoughtfully designed nudges each day — just enough to spark curiosity, reflection, and meaningful conversations with your child.
-              </Text>
-
-              {/* Divider */}
-              <View style={styles.successDivider} />
-
-              {/* What to Expect Section */}
-              <View style={styles.expectSection}>
-                <View style={styles.expectHeader}>
-                  <View style={styles.expectIconCircle}>
-                    <Icon name="bulb" size={isTablet ? 24 : 20} color="#FF6B6B" />
-                  </View>
-                  <Text style={styles.expectTitle}>What to Expect</Text>
-                </View>
-
-                {/* Bullet Points */}
-                <View style={styles.bulletList}>
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• 2-3 gentle nudges a day</Text>
-                    <Text style={styles.bulletText}>
-                      Short moments that fit naturally into everyday routines — no planning required.
-                    </Text>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• Conversations, not lessons</Text>
-                    <Text style={styles.bulletText}>
-                      Designed to help you talk, think, and explore together — without pressure or performance.
-                    </Text>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• Screen-light, parent-led learning</Text>
-                    <Text style={styles.bulletText}>
-                      No videos. No overload. Just you, your child, and shared moments that matter.
-                    </Text>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• A balanced focus on growth</Text>
-                    <Text style={styles.bulletText}>
-                      Academics, values, and life skills — because learning is more than marks.
-                    </Text>
-                  </View>
-                </View>
-              </View>
             </View>
-          ) : (
-            // Small screens - Scrollable
-            <ScrollView 
-              style={{ flex: 1 }}
-              contentContainerStyle={styles.successScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Success Icon */}
-              <View style={styles.successIconContainer}>
-                <View style={styles.successIcon}>
-                  <Icon name="checkmark" size={isTablet ? 40 : 35} color="#FFFFFF" />
+
+            {/* What to Expect Card */}
+            <View style={styles.expectCard}>
+              <View style={styles.expectHeader}>
+                <View style={styles.expectIconCircle}>
+                  <Icon name="bulb" size={18} color="#FF6B6B" />
                 </View>
+                <Text style={styles.expectTitle}>What to Expect</Text>
               </View>
 
-              {/* Title */}
-              <Text style={styles.successTitle}>You're Set to Begin 🌱</Text>
-
-              {/* Description */}
-              <Text style={styles.successDescription}>
-                Your parenting journey with intention starts here. You'll receive a few thoughtfully designed nudges each day — just enough to spark curiosity, reflection, and meaningful conversations with your child.
-              </Text>
-
-              {/* Divider */}
-              <View style={styles.successDivider} />
-
-              {/* What to Expect Section */}
-              <View style={styles.expectSection}>
-                <View style={styles.expectHeader}>
-                  <View style={styles.expectIconCircle}>
-                    <Icon name="bulb" size={isTablet ? 24 : 20} color="#FF6B6B" />
-                  </View>
-                  <Text style={styles.expectTitle}>What to Expect</Text>
-                </View>
-
-                {/* Bullet Points */}
-                <View style={styles.bulletList}>
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• 2-3 gentle nudges a day</Text>
-                    <Text style={styles.bulletText}>
-                      Short moments that fit naturally into everyday routines — no planning required.
-                    </Text>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• Conversations, not lessons</Text>
-                    <Text style={styles.bulletText}>
-                      Designed to help you talk, think, and explore together — without pressure or performance.
-                    </Text>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• Screen-light, parent-led learning</Text>
-                    <Text style={styles.bulletText}>
-                      No videos. No overload. Just you, your child, and shared moments that matter.
-                    </Text>
-                  </View>
-
-                  <View style={styles.bulletItem}>
-                    <Text style={styles.bulletTitle}>• A balanced focus on growth</Text>
-                    <Text style={styles.bulletText}>
-                      Academics, values, and life skills — because learning is more than marks.
-                    </Text>
+              {[
+                { title: '2-3 gentle nudges a day', text: 'Short moments that fit naturally into everyday routines — no planning required.' },
+                { title: 'Conversations, not lessons', text: 'Designed to help you talk, think, and explore together — without pressure or performance.' },
+                { title: 'Screen-light, parent-led learning', text: 'No videos. No overload. Just you, your child, and shared moments that matter.' },
+                { title: 'A balanced focus on growth', text: 'Academics, values, and life skills — because learning is more than marks.' },
+              ].map((item, i) => (
+                <View key={i} style={styles.bulletItem}>
+                  <View style={styles.bulletDot} />
+                  <View style={styles.bulletContent}>
+                    <Text style={styles.bulletTitle}>{item.title}</Text>
+                    <Text style={styles.bulletText}>{item.text}</Text>
                   </View>
                 </View>
-              </View>
-            </ScrollView>
-          )}
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Bottom Section */}
           <View style={styles.bottomSection}>
-            <TouchableOpacity 
-              onPress={handleStartNudge}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity onPress={handleStartNudge} activeOpacity={0.8}>
               <LinearGradient
                 colors={['#00CED1', '#45a578', '#90EE90']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.startNudgeButton}
               >
-                <Text style={styles.startNudgeButtonText}>
-                  Start Today's Nudge
-                </Text>
+                <Text style={styles.startNudgeButtonText}>Start Today's Nudge</Text>
               </LinearGradient>
             </TouchableOpacity>
-
-            <Text style={styles.successFooter}>
-              Five minutes today can shape a lifetime.
-            </Text>
+            <Text style={styles.successFooter}>Five minutes today can shape a lifetime.</Text>
           </View>
         </>
       ) : (
@@ -866,6 +831,71 @@ newsletters.
         </>
       )}
 
+      {/* Level Modal */}
+      {showLevelModal && selectedSubject && (
+        <View style={styles.levelModalOverlay}>
+          <View style={styles.levelModalContainer}>
+            {/* Header */}
+            <View style={styles.levelModalHeader}>
+              <TouchableOpacity style={styles.levelModalBack} onPress={() => setShowLevelModal(false)}>
+                <Icon name="chevron-back" size={20} color="#333" />
+              </TouchableOpacity>
+              <View style={styles.levelModalTitleContainer}>
+                <Text style={styles.levelModalTitle}>{selectedSubject.name}</Text>
+                <Text style={styles.levelModalGrade}>{grade || 'Grade'}</Text>
+              </View>
+            </View>
+            <View style={styles.levelModalDivider} />
+
+            <Text style={styles.levelModalHeading}>Choose the Right Level</Text>
+            <Text style={styles.levelModalSubtext}>
+              Start with what feels comfortable.{'\n'}You can always change the level later.
+            </Text>
+
+            {/* Level Options */}
+            <View style={styles.levelOptions}>
+              {[
+                { label: 'Basic', hint: '' },
+                { label: 'Intermediate', hint: 'Most parents choose this' },
+                { label: 'Advanced', hint: '' },
+              ].map(({ label, hint }) => {
+                const active = selectedLevel === label;
+                return (
+                  <TouchableOpacity
+                    key={label}
+                    style={[styles.levelOption, active && styles.levelOptionSelected]}
+                    onPress={() => setSelectedLevel(label)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.levelOptionContent}>
+                      <Text style={[styles.levelOptionText, active && styles.levelOptionTextSelected]}>{label}</Text>
+                      {hint ? (
+                        <Text style={[styles.levelOptionHint, active && styles.levelOptionHintSelected]}>{hint}</Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              style={styles.levelSaveButton}
+              onPress={() => {
+                setSubjectLevels({ ...subjectLevels, [selectedSubject.id]: selectedLevel });
+                if (!selectedTopics.includes(selectedSubject.id)) {
+                  setSelectedTopics([...selectedTopics, selectedSubject.id]);
+                }
+                setShowLevelModal(false);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.levelSaveButtonText}>Save &amp; Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Date Picker Modal */}
       <DatePicker
         modal
@@ -965,9 +995,9 @@ const styles = StyleSheet.create({
   },
 
   emailHint: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666666',
-    lineHeight: 18,
+    lineHeight: 21,
     marginTop: 8,
     fontFamily: 'Montserrat-Regular',
   },
@@ -1238,13 +1268,15 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999999',
+    color: '#FFFFFF',
     fontFamily: 'Montserrat-SemiBold',
   },
 
   nextButtonTextActive: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#FFFFFF',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Medium',
   },
 
   privacyContainer: {
@@ -1333,19 +1365,25 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 32 : 28,
     color: '#45a578',
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 4,
     fontFamily: 'Montserrat-Bold',
+  },
+  topicHeaderSubtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+    marginBottom: 8,
   },
 
   topicSection: {
-    marginBottom: 16,
+    marginBottom: 32,
   },
 
   topicSectionTitle: {
     fontSize: 20,
     color: '#333333',
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 16,
     fontFamily: 'Montserrat-Bold',
   },
 
@@ -1353,7 +1391,118 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 12,
+  },
+
+  // Subject card grid
+  subjectGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
+  },
+  subjectCard: {
+    width: '47%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    paddingVertical: 20,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  subjectCardSelected: {
+    borderColor: '#4A90E2',
+    backgroundColor: '#F0F7FF',
+  },
+  subjectCardName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+  },
+  subjectCardNameSelected: {
+    color: '#1A1A1A',
+  },
+  subjectCardBadge: {
+    fontSize: 12,
+    color: '#4A90E2',
+    fontWeight: '500',
+  },
+  subjectCardBadgeSelected: {
+    color: '#4A90E2',
+    fontWeight: '700',
+  },
+
+  // Subject row with inline level chips
+  subjectRow: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+
+  subjectRowSelected: {
+    borderColor: '#4A90E2',
+  },
+
+  subjectRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+
+  subjectRowName: {
+    fontSize: isTablet ? 16 : 15,
+    fontWeight: '600',
+    color: '#555',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+
+  subjectRowNameSelected: {
+    color: '#4A90E2',
+  },
+
+  levelChips: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  levelChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+
+  levelChipActive: {
+    borderColor: '#4A90E2',
+    backgroundColor: '#EFF6FF',
+  },
+
+  levelChipText: {
+    fontSize: isTablet ? 13 : 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+
+  levelChipTextActive: {
+    color: '#4A90E2',
+  },
+
+  topicSectionHint: {
+    fontSize: isTablet ? 14 : 13,
+    color: '#9CA3AF',
+    marginBottom: 14,
+    fontFamily: 'Montserrat-Regular',
   },
 
   coreCard: {
@@ -1361,27 +1510,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#CCCCCC',
-    borderRadius: 16,
-    padding: isTablet ? 24 : 18,
+    borderRadius: 12,
+    padding: isTablet ? 16 : 12,
     alignItems: 'center',
-    minHeight: isTablet ? 180 : 140,
+    minHeight: isTablet ? 140 : 110,
   },
 
   coreCardSelected: {
-    borderColor: '#FFB84D',
-    backgroundColor: '#FFF9F0',
+    borderColor: '#4A90E2',
+    backgroundColor: '#FFFFFF',
   },
 
   coreIcon: {
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+
+  coreCheckmark: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E8F4FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   coreCardTitle: {
-    fontSize: isTablet ? 20 : 17,
+    fontSize: isTablet ? 16 : 14,
     color: '#333333',
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
     fontFamily: 'Montserrat-SemiBold',
   },
 
@@ -1408,8 +1569,8 @@ const styles = StyleSheet.create({
   },
 
   exploratoryCardSelected: {
-    borderColor: '#FFB84D',
-    backgroundColor: '#FFF9F0',
+    borderColor: '#4A90E2',
+    backgroundColor: '#FFFFFF',
   },
 
   exploratoryCardText: {
@@ -1431,82 +1592,108 @@ const styles = StyleSheet.create({
   // Success Screen Styles
   successContent: {
     flex: 1,
-    paddingHorizontal: isTablet ? width * 0.15 : 30,
-    paddingTop: isTablet ? 40 : 30,
-    paddingBottom: 180,
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    paddingBottom: 10,
+    justifyContent: 'flex-start',
   },
 
   successScrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: isTablet ? width * 0.15 : 30,
-    paddingTop: isTablet ? 40 : 30,
-    paddingBottom: 180,
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 20,
   },
 
   successIconContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+
+  successHero: {
+    alignItems: 'center',
+    marginBottom: 28,
   },
 
   successIcon: {
-    width: isTablet ? 100 : 80,
-    height: isTablet ? 100 : 80,
-    borderRadius: isTablet ? 50 : 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#45a578',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
-    marginBottom: 24,
+    marginBottom: 18,
+    shadowColor: '#45a578',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
 
   successTitle: {
-    fontSize: isTablet ? 32 : 28,
-    color: '#333333',
+    fontSize: 26,
+    color: '#1A1A1A',
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     fontFamily: 'Montserrat-Bold',
   },
 
-  successDescription: {
-    fontSize: isTablet ? 17 : 16,
-    color: '#666666',
-    lineHeight: isTablet ? 26 : 24,
+  successSubtitle: {
+    fontSize: 15,
+    color: '#9CA3AF',
     textAlign: 'center',
-    marginBottom: 24,
+    fontFamily: 'Montserrat-Regular',
+  },
+
+  successDescription: {
+    fontSize: 15,
+    color: '#666666',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 12,
     fontFamily: 'Montserrat-Medium',
-    fontWeight: '500',
   },
 
   successDivider: {
     height: 1,
     backgroundColor: '#E0E0E0',
-    marginVertical: 16,
+    marginVertical: 12,
+  },
+
+  expectCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   expectSection: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
 
   expectHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
 
   expectIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#FFE5E5',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
 
   expectTitle: {
-    fontSize: isTablet ? 20 : 18,
-    color: '#333333',
+    fontSize: 17,
+    color: '#1A1A1A',
     fontWeight: '700',
     fontFamily: 'Montserrat-Bold',
   },
@@ -1516,22 +1703,37 @@ const styles = StyleSheet.create({
   },
 
   bulletItem: {
-    marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+
+  bulletDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#45a578',
+    marginTop: 6,
+    marginRight: 12,
+    flexShrink: 0,
+  },
+
+  bulletContent: {
+    flex: 1,
   },
 
   bulletTitle: {
-    fontSize: isTablet ? 16 : 15,
-    color: '#333333',
+    fontSize: 15,
+    color: '#1A1A1A',
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 3,
     fontFamily: 'Montserrat-Bold',
   },
 
   bulletText: {
-    fontSize: isTablet ? 15 : 14,
-    color: '#666666',
-    lineHeight: isTablet ? 20 : 18,
-    paddingLeft: 12,
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 19,
     fontFamily: 'Montserrat-Regular',
   },
 
@@ -1556,5 +1758,135 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     fontFamily: 'Montserrat-Regular',
+  },
+
+  // Level Modal Styles
+  levelModalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  levelModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '90%',
+    paddingBottom: 24,
+    overflow: 'hidden',
+  },
+  levelModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  levelModalBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  levelModalTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    marginRight: 48,
+  },
+  levelModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: 'Montserrat-Bold',
+  },
+  levelModalGrade: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 2,
+    fontFamily: 'Montserrat-Regular',
+  },
+  levelModalDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginBottom: 20,
+  },
+  levelModalHeading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 8,
+    fontFamily: 'Montserrat-Bold',
+  },
+  levelModalSubtext: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    fontFamily: 'Montserrat-Regular',
+  },
+  levelOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 28,
+    gap: 8,
+  },
+  levelOption: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 0,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    minHeight: 72,
+  },
+  levelOptionSelected: {
+    backgroundColor: '#4A90E2',
+    borderColor: '#4A90E2',
+  },
+  levelOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  levelOptionTextSelected: {
+    color: '#FFFFFF',
+  },
+  levelOptionHint: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 4,
+    fontFamily: 'Montserrat-Regular',
+    textAlign: 'center',
+  },
+  levelOptionHintSelected: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  levelOptionContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelSaveButton: {
+    marginHorizontal: 16,
+    backgroundColor: '#4A90E2',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  levelSaveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
   },
 });

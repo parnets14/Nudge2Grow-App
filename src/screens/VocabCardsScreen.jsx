@@ -372,19 +372,7 @@ const VocabCardsScreen = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Progress Dots */}
-          <View style={styles.dotsContainer}>
-            {vocabulary.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index <= currentIndex && styles.dotActive,
-                ]}
-              />
-            ))}
-          </View>
-
+         
           <TouchableOpacity
             style={styles.nextBtn}
             onPress={handleNext}
@@ -478,19 +466,19 @@ const styles = StyleSheet.create({
 
   deckContainer: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
     position: 'relative',
   },
 
   cardPositioned: {
     position: 'absolute',
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
   },
 
   glassCard: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
@@ -561,7 +549,7 @@ const styles = StyleSheet.create({
   vocabLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: '#6B5DD3',
     letterSpacing: 0.8,
     marginBottom: 10,
     marginTop: 8,
@@ -697,21 +685,7 @@ const styles = StyleSheet.create({
   prevBtnTextDisabled: {
     color: '#D1D5DB',
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5E7EB',
-  },
-  dotActive: {
-    backgroundColor: '#27AE60',
-    width: 24,
-  },
+  
   nextBtn: {
     flexDirection: 'row',
     alignItems: 'center',

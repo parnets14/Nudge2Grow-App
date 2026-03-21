@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
   gradientButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#FFFFFF',
     fontFamily: 'Montserrat-Medium',
   },
 
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
   disabledButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999999',
+    color: '#FFFFFF',
   },
 
   privacyContainer: { marginTop: 0, marginBottom: 0 },

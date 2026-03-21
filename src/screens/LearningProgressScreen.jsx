@@ -66,7 +66,7 @@ const CircularProgress = ({ percentage, color, size = 50 }) => {
       }}>
         <Text style={{
           fontSize: isSmallDevice ? 11 : 12,
-          fontWeight: '700',
+          fontWeight: '1000',
           color: color,
           fontFamily: 'Montserrat-Bold',
         }}>
@@ -84,6 +84,20 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
   const [showAllPracticeTopics, setShowAllPracticeTopics] = useState(false);
 
   const child = userData?.children?.[0];
+
+  // Get current month and year
+  const getCurrentMonth = () => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    const now = new Date();
+    return `${months[now.getMonth()]} ${now.getFullYear()}`;
+  };
+
+  // Get number of days in current month
+  const getDaysInCurrentMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  };
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth) => {
@@ -266,12 +280,12 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
           <Text style={styles.headerTitle}>Learning Summary</Text>
           <Text style={styles.headerSubtitle}>Detailed insights & progress</Text>
         </View>
-        <TouchableOpacity style={styles.shareButton}>
+        {/* <TouchableOpacity style={styles.shareButton}>
           <Icon name="share-social-outline" size={isSmallDevice ? 20 : 22} color="#666666" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.downloadButton}>
           <Icon name="download-outline" size={isSmallDevice ? 20 : 22} color="#666666" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -340,7 +354,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
             <View style={styles.statsGrid} key="weekly-stats">
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Icon name="checkmark-circle-outline" size={isSmallDevice ? 20 : 22} color="#9CA3AF" />
+                  <Icon name="checkmark-circle-outline" size={24} color="#BBBBBB" />
                 </View>
                 <Text style={styles.statNumber}>{currentData.overview.completed}</Text>
                 <Text style={styles.statLabel}>Completed</Text>
@@ -348,156 +362,153 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
 
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Icon name="time-outline" size={isSmallDevice ? 20 : 22} color="#9CA3AF" />
+                  <Icon name="time-outline" size={24} color="#BBBBBB" />
                 </View>
-                <Text style={styles.statNumber}>{currentData.overview.timeSpent}</Text>
+                <Text style={styles.statNumber} numberOfLines={1} adjustsFontSizeToFit>{currentData.overview.timeSpent}</Text>
                 <Text style={styles.statLabel}>Time Spent</Text>
               </View>
 
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Icon name="flame-outline" size={isSmallDevice ? 20 : 22} color="#9CA3AF" />
+                  <Icon name="flame-outline" size={24} color="#BBBBBB" />
                 </View>
-                <Text style={styles.statNumber}>{currentData.overview.streak}</Text>
+                <Text style={styles.statNumber} numberOfLines={1} adjustsFontSizeToFit>{currentData.overview.streak}</Text>
                 <Text style={styles.statLabel}>Streak</Text>
               </View>
 
               <View style={styles.statCard}>
                 <View style={styles.statIconContainer}>
-                  <Icon name="book-outline" size={isSmallDevice ? 20 : 22} color="#9CA3AF" />
+                  <Icon name="book-outline" size={24} color="#BBBBBB" />
                 </View>
                 <Text style={styles.statNumber}>{currentData.overview.topics}</Text>
                 <Text style={styles.statLabel}>Topics</Text>
               </View>
             </View>
-
-            {/* Growth Insight Card - Blue */}
-            <View style={styles.growthInsightCard}>
-              <View style={styles.growthInsightIcon}>
-                <MaterialIcon name="trending-up" size={isSmallDevice ? 20 : 24} color="#3B82F6" />
-              </View>
-              <View style={styles.growthInsightContent}>
-                <Text style={styles.growthInsightTitle}>+25% growth from last week</Text>
-                <Text style={styles.growthInsightSubtitle}>Zues is on an incredible learning streak! 🚀</Text>
-              </View>
-            </View>
           </>
         ) : (
-          <View style={styles.monthlyOverviewCard} key="monthly-stats">
-            <View style={styles.monthlyOverviewHeader}>
-              <View>
-                <Text style={styles.monthlyOverviewLabel}>Monthly Overview</Text>
-                <Text style={styles.monthlyOverviewMonth}>February 2025</Text>
+          <View style={styles.statsGrid} key="monthly-stats">
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Icon name="checkmark-circle-outline" size={24} color="#BBBBBB" />
               </View>
-              <Icon name="calendar-outline" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
+              <Text style={styles.statNumber}>{currentData.overview.completed}</Text>
+              <Text style={styles.statLabel}>Completed</Text>
             </View>
-            
-            <View style={styles.monthlyStatsGrid}>
-              <View style={styles.monthlyStatItem}>
-                <Text style={styles.monthlyStatNumber}>{currentData.overview.completed}</Text>
-                <Text style={styles.monthlyStatLabel}>Activities</Text>
-                <Text style={styles.monthlyStatChange}>+33% vs Jan</Text>
+
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Icon name="time-outline" size={24} color="#BBBBBB" />
               </View>
-              
-              <View style={styles.monthlyStatItem}>
-                <Text style={styles.monthlyStatNumber}>15.6</Text>
-                <Text style={styles.monthlyStatLabel}>Hrs Logged</Text>
-                <Text style={styles.monthlyStatChange}>+8h vs Jan</Text>
+              <Text style={styles.statNumber} numberOfLines={1} adjustsFontSizeToFit>{currentData.overview.timeSpent}</Text>
+              <Text style={styles.statLabel}>Time Spent</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Icon name="flame-outline" size={24} color="#BBBBBB" />
               </View>
-              
-              <View style={styles.monthlyStatItem}>
-                <Text style={styles.monthlyStatNumber}>74%</Text>
-                <Text style={styles.monthlyStatLabel}>Avg Score</Text>
-                <Text style={styles.monthlyStatChange}>+9% vs Jan</Text>
+              <Text style={styles.statNumber} numberOfLines={1} adjustsFontSizeToFit>{currentData.overview.streak}</Text>
+              <Text style={styles.statLabel}>Streak</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Icon name="book-outline" size={24} color="#BBBBBB" />
               </View>
-              
-              <View style={styles.monthlyStatItem}>
-                <Text style={styles.monthlyStatNumber}>28d</Text>
-                <Text style={styles.monthlyStatLabel}>Streak</Text>
-                <Text style={styles.monthlyStatChange}>Personal best!</Text>
-              </View>
+              <Text style={styles.statNumber}>{currentData.overview.topics}</Text>
+              <Text style={styles.statLabel}>Topics</Text>
             </View>
           </View>
         )}
-
-        {/* Weekly Trend Chart (Monthly View Only) */}
+ {/* Monthly AI Insights - Monthly View Only */}
         {selectedPeriod === 'monthly' && (
-          <View style={styles.weeklyTrendCard}>
-            <View style={styles.weeklyTrendHeader}>
-              <View style={styles.weeklyTrendIconContainer}>
-                <MaterialIcon name="chart-line" size={isSmallDevice ? 18 : 20} color="#6366F1" />
-              </View>
-              <View>
-                <Text style={styles.weeklyTrendTitle}>Weekly Trend</Text>
-                <Text style={styles.weeklyTrendSubtitle}>Activities, hours & scores by week</Text>
-              </View>
+          <View style={styles.monthlyAIInsightsCard}>
+            <View style={styles.monthlyAIInsightsHeader}>
+              <Icon name="sparkles" size={isSmallDevice ? 18 : 20} color="#FFFFFF" />
+              <Text style={styles.monthlyAIInsightsTitle}>Monthly AI Insights</Text>
             </View>
 
-            <View style={styles.trendChartContainer}>
-              <View style={styles.trendYAxisLabels}>
-                <Text style={styles.trendYAxisLabel}>100</Text>
-                <Text style={styles.trendYAxisLabel}>75</Text>
-                <Text style={styles.trendYAxisLabel}>50</Text>
-                <Text style={styles.trendYAxisLabel}>25</Text>
-                <Text style={styles.trendYAxisLabel}>0</Text>
+            {/* Consistency Improved - Growth */}
+            <View style={styles.monthlyInsightItem}>
+              <View style={styles.monthlyInsightIconContainer}>
+                <MaterialIcon name="chart-line-variant" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
               </View>
-
-              <View style={styles.trendChartWithGrid}>
-                <View style={styles.trendGridLines}>
-                  <View style={styles.trendGridLine} />
-                  <View style={styles.trendGridLine} />
-                  <View style={styles.trendGridLine} />
-                  <View style={styles.trendGridLine} />
-                  <View style={styles.trendGridLine} />
-                </View>
-
-                <View style={styles.trendChartArea}>
-                  <Svg width="100%" height="100%" style={styles.trendSvg}>
-                    {/* Activities Line (Blue) */}
-                    <Polyline
-                      points="10,120 110,110 210,105 310,100"
-                      fill="none"
-                      stroke="#6366F1"
-                      strokeWidth="3"
-                    />
-                    {/* Activities Dots */}
-                    <Circle cx="10" cy="120" r="5" fill="#6366F1" />
-                    <Circle cx="110" cy="110" r="5" fill="#6366F1" />
-                    <Circle cx="210" cy="105" r="5" fill="#6366F1" />
-                    <Circle cx="310" cy="100" r="5" fill="#6366F1" />
-
-                    {/* Score Line (Green) */}
-                    <Polyline
-                      points="10,80 110,75 210,70 310,50"
-                      fill="none"
-                      stroke="#10B981"
-                      strokeWidth="3"
-                    />
-                    {/* Score Dots */}
-                    <Circle cx="10" cy="80" r="5" fill="#10B981" />
-                    <Circle cx="110" cy="75" r="5" fill="#10B981" />
-                    <Circle cx="210" cy="70" r="5" fill="#10B981" />
-                    <Circle cx="310" cy="50" r="5" fill="#10B981" />
-                  </Svg>
-
-                  <View style={styles.trendXAxisLabels}>
-                    <Text style={styles.trendXAxisLabel}>Wk 1</Text>
-                    <Text style={styles.trendXAxisLabel}>Wk 2</Text>
-                    <Text style={styles.trendXAxisLabel}>Wk 3</Text>
-                    <Text style={styles.trendXAxisLabel}>Wk 4</Text>
+              <View style={styles.monthlyInsightContent}>
+                <View style={styles.monthlyInsightHeader}>
+                  <Text style={styles.monthlyInsightTitle}>Consistency Improved</Text>
+                  <View style={styles.monthlyInsightBadge}>
+                    <Icon name="checkmark" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
+                    <Text style={styles.monthlyInsightBadgeText}>Growth</Text>
                   </View>
                 </View>
+                <Text style={styles.monthlyInsightSubtitle}>Activity count grew 33% vs last month</Text>
+                <View style={styles.monthlyInsightAction}>
+                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
+                  <Text style={styles.monthlyInsightActionText}>Maintain the daily habit</Text>
+                </View>
               </View>
             </View>
 
-            <View style={styles.trendLegend}>
-              <View style={styles.trendLegendItem}>
-                <View style={[styles.trendLegendLine, { backgroundColor: '#6366F1' }]} />
-                <Text style={styles.trendLegendText}>Activities</Text>
+            {/* EVS is Zues's Strength */}
+            <View style={styles.monthlyInsightItem}>
+              <View style={styles.monthlyInsightIconContainer}>
+                <Icon name="leaf" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
               </View>
-              <View style={styles.trendLegendItem}>
-                <View style={[styles.trendLegendLine, { backgroundColor: '#10B981' }]} />
-                <Text style={styles.trendLegendText}>Score %</Text>
+              <View style={styles.monthlyInsightContent}>
+                <View style={styles.monthlyInsightHeader}>
+                  <Text style={styles.monthlyInsightTitle}>EVS is Zues's Strength</Text>
+                  <View style={[styles.monthlyInsightBadge, { backgroundColor: 'rgba(251, 191, 36, 0.3)' }]}>
+                    <Icon name="star" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
+                    <Text style={styles.monthlyInsightBadgeText}>Strength</Text>
+                  </View>
+                </View>
+                <Text style={styles.monthlyInsightSubtitle}>Highest improvement (+30%) this month</Text>
+                <View style={styles.monthlyInsightAction}>
+                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
+                  <Text style={styles.monthlyInsightActionText}>Explore advanced EVS topics</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Fin. Literacy Lagging */}
+            <View style={styles.monthlyInsightItem}>
+              <View style={styles.monthlyInsightIconContainer}>
+                <Icon name="alert-circle" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
+              </View>
+              <View style={styles.monthlyInsightContent}>
+                <View style={styles.monthlyInsightHeader}>
+                  <Text style={styles.monthlyInsightTitle}>Fin. Literacy Lagging</Text>
+                  <View style={[styles.monthlyInsightBadge, { backgroundColor: 'rgba(251, 146, 60, 0.3)' }]}>
+                    <Icon name="warning" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
+                    <Text style={styles.monthlyInsightBadgeText}>Attention</Text>
+                  </View>
+                </View>
+                <Text style={styles.monthlyInsightSubtitle}>Lowest score (60%) — needs more focus</Text>
+                <View style={styles.monthlyInsightAction}>
+                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
+                  <Text style={styles.monthlyInsightActionText}>Add 2 sessions per week</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Goal for Next Month */}
+            <View style={styles.monthlyInsightItem}>
+              <View style={styles.monthlyInsightIconContainer}>
+                <Icon name="flag" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
+              </View>
+              <View style={styles.monthlyInsightContent}>
+                <View style={styles.monthlyInsightHeader}>
+                  <Text style={styles.monthlyInsightTitle}>Goal for Next Month</Text>
+                  <View style={[styles.monthlyInsightBadge, { backgroundColor: 'rgba(244, 114, 182, 0.3)' }]}>
+                    <Icon name="trophy" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
+                    <Text style={styles.monthlyInsightBadgeText}>Goal</Text>
+                  </View>
+                </View>
+                <Text style={styles.monthlyInsightSubtitle}>Target 90%+ in Math by end of March</Text>
+                <View style={styles.monthlyInsightAction}>
+                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
+                  <Text style={styles.monthlyInsightActionText}>Focus on subtraction & measurement</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -507,13 +518,16 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
         {selectedPeriod === 'monthly' && (
           <View style={styles.streakCard}>
             <View style={styles.streakHeader}>
-              <View style={styles.streakIconContainer}>
-                <Icon name="flame" size={isSmallDevice ? 24 : 28} color="#C4B5FD" />
+              <View style={styles.streakLeftContent}>
+                <View style={styles.streakIconContainer}>
+                  <Icon name="flame" size={isSmallDevice ? 24 : 28} color="#FDBA74" />
+                </View>
+                <View>
+                  <Text style={styles.streakTitle}>Streak</Text>
+                  <Text style={styles.streakSubtitle}>1 Day</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.streakTitle}>Streak</Text>
-                <Text style={styles.streakSubtitle}>1 Day</Text>
-              </View>
+              <Text style={styles.streakMonthYear}>{getCurrentMonth()}</Text>
             </View>
 
             <View style={styles.streakCalendar}>
@@ -528,22 +542,90 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
               </View>
 
               <View style={styles.streakGrid}>
-                {[...Array(30)].map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.streakDot,
-                      index < 28 && styles.streakDotActive,
-                    ]}
-                  >
-                    <Text style={styles.streakDayNumber}>{index + 1}</Text>
-                  </View>
-                ))}
+                {[...Array(getDaysInCurrentMonth())].map((_, index) => {
+                  const dayNumber = index + 1;
+                  const today = new Date().getDate();
+                  // Only show orange for today if flashcards are completed
+                  // For other days, show based on whether they're in the past
+                  const isToday = dayNumber === today;
+                  const isPast = dayNumber < today;
+                  const isCompleted = isToday ? false : isPast; // Change this based on actual completion data
+                  
+                  return (
+                    <View
+                      key={index}
+                      style={[
+                        styles.streakDot,
+                        isCompleted && styles.streakDotActive,
+                      ]}
+                    >
+                      <Text style={styles.streakDayNumber}>{dayNumber}</Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           </View>
         )}
+   {/* Monthly Milestones - Monthly View Only */}
+        {selectedPeriod === 'monthly' && (
+          <View style={styles.monthlyMilestonesCard}>
+            <View style={styles.monthlyMilestonesHeader}>
+              <Icon name="hourglass" size={isSmallDevice ? 18 : 20} color="#F59E0B" />
+              <Text style={styles.monthlyMilestonesTitle}>Monthly Milestones</Text>
+            </View>
 
+            <View style={styles.milestonesGrid}>
+              {/* Top 10% Learner */}
+              <View style={[styles.milestoneCard, { backgroundColor: '#F59E0B' }]}>
+                <View style={styles.milestoneIcon}>
+                  <Icon name="trophy" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
+                </View>
+                <Text style={styles.milestoneTitle}>Top 10% Learner</Text>
+                <View style={styles.milestoneDate}>
+                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#FEF3C7" />
+                  <Text style={styles.milestoneDateText}>Feb 28</Text>
+                </View>
+              </View>
+
+              {/* Math Champion */}
+              <View style={[styles.milestoneCard, { backgroundColor: '#8B5CF6' }]}>
+                <View style={styles.milestoneIcon}>
+                  <Icon name="medal" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
+                </View>
+                <Text style={styles.milestoneTitle}>Math Champion</Text>
+                <View style={styles.milestoneDate}>
+                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#EDE9FE" />
+                  <Text style={styles.milestoneDateText}>Feb 24</Text>
+                </View>
+              </View>
+
+              {/* 30-Day Streak */}
+              <View style={[styles.milestoneCard, { backgroundColor: '#10B981' }]}>
+                <View style={styles.milestoneIcon}>
+                  <Icon name="flame" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
+                </View>
+                <Text style={styles.milestoneTitle}>30-Day Streak</Text>
+                <View style={styles.milestoneDate}>
+                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#D1FAE5" />
+                  <Text style={styles.milestoneDateText}>Feb 20</Text>
+                </View>
+              </View>
+
+            {/* 25% Growth */}
+              <View style={[styles.milestoneCard, { backgroundColor: '#EC4899' }]}>
+                <View style={styles.milestoneIcon}>
+                  <Icon name="trending-up" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
+                </View>
+                <Text style={styles.milestoneTitle}>25% Growth</Text>
+                <View style={styles.milestoneDate}>
+                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#FCE7F3" />
+                  <Text style={styles.milestoneDateText}>Feb 14</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
         {/* Subject Growth - Monthly View Only */}
         {selectedPeriod === 'monthly' && (
           <View style={styles.subjectGrowthCard}>
@@ -668,165 +750,14 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
           </View>
         )}
 
-        {/* Monthly AI Insights - Monthly View Only */}
-        {selectedPeriod === 'monthly' && (
-          <View style={styles.monthlyAIInsightsCard}>
-            <View style={styles.monthlyAIInsightsHeader}>
-              <Icon name="sparkles" size={isSmallDevice ? 18 : 20} color="#FFFFFF" />
-              <Text style={styles.monthlyAIInsightsTitle}>Monthly AI Insights</Text>
-            </View>
-
-            {/* Consistency Improved - Growth */}
-            <View style={styles.monthlyInsightItem}>
-              <View style={styles.monthlyInsightIconContainer}>
-                <MaterialIcon name="chart-line-variant" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
-              </View>
-              <View style={styles.monthlyInsightContent}>
-                <View style={styles.monthlyInsightHeader}>
-                  <Text style={styles.monthlyInsightTitle}>Consistency Improved</Text>
-                  <View style={styles.monthlyInsightBadge}>
-                    <Icon name="checkmark" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
-                    <Text style={styles.monthlyInsightBadgeText}>Growth</Text>
-                  </View>
-                </View>
-                <Text style={styles.monthlyInsightSubtitle}>Activity count grew 33% vs last month</Text>
-                <View style={styles.monthlyInsightAction}>
-                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
-                  <Text style={styles.monthlyInsightActionText}>Maintain the daily habit</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* EVS is Zues's Strength */}
-            <View style={styles.monthlyInsightItem}>
-              <View style={styles.monthlyInsightIconContainer}>
-                <Icon name="leaf" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
-              </View>
-              <View style={styles.monthlyInsightContent}>
-                <View style={styles.monthlyInsightHeader}>
-                  <Text style={styles.monthlyInsightTitle}>EVS is Zues's Strength</Text>
-                  <View style={[styles.monthlyInsightBadge, { backgroundColor: 'rgba(251, 191, 36, 0.3)' }]}>
-                    <Icon name="star" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
-                    <Text style={styles.monthlyInsightBadgeText}>Strength</Text>
-                  </View>
-                </View>
-                <Text style={styles.monthlyInsightSubtitle}>Highest improvement (+30%) this month</Text>
-                <View style={styles.monthlyInsightAction}>
-                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
-                  <Text style={styles.monthlyInsightActionText}>Explore advanced EVS topics</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Fin. Literacy Lagging */}
-            <View style={styles.monthlyInsightItem}>
-              <View style={styles.monthlyInsightIconContainer}>
-                <Icon name="alert-circle" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
-              </View>
-              <View style={styles.monthlyInsightContent}>
-                <View style={styles.monthlyInsightHeader}>
-                  <Text style={styles.monthlyInsightTitle}>Fin. Literacy Lagging</Text>
-                  <View style={[styles.monthlyInsightBadge, { backgroundColor: 'rgba(251, 146, 60, 0.3)' }]}>
-                    <Icon name="warning" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
-                    <Text style={styles.monthlyInsightBadgeText}>Attention</Text>
-                  </View>
-                </View>
-                <Text style={styles.monthlyInsightSubtitle}>Lowest score (60%) — needs more focus</Text>
-                <View style={styles.monthlyInsightAction}>
-                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
-                  <Text style={styles.monthlyInsightActionText}>Add 2 sessions per week</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Goal for Next Month */}
-            <View style={styles.monthlyInsightItem}>
-              <View style={styles.monthlyInsightIconContainer}>
-                <Icon name="flag" size={isSmallDevice ? 20 : 22} color="#FFFFFF" />
-              </View>
-              <View style={styles.monthlyInsightContent}>
-                <View style={styles.monthlyInsightHeader}>
-                  <Text style={styles.monthlyInsightTitle}>Goal for Next Month</Text>
-                  <View style={[styles.monthlyInsightBadge, { backgroundColor: 'rgba(244, 114, 182, 0.3)' }]}>
-                    <Icon name="trophy" size={isSmallDevice ? 10 : 12} color="#FFFFFF" />
-                    <Text style={styles.monthlyInsightBadgeText}>Goal</Text>
-                  </View>
-                </View>
-                <Text style={styles.monthlyInsightSubtitle}>Target 90%+ in Math by end of March</Text>
-                <View style={styles.monthlyInsightAction}>
-                  <Icon name="chevron-forward" size={isSmallDevice ? 10 : 12} color="#C4B5FD" />
-                  <Text style={styles.monthlyInsightActionText}>Focus on subtraction & measurement</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Monthly Milestones - Monthly View Only */}
-        {selectedPeriod === 'monthly' && (
-          <View style={styles.monthlyMilestonesCard}>
-            <View style={styles.monthlyMilestonesHeader}>
-              <Icon name="hourglass" size={isSmallDevice ? 18 : 20} color="#F59E0B" />
-              <Text style={styles.monthlyMilestonesTitle}>Monthly Milestones</Text>
-            </View>
-
-            <View style={styles.milestonesGrid}>
-              {/* Top 10% Learner */}
-              <View style={[styles.milestoneCard, { backgroundColor: '#F59E0B' }]}>
-                <View style={styles.milestoneIcon}>
-                  <Icon name="trophy" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
-                </View>
-                <Text style={styles.milestoneTitle}>Top 10% Learner</Text>
-                <View style={styles.milestoneDate}>
-                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#FEF3C7" />
-                  <Text style={styles.milestoneDateText}>Feb 28</Text>
-                </View>
-              </View>
-
-              {/* Math Champion */}
-              <View style={[styles.milestoneCard, { backgroundColor: '#8B5CF6' }]}>
-                <View style={styles.milestoneIcon}>
-                  <Icon name="medal" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
-                </View>
-                <Text style={styles.milestoneTitle}>Math Champion</Text>
-                <View style={styles.milestoneDate}>
-                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#EDE9FE" />
-                  <Text style={styles.milestoneDateText}>Feb 24</Text>
-                </View>
-              </View>
-
-              {/* 30-Day Streak */}
-              <View style={[styles.milestoneCard, { backgroundColor: '#10B981' }]}>
-                <View style={styles.milestoneIcon}>
-                  <Icon name="flame" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
-                </View>
-                <Text style={styles.milestoneTitle}>30-Day Streak</Text>
-                <View style={styles.milestoneDate}>
-                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#D1FAE5" />
-                  <Text style={styles.milestoneDateText}>Feb 20</Text>
-                </View>
-              </View>
-
-              {/* 25% Growth */}
-              <View style={[styles.milestoneCard, { backgroundColor: '#EC4899' }]}>
-                <View style={styles.milestoneIcon}>
-                  <Icon name="trending-up" size={isSmallDevice ? 24 : 28} color="#FFFFFF" />
-                </View>
-                <Text style={styles.milestoneTitle}>25% Growth</Text>
-                <View style={styles.milestoneDate}>
-                  <Icon name="calendar-outline" size={isSmallDevice ? 10 : 12} color="#FCE7F3" />
-                  <Text style={styles.milestoneDateText}>Feb 14</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
+       
+       
 
         {/* February Snapshot - Monthly View Only */}
         {selectedPeriod === 'monthly' && (
           <View style={styles.februarySnapshotCard}>
             <View style={styles.februarySnapshotHeader}>
-              <Icon name="trending-up" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
+              <Icon name="trending-up" size={isSmallDevice ? 20 : 24} color="#10B981" />
               <View>
                 <Text style={styles.februarySnapshotTitle}>February Snapshot</Text>
                 <Text style={styles.februarySnapshotSubtitle}>Zues's best month yet!</Text>
@@ -834,19 +765,19 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
             </View>
 
             <View style={styles.snapshotStatsGrid}>
-              <View style={styles.snapshotStatItem}>
+              <View style={[styles.snapshotStatItem, { backgroundColor: '#DBEAFE' }]}>
                 <Text style={styles.snapshotStatLabel}>EVS</Text>
                 <Text style={styles.snapshotStatTitle}>Best Subject</Text>
                 <Text style={styles.snapshotStatValue}>+30% growth</Text>
               </View>
 
-              <View style={styles.snapshotStatItem}>
+              <View style={[styles.snapshotStatItem, { backgroundColor: '#DBEAFE' }]}>
                 <Text style={styles.snapshotStatLabel}>Fin</Text>
                 <Text style={styles.snapshotStatTitle}>Most Active</Text>
                 <Text style={styles.snapshotStatValue}>Avg 5 activities</Text>
               </View>
 
-              <View style={styles.snapshotStatItem}>
+              <View style={[styles.snapshotStatItem, { backgroundColor: '#DBEAFE' }]}>
                 <Text style={styles.snapshotStatLabel}>Fin. Lit.</Text>
                 <Text style={styles.snapshotStatTitle}>Next Focus</Text>
                 <Text style={styles.snapshotStatValue}>Needs attention</Text>
@@ -855,114 +786,72 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
           </View>
         )}
 
-        {/* Plan March Learning Goals - Monthly View Only */}
-        {selectedPeriod === 'monthly' && (
-          <View style={styles.planMarchGoalsCard}>
-            <View style={styles.planMarchIconContainer}>
-              <Icon name="flash" size={isSmallDevice ? 28 : 32} color="#FFFFFF" />
-            </View>
-            <Text style={styles.planMarchTitle}>Plan March Learning Goals</Text>
-            <Text style={styles.planMarchSubtitle}>
-              Based on February's data, set personalised goals and create targeted assessments for March.
-            </Text>
-            <TouchableOpacity style={styles.planMarchButton}>
-              <Text style={styles.planMarchButtonText}>Set March Goals</Text>
-              <Icon name="arrow-forward" size={isSmallDevice ? 16 : 18} color="#6366F1" />
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Growth Badge - Weekly View Only */}
         {selectedPeriod === 'weekly' && (
           <View style={styles.growthBadge}>
             <View style={styles.growthIconContainer}>
-              <MaterialIcon name="trending-up" size={isSmallDevice ? 20 : 24} color="#27AE60" />
+              <MaterialIcon name="trending-up" size={isSmallDevice ? 20 : 24} color="#3B82F6" />
             </View>
             <View style={styles.growthTextContainer}>
-              <Text style={styles.growthTitle}>
-                <Text style={styles.growthPercentage}>{currentData.overview.growth} growth</Text>
-                <Text style={styles.growthSubtext}> from last {selectedPeriod === 'weekly' ? 'week' : 'month'}</Text>
-              </Text>
-              <Text style={styles.growthMessage}>
-                {child?.name || 'Zues'} is on an <Text style={styles.growthHighlight}>incredible</Text> learning streak! 🚀
-              </Text>
+              <Text style={styles.growthTitle}>+25% growth from last week</Text>
+              <Text style={styles.growthMessage}>{child?.name || 'Zues'} is on an incredible learning streak! 🚀</Text>
             </View>
           </View>
         )}
-
-        {/* Weekly Activity Card - Bar Chart (Weekly View Only) */}
+ {/* AI-Powered Insights - Weekly View Only */}
         {selectedPeriod === 'weekly' && (
-          <View style={styles.weeklyActivityCard}>
-            <View style={styles.weeklyActivityHeader}>
-              <View style={styles.activityHeaderLeft}>
-                <MaterialIcon name="chart-bar" size={isSmallDevice ? 18 : 20} color="#6B5DD3" />
-                <Text style={styles.weeklyActivityTitle}>Weekly Activity</Text>
+          <View style={styles.aiInsightsCard}>
+          <View style={styles.aiInsightsHeader}>
+            <Icon name="sparkles" size={isSmallDevice ? 18 : 20} color="#FCD34D" />
+            <Text style={styles.aiInsightsTitle}>AI-Powered Insights</Text>
+          </View>
+          
+          {/* Peak Learning Time - Blue/Gray */}
+          <View style={[styles.insightCard, styles.insightCardBlue]}>
+            <View style={styles.insightIconContainer}>
+              <Icon name="bulb-outline" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
+            </View>
+            <View style={styles.insightContent}>
+              <Text style={styles.insightTitle}>Peak Learning Time</Text>
+              <Text style={styles.insightSubtitle}>{child?.name || 'Zues'} performs best between 4-6 PM</Text>
+              <View style={styles.insightAction}>
+                <Icon name="chevron-forward" size={isSmallDevice ? 12 : 14} color="#9CA3AF" />
+                <Text style={styles.insightActionText}>Schedule activities accordingly</Text>
               </View>
             </View>
-            
-            <Text style={styles.activitySubtitle}>Daily nudges this week</Text>
-            
-            <View style={styles.chartContainer}>
-              <View style={styles.yAxisLabels}>
-                <Text style={styles.yAxisLabel}>8</Text>
-                <Text style={styles.yAxisLabel}>6</Text>
-                <Text style={styles.yAxisLabel}>4</Text>
-                <Text style={styles.yAxisLabel}>2</Text>
-                <Text style={styles.yAxisLabel}>0</Text>
-              </View>
-              
-              <View style={styles.chartWithGrid}>
-                <View style={styles.gridLines}>
-                  <View style={styles.gridLine} />
-                  <View style={styles.gridLine} />
-                  <View style={styles.gridLine} />
-                  <View style={styles.gridLine} />
-                  <View style={styles.gridLine} />
-                </View>
-                
-                <View style={styles.activityChart}>
-                  {currentData.activity.map((item, index) => (
-                    <TouchableOpacity 
-                      key={index} 
-                      style={styles.activityBarContainer}
-                      onPress={() => setSelectedBar(selectedBar === index ? null : index)}
-                      activeOpacity={0.7}
-                    >
-                      {selectedBar === index && (
-                        <View style={styles.tooltip}>
-                        <Text style={styles.tooltipDay}>{item.day}</Text>
-                        <View style={styles.tooltipRow}>
-                          <View style={[styles.tooltipDot, { backgroundColor: '#10B981' }]} />
-                          <Text style={styles.tooltipText}>{item.activities} activities</Text>
-                        </View>
-                        <View style={styles.tooltipRow}>
-                          <View style={[styles.tooltipDot, { backgroundColor: '#9CA3AF' }]} />
-                          <Text style={styles.tooltipText}>{item.hours}h spent</Text>
-                        </View>
-                      </View>
-                    )}
-                    <View style={styles.activityBarWrapper}>
-                      <View style={[styles.activityBar, { height: `${item.activityHeight}%`, backgroundColor: '#10B981' }]} />
-                      <View style={[styles.activityBar, { height: `${item.hoursHeight}%`, backgroundColor: '#D1D5DB', marginLeft: 2 }]} />
-                    </View>
-                    <Text style={styles.activityDay}>{item.day}</Text>
-                  </TouchableOpacity>
-                ))}
+          </View>
+
+          {/* Strong Progress - Green */}
+          <View style={[styles.insightCard, styles.insightCardGreen]}>
+            <View style={styles.insightIconContainer}>
+              <MaterialIcon name="trending-up" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
+            </View>
+            <View style={styles.insightContent}>
+              <Text style={styles.insightTitle}>Strong Progress in Math</Text>
+              <Text style={styles.insightSubtitle}>25% improvement this week!</Text>
+              <View style={styles.insightAction}>
+                <Icon name="chevron-forward" size={isSmallDevice ? 12 : 14} color="#10B981" />
+                <Text style={[styles.insightActionText, { color: '#10B981' }]}>Keep the momentum going</Text>
               </View>
             </View>
           </View>
           
-          <View style={styles.activityLegendBottom}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-              <Text style={styles.legendText}>Activities</Text>
+          {/* Needs Attention - Yellow/Brown */}
+          <View style={[styles.insightCard, styles.insightCardYellow]}>
+            <View style={styles.insightIconContainer}>
+              <Icon name="alert-circle-outline" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#D1D5DB' }]} />
-              <Text style={styles.legendText}>Hours</Text>
+            <View style={styles.insightContent}>
+              <Text style={styles.insightTitle}>Measurement Needs Attention</Text>
+              <Text style={styles.insightSubtitle}>3 attempts with 45% accuracy</Text>
+              <View style={styles.insightAction}>
+                <Icon name="chevron-forward" size={isSmallDevice ? 12 : 14} color="#D97706" />
+                <Text style={[styles.insightActionText, { color: '#D97706' }]}>Try interactive games</Text>
+              </View>
             </View>
           </View>
-          </View>
+         
+        </View>
         )}
 
         {/* Subject Breakdown - Weekly View Only */}
@@ -1001,46 +890,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
         </View>
         )}
 
-        {/* AI-Powered Insights - Weekly View Only */}
-        {selectedPeriod === 'weekly' && (
-          <View style={styles.aiInsightsCard}>
-          <View style={styles.aiInsightsHeader}>
-            <Icon name="sparkles" size={isSmallDevice ? 18 : 20} color="#FCD34D" />
-            <Text style={styles.aiInsightsTitle}>AI-Powered Insights</Text>
-          </View>
-          
-          {/* Peak Learning Time - Blue/Gray */}
-          <View style={[styles.insightCard, styles.insightCardBlue]}>
-            <View style={styles.insightIconContainer}>
-              <Icon name="bulb-outline" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
-            </View>
-            <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>Peak Learning Time</Text>
-              <Text style={styles.insightSubtitle}>{child?.name || 'Zues'} performs best between 4-6 PM</Text>
-              <View style={styles.insightAction}>
-                <Icon name="chevron-forward" size={isSmallDevice ? 12 : 14} color="#9CA3AF" />
-                <Text style={styles.insightActionText}>Schedule activities accordingly</Text>
-              </View>
-            </View>
-          </View>
-          
-          {/* Needs Attention - Yellow/Brown */}
-          <View style={[styles.insightCard, styles.insightCardYellow]}>
-            <View style={styles.insightIconContainer}>
-              <Icon name="alert-circle-outline" size={isSmallDevice ? 20 : 24} color="#FFFFFF" />
-            </View>
-            <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>Measurement Needs Attention</Text>
-              <Text style={styles.insightSubtitle}>3 attempts with 45% accuracy</Text>
-              <View style={styles.insightAction}>
-                <Icon name="chevron-forward" size={isSmallDevice ? 12 : 14} color="#D97706" />
-                <Text style={[styles.insightActionText, { color: '#D97706' }]}>Try interactive games</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        )}
-
+       
         {/* Topics Known - Weekly View Only */}
         {selectedPeriod === 'weekly' && (
           <View style={styles.topicsKnownCard}>
@@ -1395,58 +1245,70 @@ const styles = StyleSheet.create({
     borderRadius: isSmallDevice ? 10 : 12,
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   periodToggleButtonActive: {
-    backgroundColor: '#C4B5FD',
-    shadowColor: '#C4B5FD',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#6B5DD3',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   periodToggleText: {
     fontSize: isTablet ? 16 : isSmallDevice ? 13 : 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#000000',
     fontFamily: 'Montserrat-SemiBold',
   },
   periodToggleTextActive: {
-    color: '#FFFFFF',
+    color: '#6B5DD3',
     fontWeight: '700',
   },
 
   // Stats Grid
   statsGrid: {
     flexDirection: 'row',
-    marginHorizontal: isSmallDevice ? 8 : 12,
-    marginBottom: isSmallDevice ? 8 : 10,
-    gap: isSmallDevice ? 6 : 8,
+    marginHorizontal: isSmallDevice ? 12 : 16,
+    marginBottom: isSmallDevice ? 8 : 12,
+    gap: isSmallDevice ? 8 : 10,
   },
   statCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: isSmallDevice ? 10 : 12,
-    padding: isSmallDevice ? 12 : 14,
+    borderRadius: 18,
+    paddingVertical: isSmallDevice ? 16 : 20,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    minHeight: isSmallDevice ? 85 : 95,
+    minHeight: isSmallDevice ? 95 : 110,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   statIconContainer: {
     marginBottom: isSmallDevice ? 8 : 10,
   },
   statNumber: {
-    fontSize: isTablet ? 18 : isSmallDevice ? 15 : 17,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    fontSize: isTablet ? 20 : isSmallDevice ? 14 : 16,
+    fontWeight: '800',
+    color: '#111111',
     marginBottom: 4,
     fontFamily: 'Montserrat-Bold',
+    textAlign: 'center',
+    minWidth: 10,
   },
   statLabel: {
     fontSize: isTablet ? 10 : isSmallDevice ? 8 : 9,
-    fontWeight: '600',
-    color: '#9CA3AF',
+    fontWeight: '500',
+    color: '#999999',
     textAlign: 'center',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Regular',
   },
 
   // Growth Insight Card
@@ -1465,7 +1327,7 @@ const styles = StyleSheet.create({
     width: isSmallDevice ? 40 : 48,
     height: isSmallDevice ? 40 : 48,
     borderRadius: isSmallDevice ? 8 : 10,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#f7faf7ff',
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -1489,27 +1351,32 @@ const styles = StyleSheet.create({
 
   // Monthly Overview Card
   monthlyOverviewCard: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#5B5FE8',
     marginHorizontal: isSmallDevice ? 12 : 16,
     marginBottom: isSmallDevice ? 8 : 10,
-    padding: isSmallDevice ? 16 : 20,
-    borderRadius: isSmallDevice ? 14 : 16,
+    padding: isSmallDevice ? 20 : 24,
+    borderRadius: 22,
+    shadowColor: '#5B5FE8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 8,
   },
   monthlyOverviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: isSmallDevice ? 16 : 20,
+    alignItems: 'flex-start',
+    marginBottom: isSmallDevice ? 20 : 24,
   },
   monthlyOverviewLabel: {
-    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
-    fontWeight: '600',
-    color: '#E0E7FF',
-    marginBottom: 4,
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: isTablet ? 13 : 12,
+    fontWeight: '500',
+    color: '#C7D2FE',
+    marginBottom: 6,
+    fontFamily: 'Montserrat-Regular',
   },
   monthlyOverviewMonth: {
-    fontSize: isTablet ? 20 : isSmallDevice ? 17 : 18,
+    fontSize: isTablet ? 26 : isSmallDevice ? 22 : 24,
     fontWeight: '700',
     color: '#FFFFFF',
     fontFamily: 'Montserrat-Bold',
@@ -1521,33 +1388,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   monthlyStatItem: {
-    width: isSmallDevice ? '48%' : '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: isSmallDevice ? 10 : 12,
-    padding: isSmallDevice ? 10 : 12,
+    width: '47%',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 16,
+    paddingVertical: isSmallDevice ? 20 : 26,
+    paddingHorizontal: isSmallDevice ? 10 : 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthlyStatNumber: {
-    fontSize: isTablet ? 24 : isSmallDevice ? 20 : 22,
+    fontSize: isTablet ? 36 : isSmallDevice ? 28 : 34,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
     fontFamily: 'Montserrat-Bold',
+    textAlign: 'center',
   },
   monthlyStatLabel: {
-    fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
-    fontWeight: '600',
-    color: '#E0E7FF',
-    marginBottom: 4,
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 3,
+    fontFamily: 'Montserrat-Regular',
     textAlign: 'center',
   },
   monthlyStatChange: {
-    fontSize: isTablet ? 10 : isSmallDevice ? 8 : 9,
-    fontWeight: '600',
-    color: '#A5B4FC',
-    fontFamily: 'Montserrat-SemiBold',
+    fontSize: isTablet ? 10 : isSmallDevice ? 9 : 10,
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.45)',
+    fontFamily: 'Montserrat-Regular',
     textAlign: 'center',
   },
 
@@ -1685,16 +1554,23 @@ const styles = StyleSheet.create({
   streakHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: isSmallDevice ? 10 : 12,
+    justifyContent: 'space-between',
+    gap: isSmallDevice ? 4 : 6,
     marginBottom: isSmallDevice ? 14 : 16,
   },
+  streakLeftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 4 : 6,
+  },
   streakIconContainer: {
-    width: isSmallDevice ? 40 : 48,
-    height: isSmallDevice ? 40 : 48,
+    width: isSmallDevice ? 36 : 44,
+    height: isSmallDevice ? 36 : 44,
     borderRadius: isSmallDevice ? 10 : 12,
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#FFEDD5',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: isSmallDevice ? 2 : 4,
   },
   streakTitle: {
     fontSize: isTablet ? 16 : isSmallDevice ? 14 : 15,
@@ -1708,6 +1584,12 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontFamily: 'Montserrat-Regular',
   },
+  streakMonthYear: {
+    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Montserrat-SemiBold',
+  },
   streakCalendar: {
     gap: isSmallDevice ? 8 : 10,
   },
@@ -1718,11 +1600,11 @@ const styles = StyleSheet.create({
   },
   streakDayLabel: {
     fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#9CA3AF',
     width: '14.28%',
     textAlign: 'center',
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'Montserrat-Bold',
   },
   streakGrid: {
     flexDirection: 'row',
@@ -1738,7 +1620,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   streakDotActive: {
-    backgroundColor: '#C4B5FD',
+    backgroundColor: '#f1ca96ff',
   },
   streakDayNumber: {
     fontSize: isTablet ? 10 : isSmallDevice ? 8 : 9,
@@ -2006,7 +1888,7 @@ const styles = StyleSheet.create({
 
   // February Snapshot
   februarySnapshotCard: {
-    backgroundColor: '#34D399',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: isSmallDevice ? 12 : 16,
     marginBottom: isSmallDevice ? 8 : 10,
     padding: isSmallDevice ? 12 : 14,
@@ -2021,12 +1903,12 @@ const styles = StyleSheet.create({
   februarySnapshotTitle: {
     fontSize: isTablet ? 17 : isSmallDevice ? 14 : 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1A1A1A',
     fontFamily: 'Montserrat-Bold',
   },
   februarySnapshotSubtitle: {
     fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
-    color: '#ECFDF5',
+    color: '#6B7280',
     marginTop: 2,
     fontFamily: 'Montserrat-Regular',
   },
@@ -2036,27 +1918,27 @@ const styles = StyleSheet.create({
   },
   snapshotStatItem: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#F3F4F6',
     borderRadius: isSmallDevice ? 10 : 12,
     padding: isSmallDevice ? 8 : 10,
   },
   snapshotStatLabel: {
     fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1E40AF',
     marginBottom: isSmallDevice ? 3 : 4,
     fontFamily: 'Montserrat-Bold',
   },
   snapshotStatTitle: {
     fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
     fontWeight: '600',
-    color: '#ECFDF5',
+    color: '#1E40AF',
     marginBottom: isSmallDevice ? 2 : 3,
     fontFamily: 'Montserrat-SemiBold',
   },
   snapshotStatValue: {
     fontSize: isTablet ? 10 : isSmallDevice ? 8 : 9,
-    color: '#F0FDF4',
+    color: '#1E40AF',
     fontFamily: 'Montserrat-Regular',
   },
 
@@ -2126,7 +2008,7 @@ const styles = StyleSheet.create({
     width: isSmallDevice ? 36 : 40,
     height: isSmallDevice ? 36 : 40,
     borderRadius: isSmallDevice ? 8 : 10,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2134,8 +2016,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   growthTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: isTablet ? 16 : isSmallDevice ? 13 : 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: 'Montserrat-Bold',
     marginBottom: 4,
   },
   growthPercentage: {
@@ -2703,7 +2587,7 @@ const styles = StyleSheet.create({
 
   // Recent Achievements
   achievementsCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: isSmallDevice ? 12 : 16,
     marginBottom: isSmallDevice ? 8 : 10,
     padding: isSmallDevice ? 12 : 14,
@@ -2804,6 +2688,101 @@ const styles = StyleSheet.create({
 
   bottomSpacing: {
     height: isSmallDevice ? 20 : 30,
+  },
+
+  // AI-Powered Insights Section
+  aiInsightsSection: {
+    marginHorizontal: isSmallDevice ? 12 : 16,
+    marginVertical: isSmallDevice ? 16 : 20,
+    backgroundColor: '#1A2332',
+    borderRadius: isSmallDevice ? 16 : 20,
+    padding: isSmallDevice ? 16 : 20,
+  },
+
+  aiInsightsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 14 : 16,
+  },
+
+  aiInsightsTitle: {
+    fontSize: isTablet ? 20 : 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 10,
+    fontFamily: 'Montserrat-Bold',
+  },
+
+  aiInsightCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2D3E52',
+    borderRadius: isSmallDevice ? 12 : 14,
+    padding: isSmallDevice ? 14 : 16,
+    marginBottom: isSmallDevice ? 12 : 14,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A90E2',
+  },
+
+  aiInsightCardGreen: {
+    borderLeftColor: '#10B981',
+    backgroundColor: '#1F3A2F',
+  },
+
+  aiInsightCardOrange: {
+    borderLeftColor: '#F59E0B',
+    backgroundColor: '#3A2F1F',
+  },
+
+  aiInsightIconContainer: {
+    width: isSmallDevice ? 48 : 56,
+    height: isSmallDevice ? 48 : 56,
+    borderRadius: isSmallDevice ? 12 : 14,
+    backgroundColor: 'rgba(74, 144, 226, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: isSmallDevice ? 12 : 14,
+    flexShrink: 0,
+  },
+
+  aiInsightIconGreen: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  },
+
+  aiInsightIconOrange: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+  },
+
+  aiInsightContent: {
+    flex: 1,
+  },
+
+  aiInsightCardTitle: {
+    fontSize: isTablet ? 15 : 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    fontFamily: 'Montserrat-Bold',
+  },
+
+  aiInsightCardSubtitle: {
+    fontSize: isTablet ? 13 : 12,
+    color: '#B0B8C1',
+    marginBottom: 8,
+    fontFamily: 'Montserrat-Regular',
+  },
+
+  aiInsightAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  aiInsightActionText: {
+    fontSize: isTablet ? 12 : 11,
+    color: '#4A90E2',
+    fontWeight: '600',
+    fontFamily: 'Montserrat-SemiBold',
   },
 });
 

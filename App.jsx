@@ -13,7 +13,7 @@ import SubscriptionPlanScreen from './src/screens/SubscriptionPlanScreen';
 import MyChildrenScreen from './src/screens/MyChildrenScreen';
 import ProgressReportsScreen from './src/screens/ProgressReportsScreen';
 import LearningProgressScreen from './src/screens/LearningProgressScreen';
-import MilestonesScreen from './src/screens/MilestonesScreen';
+// import MilestonesScreen from './src/screens/MilestonesScreen';
 import AssessmentScreen from './src/screens/AssessmentScreen';
 import AssessmentHubScreen from './src/screens/AssessmentHubScreen';
 import SelectTopicsScreen from './src/screens/SelectTopicsScreen';
@@ -29,6 +29,7 @@ import FlashcardsScreen from './src/screens/FlashcardsScreen';
 import QACardsScreen from './src/screens/QACardsScreen';
 import PromptCardsScreen from './src/screens/PromptCardsScreen';
 import VocabCardsScreen from './src/screens/VocabCardsScreen';
+import RiddlesScreen from './src/screens/RiddlesScreen';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('splash');
@@ -68,7 +69,7 @@ const App = () => {
   };
 
   const handleSetupFinish = (data) => {
-    setUserData({ ...userData, ...data });
+    setUserData({ ...(userData || {}), ...data });
     setCurrentScreen('home');
   };
 
@@ -101,6 +102,9 @@ const App = () => {
       setCurrentScreen('settings');
     } else if (screen === 'helpSupport') {
       setCurrentScreen('helpSupport');
+    } else if (screen === 'riddles') {
+      setNavigationHistory([...navigationHistory, 'home']);
+      setCurrentScreen('riddles');
     } else if (screen === 'notifications') {
       setCurrentScreen('notifications');
     } else if (screen === 'logout') {
@@ -405,13 +409,14 @@ const App = () => {
       case 'home':
         return <HomeScreen userData={userData} onBack={handleHomeBack} onNavigate={handleHomeNavigate} />;
       case 'subjectsList':
-        return <SubjectsListScreen onNavigate={handleSubjectsListNavigate} onBack={handleSubjectsListBack} />;
+        return <SubjectsListScreen userData={userData} onNavigate={handleSubjectsListNavigate} onBack={handleSubjectsListBack} />;
       case 'topicDetail':
         return (
           <TopicDetailScreen 
             topicData={navigationParams.topicData}
             subjectName={navigationParams.subjectName}
             allNudges={navigationParams.allNudges}
+            userData={userData}
             onBack={handleTopicDetailBack}
             onNavigate={handleTopicDetailNavigate}
           />
@@ -530,9 +535,16 @@ const App = () => {
           />
         );
       case 'settings':
-        return <SettingsScreen onBack={handleSettingsBack} onNavigate={handleSettingsNavigate} />;
+        return <SettingsScreen 
+          userData={userData} 
+          onUpdateUserData={(updated) => setUserData({ ...userData, ...updated })}
+          onBack={handleSettingsBack} 
+          onNavigate={handleSettingsNavigate} 
+        />;
       case 'notifications':
         return <NotificationsScreen onBack={handleNotificationsBack} />;
+      case 'riddles':
+        return <RiddlesScreen onBack={() => { setNavigationHistory(navigationHistory.slice(0, -1)); setCurrentScreen('home'); }} />;
       case 'helpSupport':
         return <HelpSupportScreen onBack={handleHelpSupportBack} onNavigate={handleHelpSupportNavigate} />;
       default:

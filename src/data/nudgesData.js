@@ -1,1447 +1,1200 @@
 /**
- * Nudges Data - Organized by Subject → Chapter → Topics
- * Add new nudges here and they will automatically appear in the app
+ * Nudges Data — Grade 1 complete, all subjects, all levels
+ * Structure: id, subject, chapter, topic, grades, level, title, icon, iconColor, shortDescription, day
  */
 
-// ============================================
-// SUBJECT: Environmental Studies
-// ============================================
-
-// Chapter: Water Conservation
-const waterConservationNudges = [
+// ── MATH · Grade 1 · Basic ───────────────────────────────────────────────────
+const math_g1_basic = [
   {
-    id: 'env_water_001',
-    subject: 'Science / EVS',
-    chapter: 'Water Conservation',
-    topic: 'Rainwater Harvesting',
-    title: 'Nature Detective Walk',
-    icon: 'leaf',
-    iconColor: '#27AE60',
-    shortDescription: 'Learn about nature and water through fun outdoor walks!',
-    duration: '20 min',
-    ageGroup: 'Ages 6-10',
-    whatYouWillLearn: 'Your child will learn about colors in nature, how rainwater helps plants grow, and simple ways to save water at home.',
-    whatYouNeed: [
-      'Notebook and pencil',
-      'Colored crayons',
-      'Water bottle',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Colors in Nature',
-        activity: 'Go for a walk and count different colors you see. How many shades of green can you find?',
-        question: 'Ask: "What color do you see the most in nature?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Where Does Rain Go?',
-        activity: 'After rain, look for puddles. Watch where water flows. Point out drains and wet soil.',
-        question: 'Ask: "Where does the rainwater go after it falls?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Plants Need Water',
-        activity: 'Water a plant together. Talk about how plants drink water through their roots.',
-        question: 'Ask: "What happens if plants don\'t get water?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Saving Rainwater',
-        activity: 'Show how to collect rainwater in a bucket. Explain we can use it for plants.',
-        question: 'Ask: "How can we save water at home?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Nature Journal',
-        activity: 'Draw pictures of what you learned. Color the plants, rain, and water drops.',
-        question: 'Ask: "What was your favorite thing you learned?"',
-      },
-    ],
-    quickTips: [
-      'Make it fun - splash in puddles!',
-      'Let your child lead and explore',
-      'Take photos to remember',
-    ],
-  },
-  {
-    id: 'env_water_002',
-    subject: 'Science / EVS',
-    chapter: 'Water Conservation',
-    topic: 'Water Cycle',
-    title: 'Journey of a Water Drop',
-    icon: 'water',
-    iconColor: '#2196F3',
-    shortDescription: 'Follow a water drop\'s amazing journey from cloud to ocean!',
-    duration: '18 min',
-    ageGroup: 'Ages 6-10',
-    whatYouWillLearn: 'Your child will understand evaporation, condensation, precipitation, and how water travels in nature.',
-    whatYouNeed: [
-      'Glass of water',
-      'Ice cubes',
-      'Drawing paper',
-      'Blue crayons',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Water Everywhere',
-        activity: 'Look for water around your home - tap, plants, clouds. Talk about where water comes from.',
-        question: 'Ask: "Where does water live?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Sun Makes Water Fly',
-        activity: 'Put water in sun. Check after few hours. Explain sun makes water go up to sky (evaporation).',
-        question: 'Ask: "Where did the water go?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Clouds Are Water',
-        activity: 'Watch clouds. Explain clouds are tiny water drops floating. When heavy, they fall as rain.',
-        question: 'Ask: "What are clouds made of?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Rain Comes Down',
-        activity: 'If it rains, watch together. If not, use shower to show how rain falls from clouds.',
-        question: 'Ask: "Why does rain fall down?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Draw Water\'s Journey',
-        activity: 'Draw the water cycle: sun, water going up, clouds, rain falling, rivers, ocean.',
-        question: 'Ask: "Can you tell me the water drop\'s story?"',
-      },
-    ],
-    quickTips: [
-      'Use simple words like "water goes up" instead of evaporation',
-      'Make it a story about a water drop character',
-      'Do the ice cube experiment - watch it melt and evaporate',
-    ],
-  },
-  {
-    id: 'env_water_003',
-    subject: 'Science / EVS',
-    chapter: 'Water Conservation',
-    topic: 'Saving Water at Home',
-    title: 'Water Saving Heroes',
-    icon: 'water-pump',
-    iconColor: '#00BCD4',
-    shortDescription: 'Become a water-saving superhero! Learn simple ways to save water every day.',
-    duration: '15 min',
-    ageGroup: 'Ages 5-9',
-    whatYouWillLearn: 'Your child will learn practical ways to save water at home and understand why water conservation is important.',
-    whatYouNeed: [
-      'Bucket',
-      'Timer or clock',
-      'Stickers for tracking',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Turn Off the Tap',
-        activity: 'Practice turning off tap while brushing teeth. Count how much water we save!',
-        question: 'Ask: "How long should we brush our teeth?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Quick Showers',
-        activity: 'Time your shower. Try to make it shorter. Sing a 5-minute song!',
-        question: 'Ask: "Can we finish before the song ends?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Reuse Water',
-        activity: 'Collect water from washing vegetables. Use it to water plants.',
-        question: 'Ask: "What else can we do with used water?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Fix the Drips',
-        activity: 'Look for leaky taps. Put a bucket under drips. See how much water drips in an hour.',
-        question: 'Ask: "Why should we fix leaky taps?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Water Saving Chart',
-        activity: 'Make a chart. Put a sticker each time you save water. Celebrate your success!',
-        question: 'Ask: "How many times did you save water today?"',
-      },
-    ],
-    quickTips: [
-      'Make it a game with rewards',
-      'Lead by example',
-      'Celebrate small wins',
-    ],
-  },
-];
-
-// Chapter: Plants & Trees
-const plantsTreesNudges = [
-  {
-    id: 'env_plants_001',
-    subject: 'Science / EVS',
-    chapter: 'Plants & Trees',
-    topic: 'Parts of a Plant',
-    title: 'Plant Detective',
-    icon: 'flower',
-    iconColor: '#FF6B9D',
-    shortDescription: 'Discover the amazing parts of plants and what each part does!',
-    duration: '20 min',
-    ageGroup: 'Ages 5-9',
-    whatYouWillLearn: 'Your child will learn about roots, stem, leaves, flowers, and fruits - and what job each part does.',
-    whatYouNeed: [
-      'A small plant or flower',
-      'Magnifying glass (optional)',
-      'Drawing paper',
-      'Colored pencils',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Roots - The Anchor',
-        activity: 'Look at plant roots. Explain they hold the plant in soil and drink water.',
-        question: 'Ask: "What happens if a plant has no roots?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Stem - The Highway',
-        activity: 'Touch the stem. Explain it carries water from roots to leaves like a straw.',
-        question: 'Ask: "How does water go up to the leaves?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Leaves - The Food Makers',
-        activity: 'Collect different shaped leaves. Explain leaves make food using sunlight.',
-        question: 'Ask: "Why are leaves green?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Flowers - The Pretty Ones',
-        activity: 'Look at flowers. Explain they help make seeds and fruits. Smell them!',
-        question: 'Ask: "Why do flowers smell nice?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Draw Your Plant',
-        activity: 'Draw a plant with all its parts. Label: roots, stem, leaves, flower.',
-        question: 'Ask: "Which part is your favorite?"',
-      },
-    ],
-    quickTips: [
-      'Use real plants for hands-on learning',
-      'Go on a nature walk to find different plants',
-      'Make it colorful and fun',
-    ],
-  },
-  {
-    id: 'env_plants_002',
-    subject: 'Science / EVS',
-    chapter: 'Plants & Trees',
-    topic: 'Growing a Plant',
-    title: 'Little Gardener',
-    icon: 'sprout',
-    iconColor: '#8BC34A',
-    shortDescription: 'Grow your own plant from a seed and watch the magic happen!',
-    duration: '10 min daily',
-    ageGroup: 'Ages 4-8',
-    whatYouWillLearn: 'Your child will learn how seeds grow into plants and what plants need to stay healthy.',
-    whatYouNeed: [
-      'Seeds (beans work great)',
-      'Small pot or cup',
-      'Soil',
-      'Water',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Plant the Seed',
-        activity: 'Fill pot with soil. Plant seed. Water gently. Put in sunny spot.',
-        question: 'Ask: "What do you think will happen?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Water and Wait',
-        activity: 'Check the pot. Water if soil is dry. Be patient - seeds take time!',
-        question: 'Ask: "Do you see anything yet?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'First Sprout!',
-        activity: 'Look for tiny green sprout. Celebrate! Take a photo. Water gently.',
-        question: 'Ask: "What color is the baby plant?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Growing Bigger',
-        activity: 'Measure how tall your plant is. Draw it. Water and give it sunlight.',
-        question: 'Ask: "Is it taller than yesterday?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Plant Care',
-        activity: 'Talk about what plants need: water, sunlight, air, love! Make a care schedule.',
-        question: 'Ask: "What does your plant need to be happy?"',
-      },
-    ],
-    quickTips: [
-      'Bean seeds sprout quickly (3-5 days)',
-      'Keep soil moist but not too wet',
-      'Make it their special responsibility',
-    ],
-  },
-];
-
-// ============================================
-// SUBJECT: Mathematics
-// ============================================
-
-// Chapter: Money & Numbers
-const moneyAndNumbersNudges = [
-  {
-    id: 'math_money_001',
+    id: 'math_g1_b_001',
     subject: 'Math',
-    chapter: 'Money & Numbers',
-    topic: 'Counting Money',
-    title: 'Money Counting Game',
-    icon: 'cash-multiple',
-    iconColor: '#27AE60',
-    shortDescription: 'Let\'s count our coins together! Learn about money, saving, and making smart choices.',
-    duration: '15 min',
-    ageGroup: 'Ages 5-10',
-    whatYouWillLearn: 'Your child will learn to recognize coins, count money, understand saving, and know the difference between needs and wants.',
-    whatYouNeed: [
-      'Coins (₹1, ₹2, ₹5, ₹10)',
-      'Piggy bank or jar',
-      'Small toys or snacks to "buy"',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Know Your Coins',
-        activity: 'Show each coin. Let your child hold them. Talk about what each coin is worth.',
-        question: 'Ask: "Which coin is worth the most?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Counting Money',
-        activity: 'Count coins together. Start with same coins: five ₹1 coins = ₹5.',
-        question: 'Ask: "How many ₹2 coins make ₹10?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Play Shop',
-        activity: 'Set up a pretend shop. Price items (₹5, ₹10). Let your child "buy" things.',
-        question: 'Ask: "Do you have enough money to buy this?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Needs vs Wants',
-        activity: 'Talk about things we need (food, clothes) and things we want (toys, candy).',
-        question: 'Ask: "Is this something we need or want?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Start Saving',
-        activity: 'Put coins in piggy bank. Set a goal (buy a book, toy). Count savings together.',
-        question: 'Ask: "What do you want to save money for?"',
-      },
-    ],
-    quickTips: [
-      'Use real coins when possible',
-      'Make shopping fun and educational',
-      'Praise good money decisions',
-    ],
+    chapter: 'Numbers',
+    topic: 'Counting 1–20',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Count with Me',
+    icon: 'numeric',
+    iconColor: '#3B82F6',
+    shortDescription: 'Count objects up to 20 using everyday things at home.',
+    day: {
+      topic: 'Counting Objects',
+      activity: 'Pick any 10–20 small objects (coins, buttons, stones). Count them together out loud, touching each one.',
+      question: 'Ask: "Can you count backwards from 10?"',
+    },
   },
   {
-    id: 'math_money_002',
+    id: 'math_g1_b_003',
     subject: 'Math',
-    chapter: 'Money & Numbers',
-    topic: 'Simple Addition',
+    chapter: 'Addition',
+    topic: 'Adding Small Numbers',
+    grades: ['Grade 1'],
+    level: 'Basic',
     title: 'Adding Fun',
     icon: 'plus-circle',
-    iconColor: '#27AE60',
-    shortDescription: 'Make math fun! Learn to add numbers using toys, snacks, and games.',
-    duration: '15 min',
-    ageGroup: 'Ages 4-7',
-    whatYouWillLearn: 'Your child will understand addition as putting things together and practice adding small numbers.',
-    whatYouNeed: [
-      'Small toys or blocks',
-      'Snacks (grapes, crackers)',
-      'Paper and crayons',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Counting Together',
-        activity: 'Count toys together. "I have 2 cars, you have 3 cars. How many cars do we have together?"',
-        question: 'Ask: "Can you count all the toys?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Adding with Fingers',
-        activity: 'Use fingers to add. Show 2 fingers + 3 fingers = 5 fingers. Practice with different numbers.',
-        question: 'Ask: "How many fingers are we holding up?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Snack Math',
-        activity: 'Use snacks to add. "You have 3 grapes, I give you 2 more. How many now?"',
-        question: 'Ask: "Do you have more grapes now?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Drawing Addition',
-        activity: 'Draw 2 apples, then draw 3 more. Count all apples. Write: 2 + 3 = 5',
-        question: 'Ask: "Can you draw your own addition?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Addition Stories',
-        activity: 'Make up stories: "2 birds on tree, 1 more comes. How many birds?" Act it out!',
-        question: 'Ask: "Can you make up an addition story?"',
-      },
-    ],
-    quickTips: [
-      'Keep numbers small (under 10)',
-      'Use real objects they can touch',
-      'Make it playful, not like homework',
-    ],
+    iconColor: '#3B82F6',
+    shortDescription: 'Add numbers up to 10 using fingers and objects.',
+    day: {
+      topic: 'Adding with Objects',
+      activity: 'Put 3 grapes on one side, 4 on the other. Push them together and count the total.',
+      question: 'Ask: "What is 2 + 5?"',
+    },
   },
-];
-
-// Chapter: Shapes & Patterns
-const shapesPatternsNudges = [
   {
-    id: 'math_shapes_001',
+    id: 'math_g1_b_002',
     subject: 'Math',
     chapter: 'Shapes & Patterns',
-    topic: 'Basic Shapes',
-    title: 'Shape Hunt Adventure',
+    topic: 'The Shape Engineer',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Spatial Shapes',
     icon: 'shape',
-    iconColor: '#27AE60',
-    shortDescription: 'Go on a shape hunt! Find circles, squares, triangles, and rectangles all around you.',
-    duration: '20 min',
-    ageGroup: 'Ages 3-7',
-    whatYouWillLearn: 'Your child will learn to recognize and name basic shapes, and find them in everyday objects.',
-    whatYouNeed: [
-      'Paper and crayons',
-      'Shape stickers (optional)',
-      'Camera or phone',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Circle Hunt',
-        activity: 'Find circles around home: clock, plate, wheel. Draw circles. Count how many you found!',
-        question: 'Ask: "What shape is a ball?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Square Search',
-        activity: 'Look for squares: window, book, tile. Trace a square with your finger.',
-        question: 'Ask: "How many corners does a square have?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Triangle Time',
-        activity: 'Find triangles: pizza slice, roof, hanger. Make a triangle with your fingers.',
-        question: 'Ask: "Can you make a triangle shape?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Rectangle Race',
-        activity: 'Spot rectangles: door, phone, book. Compare with square - what\'s different?',
-        question: 'Ask: "Is a door a square or rectangle?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Shape Collage',
-        activity: 'Draw or cut out all 4 shapes. Make a picture using shapes (house, car, robot).',
-        question: 'Ask: "Which shape is your favorite?"',
-      },
-    ],
-    quickTips: [
-      'Take photos of shapes you find',
-      'Make it a game with points',
-      'Celebrate each discovery',
-    ],
+    iconColor: '#3B82F6',
+    shortDescription: 'Analyzing "attributes" like faces (flat sides), edges, and vertices (corners).',
+    day: {
+      topic: 'Shapes Around Us',
+      activity: 'Walk through one room. Find one circle, one square, one triangle, one rectangle. Point and name each.',
+      question: 'Ask: "How many corners does a triangle have?"',
+    },
+  },
+];
+
+// ── MATH · Grade 1 · Intermediate ───────────────────────────────────────────
+const math_g1_intermediate = [
+  {
+    id: 'math_g1_i_001',
+    subject: 'Math',
+    chapter: 'Numbers',
+    topic: 'Place Value — Tens & Ones',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Tens & Ones',
+    icon: 'numeric-10',
+    iconColor: '#6366F1',
+    shortDescription: 'Understand that 13 means 1 ten and 3 ones.',
+    day: {
+      topic: 'Grouping into Tens',
+      activity: 'Count out 15 coins. Group 10 together. Say: "1 ten and 5 ones = 15." Try with 12 and 18.',
+      question: 'Ask: "How many tens and ones are in 17?"',
+    },
   },
   {
-    id: 'math_shapes_002',
+    id: 'math_g1_i_002',
+    subject: 'Math',
+    chapter: 'Addition & Subtraction',
+    topic: 'Subtraction up to 20',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Take Away Game',
+    icon: 'minus-circle',
+    iconColor: '#6366F1',
+    shortDescription: 'Learn subtraction by taking objects away.',
+    day: {
+      topic: 'Taking Away',
+      activity: 'Start with 10 blocks. Remove 4. Count what is left. Write: 10 − 4 = 6. Try 3 more examples.',
+      question: 'Ask: "If you have 8 sweets and eat 3, how many are left?"',
+    },
+  },
+  {
+    id: 'math_g1_i_003',
+    subject: 'Math',
+    chapter: 'Measurement',
+    topic: 'Comparing Length',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Long or Short?',
+    icon: 'ruler',
+    iconColor: '#6366F1',
+    shortDescription: 'Compare objects using longer, shorter, taller.',
+    day: {
+      topic: 'Measuring with Hands',
+      activity: 'Pick 5 objects. Measure each using hand-spans. Order them from shortest to longest.',
+      question: 'Ask: "Which is longer — your foot or your hand?"',
+    },
+  },
+  {
+    id: 'math_g1_i_004',
     subject: 'Math',
     chapter: 'Shapes & Patterns',
-    topic: 'Patterns',
-    title: 'Pattern Detective',
+    topic: 'The Shape Engineer',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Spatial Shapes',
+    icon: 'cube-outline',
+    iconColor: '#6366F1',
+    shortDescription: 'Analyzing "attributes" like faces (flat sides), edges, and vertices (corners).',
+    day: {
+      topic: 'The Shape Engineer',
+      activity: 'Pick 3 objects at home. Describe each: how many flat faces? Does it roll or stack?',
+      question: 'Ask: "Why can a cylinder roll but a cube cannot?"',
+    },
+  },
+];
+
+// ── MATH · Grade 1 · Advanced ────────────────────────────────────────────────
+const math_g1_advanced = [
+  {
+    id: 'math_g1_a_001',
+    subject: 'Math',
+    chapter: 'Addition & Subtraction',
+    topic: 'Adding & Subtracting up to 50',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Number Challenge',
+    icon: 'calculator',
+    iconColor: '#EC4899',
+    shortDescription: 'Solve addition and subtraction problems up to 50.',
+    day: {
+      topic: 'Two-Digit Addition',
+      activity: 'Write: 23 + 14. Break it: 20+10=30, 3+4=7, so 30+7=37. Try 31+15 and 42+6.',
+      question: 'Ask: "What is 25 + 13?"',
+    },
+  },
+  {
+    id: 'math_g1_a_002',
+    subject: 'Math',
+    chapter: 'Patterns',
+    topic: 'Number Patterns',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Pattern Finder',
     icon: 'dots-horizontal',
-    iconColor: '#27AE60',
-    shortDescription: 'Discover patterns everywhere! Learn to spot, create, and continue patterns.',
-    duration: '15 min',
-    ageGroup: 'Ages 4-8',
-    whatYouWillLearn: 'Your child will learn to recognize patterns, predict what comes next, and create their own patterns.',
-    whatYouNeed: [
-      'Colored blocks or toys',
-      'Crayons or markers',
-      'Stickers',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'What is a Pattern?',
-        activity: 'Make simple pattern: red block, blue block, red block, blue block. "What comes next?"',
-        question: 'Ask: "Can you see the pattern?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Color Patterns',
-        activity: 'Draw pattern: red circle, yellow circle, red circle, yellow circle. Continue the pattern.',
-        question: 'Ask: "What color comes after red?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Shape Patterns',
-        activity: 'Make pattern with shapes: circle, square, circle, square. Let them continue it.',
-        question: 'Ask: "Which shape is next?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Sound Patterns',
-        activity: 'Clap a pattern: clap-clap-stomp, clap-clap-stomp. They repeat and continue it.',
-        question: 'Ask: "Can you make a sound pattern?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Create Your Pattern',
-        activity: 'Let them create their own pattern using toys, stickers, or drawings. You guess the pattern!',
-        question: 'Ask: "Can you teach me your pattern?"',
-      },
-    ],
-    quickTips: [
-      'Start with simple AB patterns',
-      'Use things they love (toys, snacks)',
-      'Let them be the teacher',
-    ],
+    iconColor: '#EC4899',
+    shortDescription: 'Find and continue number patterns like 2, 4, 6, 8...',
+    day: {
+      topic: 'Skip Counting',
+      activity: 'Count by 2s to 20: 2, 4, 6... Then count by 5s to 50: 5, 10, 15... Clap on each number.',
+      question: 'Ask: "What comes after 35 when counting by 5s?"',
+    },
+  },
+  {
+    id: 'math_g1_a_003',
+    subject: 'Math',
+    chapter: 'Money',
+    topic: 'Counting Money',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Money Master',
+    icon: 'cash-multiple',
+    iconColor: '#EC4899',
+    shortDescription: 'Count coins and make small purchases.',
+    day: {
+      topic: 'Making Amounts',
+      activity: 'Show ₹1, ₹2, ₹5 coins. Ask: "Show me ₹8 using these coins." Try ₹12 and ₹15.',
+      question: 'Ask: "How many ₹2 coins make ₹10?"',
+    },
+  },
+  {
+    id: 'math_g1_a_004',
+    subject: 'Math',
+    chapter: 'Shapes & Patterns',
+    topic: 'The Shape Engineer',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Spatial Shapes',
+    icon: 'cube-outline',
+    iconColor: '#EC4899',
+    shortDescription: 'Analyzing "attributes" like faces (flat sides), edges, and vertices (corners).',
+    day: {
+      topic: 'The Shape Engineer',
+      activity: 'Find a box at home. Count its faces, edges, and vertices. Then find a composite shape (like a house toy) and identify the simpler shapes inside it.',
+      question: 'Ask: "What two shapes make up this object?"',
+    },
   },
 ];
 
-// ============================================
-// SUBJECT: Science
-// ============================================
-
-// Chapter: Animal Kingdom
-const animalKingdomNudges = [
+// ── SCIENCE / EVS · Grade 1 · Basic ─────────────────────────────────────────
+const science_g1_basic = [
   {
-    id: 'sci_animal_001',
-    subject: 'Science',
-    chapter: 'Animal Kingdom',
-    topic: 'Amazing Animal Facts',
-    title: 'Amazing Animal Facts',
+    id: 'sci_g1_b_001',
+    subject: 'Science / EVS',
+    chapter: 'Plants',
+    topic: 'Parts of a Plant',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Plant Detective',
+    icon: 'flower',
+    iconColor: '#10B981',
+    shortDescription: 'Learn the 5 parts of a plant and what each one does.',
+    day: {
+      topic: 'Roots, Stem, Leaves',
+      activity: 'Find a plant at home. Point to roots, stem, leaves, flower. Say what each part does in one word.',
+      question: 'Ask: "What would happen if a plant had no leaves?"',
+    },
+  },
+  {
+    id: 'sci_g1_b_002',
+    subject: 'Science / EVS',
+    chapter: 'Animals',
+    topic: 'Animals Around Us',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Animal World',
     icon: 'paw',
-    iconColor: '#9B59B6',
-    shortDescription: 'Discover fascinating facts about animals! Did you know elephants can\'t jump? Let\'s learn more!',
-    duration: '12 min',
-    ageGroup: 'Ages 4-9',
-    whatYouWillLearn: 'Your child will learn interesting facts about different animals, where they live, what they eat, and their special abilities.',
-    whatYouNeed: [
-      'Picture books or tablet',
-      'Paper and crayons',
-      'Animal toys (optional)',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Elephants',
-        activity: 'Learn: Elephants can\'t jump! They use their trunk to drink water and pick up things.',
-        question: 'Ask: "Why do you think elephants have such big ears?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Butterflies',
-        activity: 'Learn: Butterflies taste with their feet! They have 4 wings, not 2.',
-        question: 'Ask: "How do butterflies fly?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Penguins',
-        activity: 'Learn: Penguins can\'t fly but they\'re great swimmers! They slide on their bellies.',
-        question: 'Ask: "Where do penguins live? Is it hot or cold?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Giraffes',
-        activity: 'Learn: Giraffes have the same number of neck bones as humans - just 7! But theirs are much longer.',
-        question: 'Ask: "Why do giraffes have long necks?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Your Favorite Animal',
-        activity: 'Choose your favorite animal. Draw it and write 2 facts you learned this week.',
-        question: 'Ask: "If you could be any animal, which would you be?"',
-      },
-    ],
-    quickTips: [
-      'Show pictures or videos',
-      'Visit a zoo if possible',
-      'Make animal sounds together!',
-    ],
+    iconColor: '#10B981',
+    shortDescription: 'Learn about common animals, what they eat and where they live.',
+    day: {
+      topic: 'Pet vs Wild Animals',
+      activity: 'Name 3 pet animals and 3 wild animals. Draw one of each. Talk about what they eat.',
+      question: 'Ask: "Where does a lion live? Where does a dog live?"',
+    },
   },
   {
-    id: 'sci_animal_002',
-    subject: 'Science',
-    chapter: 'Animal Kingdom',
-    topic: 'Animal Homes',
-    title: 'Where Animals Live',
-    icon: 'home-variant',
-    iconColor: '#795548',
-    shortDescription: 'Explore different animal homes! From nests to burrows, dens to hives.',
-    duration: '18 min',
-    ageGroup: 'Ages 4-8',
-    whatYouWillLearn: 'Your child will learn about different types of animal homes and why animals need shelter.',
-    whatYouNeed: [
-      'Picture books',
-      'Cardboard boxes',
-      'Drawing materials',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Birds and Nests',
-        activity: 'Look at bird nests. Explain birds build nests with twigs and leaves for their eggs.',
-        question: 'Ask: "Where do birds build their nests?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Bees and Hives',
-        activity: 'Learn about beehives. Bees make honeycomb homes. They work together as a team!',
-        question: 'Ask: "What do bees make in their hive?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Rabbits and Burrows',
-        activity: 'Rabbits dig holes underground called burrows. It keeps them safe and cool.',
-        question: 'Ask: "Why do rabbits live underground?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Bears and Dens',
-        activity: 'Bears sleep in dens during winter. Dens can be in caves or hollow trees.',
-        question: 'Ask: "What do bears do in their den in winter?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Build Animal Homes',
-        activity: 'Use boxes to build animal homes. Make a nest, burrow, or den. Play with toy animals!',
-        question: 'Ask: "Which animal home would you like to live in?"',
-      },
-    ],
-    quickTips: [
-      'Watch nature videos together',
-      'Build simple models with household items',
-      'Visit a nature center if possible',
-    ],
-  },
-];
-
-// Chapter: My Body
-const myBodyNudges = [
-  {
-    id: 'sci_body_001',
-    subject: 'Science',
+    id: 'sci_g1_b_003',
+    subject: 'Science / EVS',
     chapter: 'My Body',
     topic: 'Five Senses',
+    grades: ['Grade 1'],
+    level: 'Basic',
     title: 'Sense Explorer',
     icon: 'eye',
-    iconColor: '#00BCD4',
-    shortDescription: 'Discover your amazing five senses! See, hear, smell, taste, and touch the world.',
-    duration: '20 min',
-    ageGroup: 'Ages 3-7',
-    whatYouWillLearn: 'Your child will learn about the five senses and how we use them to explore the world.',
-    whatYouNeed: [
-      'Blindfold (scarf)',
-      'Different textured items',
-      'Safe foods to taste',
-      'Items that make sounds',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Sight - I Can See',
-        activity: 'Look around. Name colors, shapes, big and small things. Play "I Spy" game.',
-        question: 'Ask: "What can you see right now?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Hearing - I Can Hear',
-        activity: 'Close eyes. Listen to sounds: birds, cars, music. Make different sounds together.',
-        question: 'Ask: "What sounds do you hear?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Touch - I Can Feel',
-        activity: 'Touch different things: soft pillow, rough wall, smooth glass. Describe how they feel.',
-        question: 'Ask: "Is it soft or hard?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Smell - I Can Smell',
-        activity: 'Smell different things: flowers, food, soap. Talk about nice and not-nice smells.',
-        question: 'Ask: "What is your favorite smell?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Taste - I Can Taste',
-        activity: 'Taste safe foods: sweet (fruit), salty (chips), sour (lemon). Talk about different tastes.',
-        question: 'Ask: "Is it sweet or salty?"',
-      },
-    ],
-    quickTips: [
-      'Make it a sensory adventure',
-      'Use safe, familiar items',
-      'Let them lead the exploration',
-    ],
-  },
-  {
-    id: 'sci_body_002',
-    subject: 'Science',
-    chapter: 'My Body',
-    topic: 'Healthy Habits',
-    title: 'Healthy Me',
-    icon: 'heart-pulse',
-    iconColor: '#27AE60',
-    shortDescription: 'Learn healthy habits! Washing hands, brushing teeth, eating well, and staying active.',
-    duration: '15 min',
-    ageGroup: 'Ages 3-8',
-    whatYouWillLearn: 'Your child will learn important healthy habits and why they keep us strong and happy.',
-    whatYouNeed: [
-      'Soap and water',
-      'Toothbrush',
-      'Healthy snacks',
-      'Timer',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Washing Hands',
-        activity: 'Practice washing hands properly. Sing ABC song while washing. Make it fun with bubbles!',
-        question: 'Ask: "When should we wash our hands?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Brushing Teeth',
-        activity: 'Brush teeth together. Count to 20 for each section. Make silly faces in mirror!',
-        question: 'Ask: "How many times a day should we brush?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Eating Healthy',
-        activity: 'Talk about healthy foods: fruits, vegetables, milk. Make a colorful plate together.',
-        question: 'Ask: "Which fruits and vegetables do you like?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Moving and Playing',
-        activity: 'Do fun exercises: jump, run, dance! Play active games. Move your body for 10 minutes.',
-        question: 'Ask: "How does your body feel after playing?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Good Sleep',
-        activity: 'Talk about bedtime routine. Why sleep is important. Make a bedtime chart with pictures.',
-        question: 'Ask: "What helps you sleep well?"',
-      },
-    ],
-    quickTips: [
-      'Lead by example',
-      'Make healthy habits fun, not a chore',
-      'Celebrate good choices',
-    ],
-  },
-];
-
-
-
-
-// ============================================
-// SUBJECT: Values & Character
-// ============================================
-
-// Chapter: Kindness & Empathy
-const kindnessEmpathyNudges = [
-  {
-    id: 'val_kind_001',
-    subject: 'Social Studies',
-    chapter: 'Kindness & Empathy',
-    topic: 'Acts of Kindness',
-    title: 'Kindness Challenge',
-    icon: 'heart-multiple',
-    iconColor: '#27AE60',
-    shortDescription: 'Spread kindness and learn about helping others!',
-    duration: '15 min',
-    ageGroup: 'Ages 4-10',
-    whatYouWillLearn: 'Your child will understand kindness, empathy, and how small actions can make others happy.',
-    whatYouNeed: [
-      'Paper and markers',
-      'Stickers',
-      'Small treats or cards',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'What is Kindness?',
-        activity: 'Talk about kindness. Share examples: helping, sharing, saying nice words.',
-        question: 'Ask: "When did someone show you kindness?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Kind Words',
-        activity: 'Practice saying kind words: "Thank you", "Please", "You\'re awesome!" Make a list together.',
-        question: 'Ask: "How do kind words make you feel?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Help at Home',
-        activity: 'Do a kind act at home: help set the table, clean up toys, hug a family member.',
-        question: 'Ask: "How can we help each other?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Make Someone Smile',
-        activity: 'Draw a picture or make a card for someone. Give it to them and see their smile!',
-        question: 'Ask: "Who would you like to make happy today?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Kindness Jar',
-        activity: 'Create a kindness jar. Every time you do something kind, add a star sticker!',
-        question: 'Ask: "What kind thing did you do today?"',
-      },
-    ],
-    quickTips: [
-      'Model kindness yourself',
-      'Praise kind behavior',
-      'Make it a daily practice',
-    ],
-  },
-];
-
-// ============================================
-// SUBJECT: Arts & Creativity
-// ============================================
-
-// Chapter: Creative Expression
-const creativeExpressionNudges = [
-  {
-    id: 'art_create_001',
-    subject: 'English',
-    chapter: 'Creative Expression',
-    topic: 'Art & Craft',
-    title: 'Little Artist',
-    icon: 'brush',
-    iconColor: '#FFB84D',
-    shortDescription: 'Unleash creativity through fun art and craft activities!',
-    duration: '25 min',
-    ageGroup: 'Ages 3-8',
-    whatYouWillLearn: 'Your child will explore colors, textures, and express themselves through art.',
-    whatYouNeed: [
-      'Paper',
-      'Crayons, markers, paints',
-      'Glue and scissors',
-      'Recyclable materials',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Color Mixing',
-        activity: 'Mix colors together. Red + Yellow = Orange! Blue + Yellow = Green! Experiment and discover.',
-        question: 'Ask: "What new colors can you make?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Free Drawing',
-        activity: 'Draw anything you want! No rules. Use all the colors. Let imagination flow.',
-        question: 'Ask: "Tell me about your drawing!"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Texture Art',
-        activity: 'Create art with different textures: cotton balls, sandpaper, fabric, leaves.',
-        question: 'Ask: "How does it feel?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Recycled Craft',
-        activity: 'Make something from recyclables: robot from boxes, flowers from bottles, anything creative!',
-        question: 'Ask: "What can we make from this?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Art Gallery',
-        activity: 'Display all the art you made this week. Have a mini art show! Take photos.',
-        question: 'Ask: "Which is your favorite artwork?"',
-      },
-    ],
-    quickTips: [
-      'Focus on process, not perfection',
-      'Provide variety of materials',
-      'Display their artwork proudly',
-    ],
-  },
-];
-
-// ============================================
-// SUBJECT: Artificial Intelligence
-// ============================================
-
-// Chapter: AI Basics
-const aiBasicsNudges = [
-  {
-    id: 'ai_basics_001',
-    subject: 'Artificial Intelligence',
-    chapter: 'AI Basics',
-    topic: 'What is AI?',
-    title: 'AI All Around Us',
-    icon: 'robot',
-    iconColor: '#8B5CF6',
-    shortDescription: 'Discover AI in everyday life! From phones to games, AI is everywhere.',
-    duration: '15 min',
-    ageGroup: 'Ages 6-12',
-    whatYouWillLearn: 'Your child will learn what AI is, where it\'s used, and how it helps us.',
-    whatYouNeed: [
-      'Smartphone or tablet',
-      'Paper and crayons',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'What is AI?',
-        activity: 'Explain: AI is like a smart computer that learns and makes decisions, like a robot brain!',
-        question: 'Ask: "What do you think AI can do?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'AI in Your Phone',
-        activity: 'Show voice assistant (Siri, Google). It understands what you say! That\'s AI.',
-        question: 'Ask: "How does your phone understand you?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'AI in Games',
-        activity: 'Play a game with AI opponent. Explain the computer learns your moves!',
-        question: 'Ask: "Can the computer beat you?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'AI Helps Us',
-        activity: 'Talk about AI helping: doctors, teachers, cars. AI makes life easier!',
-        question: 'Ask: "How does AI help people?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Draw Your AI',
-        activity: 'Draw what you think AI looks like. Is it a robot? A brain? Anything you imagine!',
-        question: 'Ask: "What would your AI robot do?"',
-      },
-    ],
-    quickTips: [
-      'Use real examples they know',
-      'Make it fun and not scary',
-      'Encourage curiosity',
-    ],
-  },
-];
-
-// ============================================
-// SUBJECT: Financial Literacy
-// ============================================
-
-// Chapter: Money Basics
-const moneyBasicsNudges = [
-  {
-    id: 'fin_money_001',
-    subject: 'Financial Literacy',
-    chapter: 'Money Basics',
-    topic: 'Understanding Money',
-    title: 'Money Matters',
-    icon: 'cash-multiple',
     iconColor: '#10B981',
-    shortDescription: 'Learn about money, saving, and making smart choices!',
-    duration: '15 min',
-    ageGroup: 'Ages 6-12',
-    whatYouWillLearn: 'Your child will learn about earning, saving, spending wisely, and financial responsibility.',
-    whatYouNeed: [
-      'Coins and notes',
-      'Piggy bank',
-      'Paper for tracking',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'Where Money Comes From',
-        activity: 'Talk about how parents earn money through work. Money helps us buy things we need.',
-        question: 'Ask: "How do people get money?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Saving Money',
-        activity: 'Start a savings goal. Put coins in piggy bank. Track your savings!',
-        question: 'Ask: "What do you want to save for?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Spending Wisely',
-        activity: 'Talk about needs vs wants. Make a list of things you need and things you want.',
-        question: 'Ask: "Do we need this or just want it?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Earning Money',
-        activity: 'Discuss ways kids can earn money: chores, helping, selling things.',
-        question: 'Ask: "How can you earn money?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Money Goals',
-        activity: 'Set a money goal together. Make a plan to reach it. Celebrate when you do!',
-        question: 'Ask: "What\'s your money goal?"',
-      },
-    ],
-    quickTips: [
-      'Make it practical and real',
-      'Involve them in family finances',
-      'Praise good money decisions',
-    ],
+    shortDescription: 'Discover your 5 senses and how they help you every day.',
+    day: {
+      topic: 'Using Our Senses',
+      activity: 'Close eyes. Touch 5 objects. Describe each using only touch words: rough, smooth, hard, soft, cold.',
+      question: 'Ask: "Which sense do you use most?"',
+    },
   },
 ];
 
-// ============================================
-// SUBJECT: Sex & Safety
-// ============================================
-
-// Chapter: Body Safety
-const bodySafetyNudges = [
+// ── SCIENCE / EVS · Grade 1 · Intermediate ──────────────────────────────────
+const science_g1_intermediate = [
   {
-    id: 'safety_body_001',
-    subject: 'Sex & Safety',
-    chapter: 'Body Safety',
-    topic: 'My Body, My Rules',
-    title: 'Body Safety Basics',
-    icon: 'shield-heart-outline',
-    iconColor: '#EF4444',
-    shortDescription: 'Learn about body safety, privacy, and saying no!',
-    duration: '15 min',
-    ageGroup: 'Ages 5-12',
-    whatYouWillLearn: 'Your child will learn about body autonomy, privacy, safe and unsafe touches, and how to ask for help.',
-    whatYouNeed: [
-      'Picture books about bodies',
-      'Paper and crayons',
-    ],
-    dayByDay: [
-      {
-        day: 'Day 1',
-        topic: 'My Body is Mine',
-        activity: 'Teach: Your body belongs to you. No one should touch you without permission.',
-        question: 'Ask: "Who can give you a hug?"',
-      },
-      {
-        day: 'Day 2',
-        topic: 'Safe and Unsafe Touches',
-        activity: 'Explain safe touches (hugs, high-fives) and unsafe touches. It\'s okay to say NO!',
-        question: 'Ask: "What should you do if someone touches you in a way that makes you uncomfortable?"',
-      },
-      {
-        day: 'Day 3',
-        topic: 'Private Parts',
-        activity: 'Use correct names for body parts. Explain which parts are private and should be covered.',
-        question: 'Ask: "What are your private parts?"',
-      },
-      {
-        day: 'Day 4',
-        topic: 'Saying No',
-        activity: 'Practice saying NO firmly and clearly. Role-play scenarios. It\'s okay to say no!',
-        question: 'Ask: "Can you say no to someone?"',
-      },
-      {
-        day: 'Day 5',
-        topic: 'Asking for Help',
-        activity: 'Teach trusted adults to talk to: parents, teachers, counselors. It\'s never your fault.',
-        question: 'Ask: "Who can you talk to if you feel unsafe?"',
-      },
-    ],
-    quickTips: [
-      'Use age-appropriate language',
-      'Be calm and matter-of-fact',
-      'Reinforce that it\'s never their fault',
-    ],
+    id: 'sci_g1_i_001',
+    subject: 'Science / EVS',
+    chapter: 'Water',
+    topic: 'Water Around Us',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Water Explorer',
+    icon: 'water',
+    iconColor: '#0EA5E9',
+    shortDescription: 'Learn where water comes from and why we must save it.',
+    day: {
+      topic: 'Where Does Water Come From?',
+      activity: 'List 5 places you use water at home. Then list 3 ways to save water. Make a "Water Hero" pledge.',
+      question: 'Ask: "What would happen if taps ran dry for one day?"',
+    },
+  },
+  {
+    id: 'sci_g1_i_002',
+    subject: 'Science / EVS',
+    chapter: 'Weather',
+    topic: 'Types of Weather',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Weather Watcher',
+    icon: 'cloud',
+    iconColor: '#0EA5E9',
+    shortDescription: 'Observe and describe sunny, rainy, cloudy and windy weather.',
+    day: {
+      topic: 'Today\'s Weather',
+      activity: 'Look outside. Describe the weather in 3 words. Draw a weather symbol for today. Do this for 3 days.',
+      question: 'Ask: "What clothes do you wear on a rainy day? A sunny day?"',
+    },
+  },
+  {
+    id: 'sci_g1_i_003',
+    subject: 'Science / EVS',
+    chapter: 'Food',
+    topic: 'Healthy Eating',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Food Explorer',
+    icon: 'nutrition',
+    iconColor: '#0EA5E9',
+    shortDescription: 'Learn about food groups and why we need different foods.',
+    day: {
+      topic: 'My Plate',
+      activity: 'Draw a plate. Divide into 4 sections: grains, vegetables, fruits, protein. Draw one food in each.',
+      question: 'Ask: "Which food gives you energy to run and play?"',
+    },
   },
 ];
 
-// ============================================
-// COMBINE ALL NUDGES
-// ============================================
+// ── SCIENCE / EVS · Grade 1 · Advanced ──────────────────────────────────────
+const science_g1_advanced = [
+  {
+    id: 'sci_g1_a_001',
+    subject: 'Science / EVS',
+    chapter: 'Environment',
+    topic: 'Caring for the Environment',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Earth Guardian',
+    icon: 'earth',
+    iconColor: '#059669',
+    shortDescription: 'Understand pollution, recycling and how to protect our planet.',
+    day: {
+      topic: 'Reduce, Reuse, Recycle',
+      activity: 'Go through today\'s rubbish. Sort into: can recycle / cannot recycle. Count each pile. Discuss why recycling helps.',
+      question: 'Ask: "What happens to plastic that is not recycled?"',
+    },
+  },
+  {
+    id: 'sci_g1_a_002',
+    subject: 'Science / EVS',
+    chapter: 'Animals',
+    topic: 'Animal Adaptations',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Animal Superpowers',
+    icon: 'paw',
+    iconColor: '#059669',
+    shortDescription: 'Discover how animals are built to survive in their homes.',
+    day: {
+      topic: 'Special Features',
+      activity: 'Pick 3 animals: fish, camel, penguin. For each, name one special body feature and explain why it helps them survive.',
+      question: 'Ask: "Why does a camel have a hump?"',
+    },
+  },
+  {
+    id: 'sci_g1_a_003',
+    subject: 'Science / EVS',
+    chapter: 'Plants',
+    topic: 'How Plants Make Food',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Leaf Factory',
+    icon: 'leaf',
+    iconColor: '#059669',
+    shortDescription: 'Learn how leaves use sunlight, water and air to make food.',
+    day: {
+      topic: 'Photosynthesis Simply',
+      activity: 'Draw a leaf. Add arrows: sunlight → leaf, water → leaf, air → leaf, food out. Label each arrow.',
+      question: 'Ask: "What do plants give us in return for making food?"',
+    },
+  },
+];
 
+// ── ENGLISH · Grade 1 · Basic ────────────────────────────────────────────────
+const english_g1_basic = [
+  {
+    id: 'eng_g1_b_001',
+    subject: 'English',
+    chapter: 'Reading',
+    topic: 'Letter Sounds (Phonics)',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Sound Safari',
+    icon: 'volume-high',
+    iconColor: '#F59E0B',
+    shortDescription: 'Learn letter sounds and blend them into simple words.',
+    day: {
+      topic: 'Blending Sounds',
+      activity: 'Say sounds slowly: c-a-t. Blend faster: cat. Try: d-o-g, s-u-n, h-a-t. Clap once per sound.',
+      question: 'Ask: "What sound does the letter B make?"',
+    },
+  },
+  {
+    id: 'eng_g1_b_002',
+    subject: 'English',
+    chapter: 'Vocabulary',
+    topic: 'Sight Words',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Word Flash',
+    icon: 'book-open-variant',
+    iconColor: '#F59E0B',
+    shortDescription: 'Recognise common words like the, is, and, a, to on sight.',
+    day: {
+      topic: 'Reading Sight Words',
+      activity: 'Write on cards: the, is, a, and, to, I, you, we. Flash each card. Read aloud. Repeat 3 times.',
+      question: 'Ask: "Can you find the word \'the\' in this sentence?"',
+    },
+  },
+  {
+    id: 'eng_g1_b_003',
+    subject: 'English',
+    chapter: 'Writing',
+    topic: 'Writing Simple Sentences',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Sentence Builder',
+    icon: 'pencil',
+    iconColor: '#F59E0B',
+    shortDescription: 'Write short sentences using simple words.',
+    day: {
+      topic: 'My First Sentence',
+      activity: 'Look at a picture. Write one sentence about it. Start with a capital letter. End with a full stop.',
+      question: 'Ask: "What does every sentence start with?"',
+    },
+  },
+];
+
+// ── ENGLISH · Grade 1 · Intermediate ────────────────────────────────────────
+const english_g1_intermediate = [
+  {
+    id: 'eng_g1_i_001',
+    subject: 'English',
+    chapter: 'Reading',
+    topic: 'Reading Short Stories',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Story Time',
+    icon: 'book',
+    iconColor: '#D97706',
+    shortDescription: 'Read a short story and answer questions about it.',
+    day: {
+      topic: 'Who, What, Where',
+      activity: 'Read a short story together. Ask: Who is in it? What happened? Where did it happen? Write one answer each.',
+      question: 'Ask: "What was the problem in the story?"',
+    },
+  },
+  {
+    id: 'eng_g1_i_002',
+    subject: 'English',
+    chapter: 'Grammar',
+    topic: 'Nouns and Verbs',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Word Sorter',
+    icon: 'sort-alphabetical-ascending',
+    iconColor: '#D97706',
+    shortDescription: 'Learn the difference between naming words and action words.',
+    day: {
+      topic: 'Nouns vs Verbs',
+      activity: 'Write 10 words. Sort into two columns: Things (nouns) and Actions (verbs). Example: dog = noun, run = verb.',
+      question: 'Ask: "Is \'jump\' a noun or a verb?"',
+    },
+  },
+  {
+    id: 'eng_g1_i_003',
+    subject: 'English',
+    chapter: 'Writing',
+    topic: 'Describing Words',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Adjective Adventure',
+    icon: 'text',
+    iconColor: '#D97706',
+    shortDescription: 'Use adjectives to make sentences more interesting.',
+    day: {
+      topic: 'Adding Describing Words',
+      activity: 'Take a plain sentence: "The dog ran." Add 2 adjectives: "The big, fluffy dog ran." Try with 3 more sentences.',
+      question: 'Ask: "What colour, size or feeling word can you add?"',
+    },
+  },
+];
+
+// ── ENGLISH · Grade 1 · Advanced ────────────────────────────────────────────
+const english_g1_advanced = [
+  {
+    id: 'eng_g1_a_001',
+    subject: 'English',
+    chapter: 'Reading',
+    topic: 'Story Comprehension',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Deep Reader',
+    icon: 'book-open-page-variant',
+    iconColor: '#B45309',
+    shortDescription: 'Read a story and explain what happened in your own words.',
+    day: {
+      topic: 'Retelling a Story',
+      activity: 'Read a short story. Close the book. Retell it in 4 sentences: beginning, middle, problem, end.',
+      question: 'Ask: "Why did the character do that?"',
+    },
+  },
+  {
+    id: 'eng_g1_a_002',
+    subject: 'English',
+    chapter: 'Writing',
+    topic: 'Writing a Paragraph',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Paragraph Pro',
+    icon: 'file-document',
+    iconColor: '#B45309',
+    shortDescription: 'Write 3–4 connected sentences about one topic.',
+    day: {
+      topic: 'My Favourite Animal',
+      activity: 'Write 4 sentences about your favourite animal: what it is, what it looks like, what it eats, why you like it.',
+      question: 'Ask: "Do all your sentences talk about the same thing?"',
+    },
+  },
+  {
+    id: 'eng_g1_a_003',
+    subject: 'English',
+    chapter: 'Grammar',
+    topic: 'Punctuation',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Punctuation Police',
+    icon: 'exclamation',
+    iconColor: '#B45309',
+    shortDescription: 'Use full stops, question marks and capital letters correctly.',
+    day: {
+      topic: 'Fix the Sentences',
+      activity: 'Write 5 sentences with missing punctuation. Fix each one: add capital letters, full stops, question marks.',
+      question: 'Ask: "When do we use a question mark instead of a full stop?"',
+    },
+  },
+];
+
+// ── SOCIAL STUDIES · Grade 1 · Basic ────────────────────────────────────────
+const social_g1_basic = [
+  {
+    id: 'soc_g1_b_001',
+    subject: 'Social Studies',
+    chapter: 'Family & Community',
+    topic: 'My Family',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Family Tree',
+    icon: 'account-group',
+    iconColor: '#EC4899',
+    shortDescription: 'Learn about family members and the roles they play.',
+    day: {
+      topic: 'Who is in My Family?',
+      activity: 'Draw a family tree. Write each person\'s name and their relation: mother, father, sister, brother, grandparent.',
+      question: 'Ask: "What does each person in your family do to help?"',
+    },
+  },
+  {
+    id: 'soc_g1_b_002',
+    subject: 'Social Studies',
+    chapter: 'Community Helpers',
+    topic: 'People Who Help Us',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Community Heroes',
+    icon: 'account-hard-hat',
+    iconColor: '#EC4899',
+    shortDescription: 'Learn about doctors, teachers, police and other helpers.',
+    day: {
+      topic: 'Who Helps Us?',
+      activity: 'Name 5 community helpers. For each, say: what they do, what they wear, what tool they use.',
+      question: 'Ask: "Who would you call if there was a fire?"',
+    },
+  },
+  {
+    id: 'soc_g1_b_003',
+    subject: 'Social Studies',
+    chapter: 'Values',
+    topic: 'Kindness & Sharing',
+    grades: ['Grade 1'],
+    level: 'Basic',
+    title: 'Kindness Challenge',
+    icon: 'heart',
+    iconColor: '#EC4899',
+    shortDescription: 'Practise acts of kindness and understand why sharing matters.',
+    day: {
+      topic: 'One Kind Act',
+      activity: 'Do one kind act today: help set the table, share a toy, say thank you. Talk about how it felt.',
+      question: 'Ask: "How did the other person feel when you were kind?"',
+    },
+  },
+];
+
+// ── SOCIAL STUDIES · Grade 1 · Intermediate ─────────────────────────────────
+const social_g1_intermediate = [
+  {
+    id: 'soc_g1_i_001',
+    subject: 'Social Studies',
+    chapter: 'Our Country',
+    topic: 'India — Our Home',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'My Country',
+    icon: 'flag',
+    iconColor: '#8B5CF6',
+    shortDescription: 'Learn about India — its flag, capital, and national symbols.',
+    day: {
+      topic: 'National Symbols',
+      activity: 'Draw the Indian flag. Name: national animal (tiger), national bird (peacock), national flower (lotus). Write one fact about each.',
+      question: 'Ask: "What is the capital of India?"',
+    },
+  },
+  {
+    id: 'soc_g1_i_002',
+    subject: 'Social Studies',
+    chapter: 'Emotions',
+    topic: 'Understanding Feelings',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Feelings Explorer',
+    icon: 'emoticon',
+    iconColor: '#8B5CF6',
+    shortDescription: 'Name and understand different emotions and how to handle them.',
+    day: {
+      topic: 'Emotion Faces',
+      activity: 'Draw 6 faces: happy, sad, angry, scared, surprised, proud. Under each, write one thing that makes you feel that way.',
+      question: 'Ask: "What do you do when you feel angry?"',
+    },
+  },
+  {
+    id: 'soc_g1_i_003',
+    subject: 'Social Studies',
+    chapter: 'Safety',
+    topic: 'Staying Safe',
+    grades: ['Grade 1'],
+    level: 'Intermediate',
+    title: 'Safety First',
+    icon: 'shield-check',
+    iconColor: '#8B5CF6',
+    shortDescription: 'Learn road safety, stranger safety and home safety rules.',
+    day: {
+      topic: 'Road Safety Rules',
+      activity: 'Name 5 road safety rules. Act out crossing the road: stop, look left, look right, look left again, cross.',
+      question: 'Ask: "What does a red traffic light mean?"',
+    },
+  },
+];
+
+// ── SOCIAL STUDIES · Grade 1 · Advanced ─────────────────────────────────────
+const social_g1_advanced = [
+  {
+    id: 'soc_g1_a_001',
+    subject: 'Social Studies',
+    chapter: 'History',
+    topic: 'Famous Indians',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Great Indians',
+    icon: 'star',
+    iconColor: '#7C3AED',
+    shortDescription: 'Learn about inspiring Indians who changed the world.',
+    day: {
+      topic: 'Mahatma Gandhi',
+      activity: 'Read or tell the story of Gandhi. Write 3 things he did. Draw him. Discuss: "What can we learn from him?"',
+      question: 'Ask: "Why is Gandhi called the Father of the Nation?"',
+    },
+  },
+  {
+    id: 'soc_g1_a_002',
+    subject: 'Social Studies',
+    chapter: 'Geography',
+    topic: 'Maps & Directions',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Map Maker',
+    icon: 'map',
+    iconColor: '#7C3AED',
+    shortDescription: 'Draw a simple map of your home or school with directions.',
+    day: {
+      topic: 'Drawing a Map',
+      activity: 'Draw a map of your home. Mark: front door, kitchen, bedroom, bathroom. Add a compass: N, S, E, W.',
+      question: 'Ask: "Which direction does the sun rise from?"',
+    },
+  },
+  {
+    id: 'soc_g1_a_003',
+    subject: 'Social Studies',
+    chapter: 'Culture',
+    topic: 'Festivals of India',
+    grades: ['Grade 1'],
+    level: 'Advanced',
+    title: 'Festival Fun',
+    icon: 'party-popper',
+    iconColor: '#7C3AED',
+    shortDescription: 'Explore India\'s major festivals and what makes each special.',
+    day: {
+      topic: 'Three Festivals',
+      activity: 'Pick 3 festivals: Diwali, Eid, Christmas. For each write: when it is, how it is celebrated, one special food.',
+      question: 'Ask: "Why is it important to celebrate different festivals?"',
+    },
+  },
+];
+
+// ── ALL NUDGES ───────────────────────────────────────────────────────────────
 const allNudges = [
-  ...waterConservationNudges.slice(0, 1), // First Science / EVS nudge
-  ...moneyAndNumbersNudges.slice(0, 1),   // First Math nudge
-  ...waterConservationNudges.slice(1),    // Remaining Water Conservation nudges
-  ...plantsTreesNudges,                   // Plants & Trees nudges
-  ...moneyAndNumbersNudges.slice(1),      // Remaining Money & Numbers nudges
-  ...shapesPatternsNudges,                // Shapes & Patterns nudges
-  ...kindnessEmpathyNudges,               // Social Studies nudges
-  ...creativeExpressionNudges,            // English nudges
-  ...aiBasicsNudges,                      // Artificial Intelligence nudges
+  ...math_g1_basic,
+  ...math_g1_intermediate,
+  ...math_g1_advanced,
+  ...science_g1_basic,
+  ...science_g1_intermediate,
+  ...science_g1_advanced,
+  ...english_g1_basic,
+  ...english_g1_intermediate,
+  ...english_g1_advanced,
+  ...social_g1_basic,
+  ...social_g1_intermediate,
+  ...social_g1_advanced,
 ];
 
 export default allNudges;
 
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
+// ── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
 
-// Get a nudge by ID
-export const getNudgeById = (id) => {
-  return allNudges.find(nudge => nudge.id === id);
-};
+export const getNudgeById = (id) => allNudges.find(n => n.id === id);
+export const getAllNudges = () => allNudges;
+export const getNudgesBySubject = (subject) => allNudges.filter(n => n.subject === subject);
+export const getNudgesByChapter = (subject, chapter) =>
+  allNudges.filter(n => n.subject === subject && n.chapter === chapter);
 
-// Get all nudges
-export const getAllNudges = () => {
-  return allNudges;
-};
-
-// Get nudges by subject
-export const getNudgesBySubject = (subject) => {
-  return allNudges.filter(nudge => nudge.subject === subject);
-};
-
-// Get nudges by chapter
-export const getNudgesByChapter = (subject, chapter) => {
-  return allNudges.filter(nudge => nudge.subject === subject && nudge.chapter === chapter);
-};
-
-// Get all unique subjects
 export const getAllSubjects = () => {
-  const subjects = [...new Set(allNudges.map(nudge => nudge.subject))];
-  return subjects.map(subject => {
-    const topicCount = [...new Set(
-      allNudges
-        .filter(nudge => nudge.subject === subject)
-        .map(nudge => nudge.topic)
-    )].length;
-    return {
-      name: subject,
-      chapters: getChaptersBySubject(subject),
-      topicCount: topicCount,
-    };
-  });
+  const subjects = [...new Set(allNudges.map(n => n.subject))];
+  return subjects.map(subject => ({
+    name: subject,
+    chapters: getChaptersBySubject(subject),
+    topicCount: [...new Set(allNudges.filter(n => n.subject === subject).map(n => n.topic))].length,
+  }));
 };
 
-// Get chapters by subject
 export const getChaptersBySubject = (subject) => {
-  const chapters = [...new Set(
-    allNudges
-      .filter(nudge => nudge.subject === subject)
-      .map(nudge => nudge.chapter)
-  )];
+  const chapters = [...new Set(allNudges.filter(n => n.subject === subject).map(n => n.chapter))];
   return chapters.map(chapter => ({
     name: chapter,
     topics: getTopicsByChapter(subject, chapter),
   }));
 };
 
-// Get topics by chapter
-export const getTopicsByChapter = (subject, chapter) => {
-  return allNudges.filter(nudge => nudge.subject === subject && nudge.chapter === chapter);
+export const getTopicsByChapter = (subject, chapter) =>
+  allNudges.filter(n => n.subject === subject && n.chapter === chapter);
+
+// ── GRADE + LEVEL FILTER ─────────────────────────────────────────────────────
+const SUBJECT_ID_TO_NAME = {
+  mathematics: ['Math'],
+  science: ['Science / EVS', 'Science'],
+  english: ['English'],
+  'social-studies': ['Social Studies'],
 };
 
-// ============================================
-// FLASHCARDS DATA
-// ============================================
+export const getNudgesByGradeAndLevel = (grade, subjectLevels = {}) => {
+  if (!grade) return allNudges;
+  return allNudges.filter(nudge => {
+    if (nudge.grades && !nudge.grades.includes(grade)) return false;
+    const matchedSubjectId = Object.entries(SUBJECT_ID_TO_NAME).find(
+      ([, names]) => names.includes(nudge.subject)
+    )?.[0];
+    if (matchedSubjectId) {
+      const chosenLevel = subjectLevels[matchedSubjectId];
+      if (chosenLevel && nudge.level && nudge.level !== chosenLevel) return false;
+    }
+    return true;
+  });
+};
 
+// ── FLASHCARDS DATA ──────────────────────────────────────────────────────────
 export const flashcardsData = {
-  'env_water_001': [
-    { id: 'fc1', question: 'What is rainwater harvesting?', answer: 'Collecting and storing rainwater for later use, like watering plants or cleaning.' },
-    { id: 'fc2', question: 'Why should we save rainwater?', answer: 'Because water is precious and rainwater can be used for many things instead of wasting it.' },
-    { id: 'fc3', question: 'Where does rainwater go after it falls?', answer: 'It goes into the ground, rivers, lakes, or drains. Some evaporates back into the sky.' },
-    { id: 'fc4', question: 'How can we collect rainwater at home?', answer: 'We can use buckets, barrels, or special tanks to collect rain from roofs.' },
-    { id: 'fc5', question: 'What can we use collected rainwater for?', answer: 'Watering plants, washing cars, cleaning floors, and flushing toilets.' },
+  'math_g1_b_001': [
+    { id: 'fc1', title: 'Counting Objects', concept: 'Touch each object as you count. Never skip one or count one twice.', parentOutcome: 'Line up 15 coins. Count together touching each one.' },
+    { id: 'fc2', title: 'Numbers Have Order', concept: '1, 2, 3... each number is exactly one more than the one before.', parentOutcome: 'Ask: "What number comes after 9? After 14?"' },
+    { id: 'fc3', title: 'Counting Backwards', concept: 'Counting down from 10 to 1 is just as important as counting up.', parentOutcome: 'Countdown together like a rocket launch: 10, 9, 8... blast off!' },
   ],
-  'env_water_002': [
-    { id: 'fc1', question: 'What is the water cycle?', answer: 'The journey water takes as it moves from the earth to the sky and back again.' },
-    { id: 'fc2', question: 'What is evaporation?', answer: 'When the sun heats water and turns it into vapor that rises into the sky.' },
-    { id: 'fc3', question: 'What are clouds made of?', answer: 'Tiny drops of water that have evaporated and gathered together in the sky.' },
-    { id: 'fc4', question: 'What is precipitation?', answer: 'When water falls from clouds as rain, snow, or hail.' },
-    { id: 'fc5', question: 'Why is the water cycle important?', answer: 'It gives us fresh water to drink and helps plants grow.' },
+  'math_g1_b_002': [
+    {
+      id: 'fc1',
+      title: 'Your Conversation Starter-',
+      concept: '"Look at this orange. Is it a circle or a sphere?" (Answer: It\'s a sphere because it\'s round like a ball and has thickness, not flat like a drawing on paper.) "What other spheres can you see in this room?" (Answer: Marbles, balls, or round light bulbs.)"',
+      section2Title: 'Helpful Way to Explain',
+      section2: 'Think of 2D shapes like a sticker on a page—they are flat and have no "body." 3D shapes are like toys—they have "fatness" or depth, and you can hold them in your hand. We call these "Spatial Shapes" because they take up real space around us. Ask: "Can we put this object in a box?" (If yes, it\'s 3D). Ask: "If we turn it around, does it have a back and a front?" This helps them understand that 3D shapes exist in all directions, unlike a flat drawing.',
+    },
+    {
+      id: 'fc2',
+      title: 'Concept',
+      concept: 'Sphere: Perfectly round, no corners, and no flat sides. It is the best shape for rolling in every direction. Think of a marble, a planet, or a soap bubble!\n\nCube: Like a box with 6 flat square sides that are all the exact same size. Every side looks the same no matter how you turn it. Think of a dice or a sugar cube.',
+    },
+    {
+      id: 'fc3',
+      title: 'Concept',
+      concept: 'Cylinder: It has a round, curved middle but two flat circles on the ends. It looks like a soda can, a glue stick, or a rolling pin. It can roll like a log or stand still like a tower.\n\nCone: It has one flat circle on the bottom that goes up to a sharp point at the top. It looks exactly like a party hat or an ice cream holder. It is unique because it is both round and pointy.',
+    },
+    {
+      id: 'fc4',
+      title: 'Concept',
+      concept: 'Rectangular Prism: A long, solid box shape. It has 6 faces, but unlike a cube, its sides can be long rectangles. Think of a cereal box, a brick, or a book.',
+    },
+    {
+      id: 'fc5',
+      title: 'Why This Matters?',
+      concept: 'Recognising 3D shapes is the first step in "visual literacy," helping kids move from seeing objects as simple items to seeing them as geometric structures. This builds the foundation for spatial reasoning needed in science and art.',
+    },
+    {
+      id: 'fc6',
+      title: 'Real-Life Connection',
+      concept: 'A basketball is a perfect example of a sphere because it is a solid ball that rolls. A drawing of a ball on a piece of paper is just a circle because it has no depth. When you eat a sandwich, the bread is a rectangular prism, but the crust outline is a rectangle.',
+    },
+    {
+      id: 'fc7',
+      title: 'Common Misconception',
+      concept: 'Children often call a sphere a "circle." Remind them: "A circle is pancake-flat; a sphere is ball-round!" Use the word "solid" to help them understand the difference between a drawing and a real object.',
+    },
   ],
-  'math_money_001': [
-    { id: 'fc1', question: 'How many ₹1 coins make ₹5?', answer: 'Five ₹1 coins make ₹5. (1+1+1+1+1 = 5)' },
-    { id: 'fc2', question: 'If you have ₹5 and spend ₹2, how much is left?', answer: '₹3 is left. (5 - 2 = 3)' },
-    { id: 'fc3', question: 'How many ₹2 coins make ₹10?', answer: 'Five ₹2 coins make ₹10. (2+2+2+2+2 = 10)' },
-    { id: 'fc4', question: 'If a pencil costs ₹3 and an eraser costs ₹2, how much for both?', answer: '₹5 for both. (3 + 2 = 5)' },
-    { id: 'fc5', question: 'You have three ₹5 coins. How much money do you have?', answer: '₹15 in total. (5+5+5 = 15)' },
-    { id: 'fc6', question: 'If you save ₹2 every day for 5 days, how much will you save?', answer: '₹10 in total. (2+2+2+2+2 = 10)' },
+  'math_g1_b_003': [
+    { id: 'fc1', title: 'What is Addition?', concept: 'Addition means putting two groups together to find the total.', parentOutcome: 'Put 2 apples and 3 apples together. Count all: that is addition.' },
+    { id: 'fc2', title: 'The + Sign', concept: 'The plus sign (+) means "add" or "put together."', parentOutcome: 'Write 2 + 3 = ? together. Say: "2 plus 3 equals 5."' },
+    { id: 'fc3', title: 'Adding to Zero', concept: 'Any number plus zero stays the same. 5 + 0 = 5.', parentOutcome: 'Ask: "If you have 7 sweets and I give you 0 more, how many do you have?"' },
   ],
-  'sci_animal_001': [
-    { id: 'fc1', question: 'Can elephants jump?', answer: 'No, elephants are the only mammals that cannot jump!' },
-    { id: 'fc2', question: 'How do butterflies taste food?', answer: 'Butterflies taste with their feet!' },
-    { id: 'fc3', question: 'Can penguins fly?', answer: 'No, penguins cannot fly, but they are excellent swimmers.' },
-    { id: 'fc4', question: 'How many neck bones do giraffes have?', answer: 'Giraffes have 7 neck bones, just like humans, but theirs are much longer.' },
-    { id: 'fc5', question: 'What do elephants use their trunk for?', answer: 'To drink water, pick up food, spray water, and greet other elephants.' },
+  'math_g1_i_001': [
+    { id: 'fc1', title: 'What is Place Value?', concept: 'The position of a digit tells us its value. In 13, the 1 means 10, not 1.', parentOutcome: 'Show 13 coins: group 10 together, leave 3 aside. "1 ten and 3 ones."' },
+    { id: 'fc2', title: 'Tens Column', concept: 'The tens column is the second digit from the right. In 25, the 2 means 2 tens = 20.', parentOutcome: 'Write 25. Circle the tens digit. Ask: "What is its value?"' },
+    { id: 'fc3', title: 'Ones Column', concept: 'The ones column is the rightmost digit. In 25, the 5 means 5 ones.', parentOutcome: 'Write 18. Ask: "How many tens? How many ones?"' },
+  ],
+  'math_g1_i_002': [
+    { id: 'fc1', title: 'What is Subtraction?', concept: 'Subtraction means taking away from a group to find what is left.', parentOutcome: 'Start with 8 grapes. Eat 3. Count what is left: 8 − 3 = 5.' },
+    { id: 'fc2', title: 'The − Sign', concept: 'The minus sign (−) means "take away" or "subtract."', parentOutcome: 'Write 10 − 4 = ? Say: "10 minus 4 equals 6."' },
+    { id: 'fc3', title: 'Subtraction and Addition are Linked', concept: 'If 3 + 5 = 8, then 8 − 5 = 3. They are opposites.', parentOutcome: 'Write a sum: 6 + 4 = 10. Now flip it: 10 − 4 = 6.' },
+  ],
+  'math_g1_i_003': [
+    { id: 'fc1', title: 'Measuring Length', concept: 'Length tells us how long or tall something is.', parentOutcome: 'Measure your child\'s hand with a ruler. Write the number in cm.' },
+    { id: 'fc2', title: 'Longer and Shorter', concept: 'We compare lengths using: longer, shorter, taller, smaller.', parentOutcome: 'Compare a pencil and a pen. Which is longer? By how much?' },
+    { id: 'fc3', title: 'Non-Standard Units', concept: 'Before rulers, people measured with hands, feet, and sticks.', parentOutcome: 'Measure the table in hand-spans. Then in pencil-lengths. Are the numbers different?' },
+  ],
+  'math_g1_i_004': [
+    {
+      id: 'fc1',
+      title: 'Your Conversation Starter',
+      concept: 'Why are car wheels cylinders instead of cubes? Cylinders have curved sides so they roll smoothly. Cubes have flat faces and corners that would make them get stuck.',
+      section2Title: 'Helpful Way to Explain',
+      section2: 'Ask: "Does it have a flat face?" → "Can it slide?" Ask: "Does it have a curved side?" → "Can it roll?" This helps them link physical features of a shape to how it moves. We use special "math words" to describe 3D shapes. Faces are the flat surfaces you can touch. Edges are the straight lines where two faces meet. Vertices are the pointy corners where the edges come together.',
+    },
+    { id: 'fc2', title: 'Concept: Faces & Vertices', concept: 'Faces are the flat, smooth "walls" of the shape. A cube has 6 faces, but a sphere has zero flat faces. You can count faces by putting a small sticker on each one as you touch it. Vertices are the "corners" where three or more edges meet. A cube has 8 vertices, while a cone has only 1 vertex at the very top. Spheres have zero vertices because they have no corners.' },
+    { id: 'fc3', title: 'Concept: Rolling Shapes', concept: 'Shapes with curved surfaces (spheres, cylinders, cones) can roll. Spheres roll in any direction, while cylinders only roll in one direction. This is why we use cylinders for rolling pins.' },
+    { id: 'fc4', title: 'Concept: Stacking', concept: 'To stack, a shape needs a flat top and a flat bottom to balance. Cubes and rectangular prisms are the best for stacking. You cannot stack spheres because they have no flat place to rest.' },
+    { id: 'fc5', title: 'Why This Matters', concept: 'At this level, kids start "analytical thinking." They stop looking at the whole object and start identifying its parts. Learning how edges and corners work helps them understand how things are built and how they move.' },
+    { id: 'fc6', title: 'Real-Life Connection', concept: 'A brick is a rectangular prism. It has flat faces so it stays still when you build a wall. A wheel is a cylinder so it can move. A funnel is a cone because its shape helps pour liquid into a small hole.' },
+    { id: 'fc7', title: 'Common Misconception', concept: 'Thinking a cylinder can only roll. Show them that if you stand a cylinder on its flat end, it can slide just like a block. It is a "multi-talented" shape that can do both.' },
+  ],
+  'math_g1_a_001': [
+    { id: 'fc1', title: 'Two-Digit Numbers', concept: 'Numbers from 10 to 99 are two-digit numbers. They have a tens and ones place.', parentOutcome: 'Write 34. Ask: "How many tens? How many ones? What is 34 + 10?"' },
+    { id: 'fc2', title: 'Adding Tens', concept: 'To add tens, just add the tens digits. 30 + 20 = 50 (3 tens + 2 tens = 5 tens).', parentOutcome: 'Try: 40 + 30, 20 + 50, 10 + 60. Use coins grouped in 10s.' },
+    { id: 'fc3', title: 'Adding Ones Then Tens', concept: 'For 23 + 14: add ones first (3+4=7), then tens (20+10=30), total = 37.', parentOutcome: 'Work through 31 + 15 step by step on paper together.' },
+  ],
+  'math_g1_a_002': [
+    { id: 'fc1', title: 'Skip Counting by 2', concept: 'Count every second number: 2, 4, 6, 8, 10... These are all even numbers.', parentOutcome: 'Clap and count by 2s to 20. Then write them down.' },
+    { id: 'fc2', title: 'Skip Counting by 5', concept: 'Count in fives: 5, 10, 15, 20... The pattern always ends in 0 or 5.', parentOutcome: 'Count fingers in groups of 5. Two hands = 10. Four hands = 20.' },
+    { id: 'fc3', title: 'Even and Odd', concept: 'Even numbers end in 0, 2, 4, 6, 8. Odd numbers end in 1, 3, 5, 7, 9.', parentOutcome: 'Write numbers 1–20. Circle even in blue, odd in red.' },
+  ],
+  'math_g1_a_003': [
+    { id: 'fc1', title: 'Coins of India', concept: 'Indian coins: ₹1, ₹2, ₹5, ₹10. Each has a different size and value.', parentOutcome: 'Lay out all coins. Sort by value. Which is worth most?' },
+    { id: 'fc2', title: 'Making Amounts', concept: 'You can make the same amount in different ways. ₹5 = five ₹1 coins or one ₹5 coin.', parentOutcome: 'Ask: "Show me ₹8 using only ₹2 coins. Now using ₹1 and ₹5."' },
+    { id: 'fc3', title: 'Buying and Change', concept: 'If something costs ₹6 and you pay ₹10, your change is ₹10 − ₹6 = ₹4.', parentOutcome: 'Set up a pretend shop. Price items ₹3–₹9. Practice paying and giving change.' },
+  ],
+  'math_g1_a_004': [
+    {
+      id: 'fc1',
+      title: 'Your Conversation Starter',
+      concept: 'If we want to build a rocket, what shapes should we use? A cylinder for the body because it is tall, and a cone for the top because it is pointy and aerodynamic. What could we use for the engine boosters? Smaller cylinders or cones!',
+      section2Title: 'Helpful Way to Explain',
+      section2: '3D shapes are like the building blocks of the entire world. You can put them together to make "Composite Shapes" — new objects made of many parts. A house is often a cube with a triangular prism on top. Ask: "What shapes make up this lamp?" Ask: "Compare a cube and a sphere — what is one way they are the same and one way they are different?" This encourages them to look for deep mathematical patterns.',
+    },
+    { id: 'fc2', title: 'Concept: Attributes', concept: 'Attributes are descriptive words like "round," "flat," "pointy," or "straight." We use these to sort shapes into families. Mathematicians use these rules to organise everything in the universe. Composite Shapes: This is the term for an object made of two or more simple 3D shapes. You can become an architect by learning how these shapes fit together. Think about how Lego bricks are mostly rectangular prisms.' },
+    { id: 'fc3', title: 'Concept: Surface Area & Symmetry', concept: 'Surface Area (Simple): Every 3D shape has an "outside" that you can touch or paint. A large box has more surface to paint than a small ball. This helps us understand how much wrapping paper we need for a gift. Symmetry: Many 3D shapes look the same on both sides if you cut them exactly in half. You can see this in a cylinder or a cube. Symmetry is very important in building bridges and airplanes so they stay balanced.' },
+    { id: 'fc4', title: 'Concept: Volume', concept: 'Volume (Simple): This is how much "stuff" fits inside a 3D shape. A big bucket has more volume than a small cup, even if they are both the same shape. This is how we measure things like water or sand.' },
+    { id: 'fc5', title: 'Why This Matters', concept: 'This develops "spatial reasoning," a skill highly linked to success in engineering and architecture. Understanding that complex objects are made of simpler parts helps children deconstruct and solve difficult problems.' },
+    { id: 'fc6', title: 'Real-Life Connection', concept: 'A sharp pencil is a cylinder with a cone on the end. A flashlight is a cylinder with a hemisphere (half-sphere) on top. Even a tree can be seen as a cylinder (trunk) with a sphere (leaves) on top.' },
+    { id: 'fc7', title: 'Common Misconception', concept: 'Thinking all boxes are cubes. Most boxes are actually rectangular prisms because their sides are not all equal. A cube is a very special, rare type of box where every single side is a perfect square.' },
   ],
 };
 
-// ============================================
-// PROMPTS DATA
-// ============================================
-
-export const promptsData = {
-  'env_water_001': [
-    { id: 'p1', prompt: 'Imagine you are a raindrop. Describe your journey from a cloud to the ground and what you see along the way.' },
-    { id: 'p2', prompt: 'If you could invent a new way to save water at home, what would it be? Draw or describe your invention.' },
-    { id: 'p3', prompt: 'Write a short story about a village that ran out of water and how the children helped save the day.' },
-    { id: 'p4', prompt: 'Create a poster showing 5 ways your family can save water every day.' },
-    { id: 'p5', prompt: 'Pretend you are teaching your younger sibling about rainwater harvesting. What would you say?' },
-  ],
-  'env_water_002': [
-    { id: 'p1', prompt: 'Draw the water cycle and label each part: evaporation, condensation, precipitation, and collection.' },
-    { id: 'p2', prompt: 'Write a diary entry from the perspective of a water drop going through the water cycle.' },
-    { id: 'p3', prompt: 'Explain to a friend why we never run out of water on Earth, even though we use it every day.' },
-    { id: 'p4', prompt: 'Create a song or poem about the water cycle using simple rhyming words.' },
-    { id: 'p5', prompt: 'If the water cycle stopped working, what would happen to plants, animals, and people?' },
-  ],
-  'math_money_001': [
-    { id: 'p1', prompt: 'You have ₹20 to spend at a toy shop. A small car costs ₹8 and a ball costs ₹6. Can you buy both? How much money will you have left?' },
-    { id: 'p2', prompt: 'Draw 5 different ways to make ₹10 using ₹1, ₹2, and ₹5 coins. Which way uses the fewest coins?' },
-    { id: 'p3', prompt: 'You want to buy a book that costs ₹25. You have ₹15. How much more money do you need to save?' },
-    { id: 'p4', prompt: 'Create a shopping list with 4 items. Each item costs between ₹5 and ₹10. What is the total cost?' },
-    { id: 'p5', prompt: 'If you earn ₹5 for helping with chores each day, how many days will it take to save ₹30?' },
-  ],
-  'sci_animal_001': [
-    { id: 'p1', prompt: 'If you could be any animal for a day, which would you choose and why? What would you do?' },
-    { id: 'p2', prompt: 'Create a fact card about your favorite animal. Include where it lives, what it eats, and one amazing fact.' },
-    { id: 'p3', prompt: 'Write a story about a penguin who wants to learn how to fly. What happens?' },
-    { id: 'p4', prompt: 'Design a zoo exhibit for giraffes. What would you include to make them happy and healthy?' },
-    { id: 'p5', prompt: 'Imagine you discovered a new animal. Describe what it looks like, where it lives, and what makes it special.' },
-  ],
-};
-
-// ============================================
-// Q&A CARDS DATA
-// ============================================
-
+// ── QA CARDS DATA ────────────────────────────────────────────────────────────
 export const qaCardsData = {
-  'env_water_001': [
-    { 
-      id: 'qa1', 
-      question: 'Q1. Why is water important for all living things?', 
-      answer: 'Water is essential for survival. Humans need water to drink, plants need water to grow, and animals need water to stay alive. Our bodies are made up of about 60% water! Without water, nothing can live.' 
-    },
-    { 
-      id: 'qa2', 
-      question: 'Q2. How does rainwater harvesting help the environment?', 
-      answer: 'Rainwater harvesting reduces the demand on groundwater and helps prevent flooding. It also provides free water for gardens and reduces water bills. When we collect rainwater, we help conserve our precious water resources.' 
-    },
-    { 
-      id: 'qa3', 
-      question: 'Q3. What happens if we waste too much water?', 
-      answer: 'If we waste water, there might not be enough clean water for everyone. Rivers and lakes can dry up, plants and animals suffer, and people may not have water to drink or grow food. That\'s why saving water is so important!' 
-    },
-    { 
-      id: 'qa4', 
-      question: 'Q4. Can rainwater be used for drinking?', 
-      answer: 'Rainwater can be used for drinking, but it needs to be filtered and cleaned first to remove dirt and germs. It\'s safer to use collected rainwater for watering plants, washing, and cleaning.' 
-    },
+  'math_g1_b_001': [
+    { id: 'q1', question: 'What number comes after 9?', answer: '10. After 9 we move to a new group of ten.' },
+    { id: 'q2', question: 'Count backwards from 5.', answer: '5, 4, 3, 2, 1. Each step goes one less.' },
   ],
-  'math_money_001': [
-    { 
-      id: 'qa1', 
-      question: 'Q1. If you have two ₹5 coins and three ₹2 coins, how much money do you have in total?', 
-      answer: 'You have ₹16 in total. Two ₹5 coins = ₹10 (5+5=10). Three ₹2 coins = ₹6 (2+2+2=6). Add them together: ₹10 + ₹6 = ₹16.' 
-    },
-    { 
-      id: 'qa2', 
-      question: 'Q2. A chocolate costs ₹5 and a juice costs ₹8. You have ₹20. Can you buy both? How much will be left?', 
-      answer: 'Yes, you can buy both! Chocolate (₹5) + Juice (₹8) = ₹13. You have ₹20, so ₹20 - ₹13 = ₹7 left. You will have ₹7 remaining.' 
-    },
-    { 
-      id: 'qa3', 
-      question: 'Q3. You want to buy a toy that costs ₹30. You have ₹18. How much more money do you need?', 
-      answer: 'You need ₹12 more. The toy costs ₹30 and you have ₹18. So ₹30 - ₹18 = ₹12. You need to save ₹12 more to buy the toy.' 
-    },
-    { 
-      id: 'qa4', 
-      question: 'Q4. If you save ₹3 every day, how much will you have after one week (7 days)?', 
-      answer: 'You will have ₹21 after one week. ₹3 × 7 days = ₹21. That\'s ₹3 + ₹3 + ₹3 + ₹3 + ₹3 + ₹3 + ₹3 = ₹21!' 
-    },
+  'math_g1_b_002': [
+    { id: 'q1', question: 'If I want to roll something across the floor very fast, which shape should I use?', answer: 'A sphere or a cylinder because they have curved surfaces. A cube would just slide or get stuck!' },
+    { id: 'q2', question: 'Which shape has a pointy top like a mountain and a round bottom?', answer: 'That is a cone! It is the only shape that has one flat face and one sharp point at the very top.' },
   ],
-  'sci_animal_001': [
-    { 
-      id: 'qa1', 
-      question: 'Q1. How do animals survive in different climates?', 
-      answer: 'Animals have special adaptations! Polar bears have thick fur for cold weather, camels store water in their humps for deserts, and fish have gills to breathe underwater. Each animal is perfectly designed for where it lives.' 
-    },
-    { 
-      id: 'qa2', 
-      question: 'Q2. Why do some animals migrate?', 
-      answer: 'Animals migrate to find food, warmer weather, or safe places to have babies. Birds fly south in winter where it\'s warmer and there\'s more food. When spring comes, they fly back north. It\'s like taking a long vacation!' 
-    },
-    { 
-      id: 'qa3', 
-      question: 'Q3. How do baby animals learn from their parents?', 
-      answer: 'Baby animals watch and copy their parents. Lion cubs learn to hunt by playing and watching their mother. Birds teach their babies to fly by encouraging them to jump from the nest. Practice makes perfect!' 
-    },
+  'math_g1_b_003': [
+    { id: 'q1', question: 'What does the + sign mean?', answer: 'It means add or put together.' },
+    { id: 'q2', question: 'What is 4 + 3?', answer: '7. Count on from 4: 5, 6, 7.' },
   ],
-};
-
-// ============================================
-// VOCABULARY DATA
-// ============================================
-
-export const vocabularyData = {
-  'env_water_001': [
-    { 
-      id: 'v1', 
-      word: 'Harvest', 
-      type: 'verb', 
-      definition: 'To collect or gather something, especially crops or natural resources like rainwater.', 
-      example: 'We harvest rainwater from our roof to water the garden.', 
-      synonym: 'Collect, gather' 
-    },
-    { 
-      id: 'v2', 
-      word: 'Conservation', 
-      type: 'noun', 
-      definition: 'The act of protecting and saving something, especially natural resources like water.', 
-      example: 'Water conservation means using less water and not wasting it.', 
-      synonym: 'Protection, preservation' 
-    },
-    { 
-      id: 'v3', 
-      word: 'Precious', 
-      type: 'adjective', 
-      definition: 'Very valuable and important; something we should take care of.', 
-      example: 'Water is precious because all living things need it to survive.', 
-      synonym: 'Valuable, important' 
-    },
-    { 
-      id: 'v4', 
-      word: 'Evaporate', 
-      type: 'verb', 
-      definition: 'When liquid water turns into water vapor (gas) and goes into the air.', 
-      example: 'When the sun shines on a puddle, the water evaporates and disappears.', 
-      synonym: 'Vaporize, dry up' 
-    },
-    { 
-      id: 'v5', 
-      word: 'Groundwater', 
-      type: 'noun', 
-      definition: 'Water that is stored underground in soil and rocks.', 
-      example: 'We get drinking water from groundwater by digging wells.', 
-      synonym: 'Underground water' 
-    },
+  'math_g1_i_001': [
+    { id: 'q1', question: 'In the number 24, what does the 2 mean?', answer: '2 tens, which equals 20.' },
+    { id: 'q2', question: 'How many ones are in 17?', answer: '7 ones. The 1 means 1 ten = 10.' },
   ],
-  'math_money_001': [
-    { 
-      id: 'v1', 
-      word: 'Addition', 
-      type: 'noun', 
-      definition: 'Putting numbers together to find the total. The symbol for addition is +.', 
-      example: 'If you have 3 apples and get 2 more, you use addition: 3 + 2 = 5 apples.', 
-      synonym: 'Plus, sum, total' 
-    },
-    { 
-      id: 'v2', 
-      word: 'Subtraction', 
-      type: 'noun', 
-      definition: 'Taking away one number from another. The symbol for subtraction is -.', 
-      example: 'If you have 10 candies and eat 3, you use subtraction: 10 - 3 = 7 candies left.', 
-      synonym: 'Minus, take away, difference' 
-    },
-    { 
-      id: 'v3', 
-      word: 'Coin', 
-      type: 'noun', 
-      definition: 'A small, round piece of metal used as money.', 
-      example: 'I have five coins in my pocket: two ₹5 coins and three ₹2 coins.', 
-      synonym: 'Change, money' 
-    },
-    { 
-      id: 'v4', 
-      word: 'Total', 
-      type: 'noun', 
-      definition: 'The final amount when you add everything together.', 
-      example: 'The total cost of the pencil (₹3) and eraser (₹2) is ₹5.', 
-      synonym: 'Sum, whole amount' 
-    },
-    { 
-      id: 'v5', 
-      word: 'Change', 
-      type: 'noun', 
-      definition: 'The money you get back when you pay more than something costs.', 
-      example: 'I bought a toy for ₹7 with a ₹10 note. My change is ₹3.', 
-      synonym: 'Leftover money, remainder' 
-    },
+  'math_g1_i_002': [
+    { id: 'q1', question: 'What is 9 − 4?', answer: '5. Start at 9, count back 4 steps.' },
+    { id: 'q2', question: 'If 6 + 3 = 9, what is 9 − 3?', answer: '6. Addition and subtraction are opposites.' },
   ],
-  'sci_animal_001': [
-    { 
-      id: 'v1', 
-      word: 'Habitat', 
-      type: 'noun', 
-      definition: 'The natural home or environment where an animal lives.', 
-      example: 'A fish\'s habitat is water, while a bird\'s habitat is the sky and trees.', 
-      synonym: 'Home, environment' 
-    },
-    { 
-      id: 'v2', 
-      word: 'Mammal', 
-      type: 'noun', 
-      definition: 'A warm-blooded animal that has hair or fur and feeds milk to its babies.', 
-      example: 'Dogs, cats, elephants, and humans are all mammals.', 
-      synonym: 'Warm-blooded animal' 
-    },
-    { 
-      id: 'v3', 
-      word: 'Predator', 
-      type: 'noun', 
-      definition: 'An animal that hunts and eats other animals for food.', 
-      example: 'A lion is a predator that hunts zebras and other animals.', 
-      synonym: 'Hunter, carnivore' 
-    },
-    { 
-      id: 'v4', 
-      word: 'Herbivore', 
-      type: 'noun', 
-      definition: 'An animal that only eats plants.', 
-      example: 'Cows, elephants, and rabbits are herbivores because they eat grass and leaves.', 
-      synonym: 'Plant-eater' 
-    },
-    { 
-      id: 'v5', 
-      word: 'Nocturnal', 
-      type: 'adjective', 
-      definition: 'Active at night and sleeping during the day.', 
-      example: 'Owls are nocturnal birds that hunt for food at night.', 
-      synonym: 'Night-active' 
-    },
+  'math_g1_i_003': [
+    { id: 'q1', question: 'Which is longer — 5 cm or 8 cm?', answer: '8 cm is longer.' },
+    { id: 'q2', question: 'What tool do we use to measure length?', answer: 'A ruler, measuring tape, or metre stick.' },
+  ],
+  'math_g1_i_004': [
+    { id: 'q1', question: 'How many flat faces does a standard tissue box have?', answer: 'It has 6 faces because it is a rectangular prism. You can count the top, bottom, and all four sides to be sure.' },
+    { id: 'q2', question: "Why can't we stack two spheres on top of each other?", answer: 'Because they have no flat faces to balance on. They will simply roll off the moment you let go!' },
+  ],
+  'math_g1_a_001': [
+    { id: 'q1', question: 'What is 23 + 14?', answer: '37. Add ones: 3+4=7. Add tens: 20+10=30. Total: 37.' },
+    { id: 'q2', question: 'What is 45 − 12?', answer: '33. Subtract ones: 5−2=3. Subtract tens: 40−10=30. Total: 33.' },
+  ],
+  'math_g1_a_002': [
+    { id: 'q1', question: 'What are the first 5 even numbers?', answer: '2, 4, 6, 8, 10.' },
+    { id: 'q2', question: 'Count by 5s: 5, 10, 15, __, 25.', answer: '20. The pattern adds 5 each time.' },
+  ],
+  'math_g1_a_003': [
+    { id: 'q1', question: 'How many ₹2 coins make ₹10?', answer: '5 coins. 5 × ₹2 = ₹10.' },
+    { id: 'q2', question: 'You pay ₹10 for a ₹7 item. What is your change?', answer: '₹3. ₹10 − ₹7 = ₹3.' },
+  ],
+  'math_g1_a_004': [
+    { id: 'q1', question: 'If you put two identical cubes together side-by-side, what new shape do you make?', answer: 'A rectangular prism! This shows how shapes can change when they are combined.' },
+    { id: 'q2', question: 'How is a cylinder different from a sphere?', answer: 'A cylinder has two flat faces and can stand still; a sphere has zero flat faces and is always ready to roll.' },
+  ],
+  'sci_g1_b_001': [
+    { id: 'q1', question: 'What do roots do?', answer: 'They hold the plant in soil and absorb water.' },
+    { id: 'q2', question: 'Which part of the plant makes food?', answer: 'The leaves, using sunlight and water.' },
+  ],
+  'sci_g1_b_002': [
+    { id: 'q1', question: 'Name 2 pet animals and 2 wild animals.', answer: 'Pets: dog, cat. Wild: lion, elephant.' },
+    { id: 'q2', question: 'What does a cow eat?', answer: 'Grass and hay. Cows are herbivores.' },
+  ],
+  'sci_g1_b_003': [
+    { id: 'q1', question: 'Which sense do you use to hear music?', answer: 'Hearing — using your ears.' },
+    { id: 'q2', question: 'Name all 5 senses.', answer: 'Sight, hearing, touch, taste, smell.' },
+  ],
+  'sci_g1_i_001': [
+    { id: 'q1', question: 'Name 3 ways to save water at home.', answer: 'Turn off taps, take short showers, reuse washing water for plants.' },
+    { id: 'q2', question: 'Why is water important?', answer: 'We need it to drink, cook, clean, and grow food.' },
+  ],
+  'sci_g1_i_002': [
+    { id: 'q1', question: 'What type of weather is best for flying a kite?', answer: 'Windy weather.' },
+    { id: 'q2', question: 'What do you wear on a rainy day?', answer: 'A raincoat and boots to stay dry.' },
+  ],
+  'sci_g1_i_003': [
+    { id: 'q1', question: 'Name the 5 food groups.', answer: 'Grains, vegetables, fruits, protein, dairy.' },
+    { id: 'q2', question: 'Which food gives you energy?', answer: 'Grains like rice, bread, and oats give energy.' },
+  ],
+  'sci_g1_a_001': [
+    { id: 'q1', question: 'What does recycling mean?', answer: 'Turning old materials into new products instead of throwing them away.' },
+    { id: 'q2', question: 'Name 3 things you can recycle.', answer: 'Paper, plastic bottles, glass jars.' },
+  ],
+  'sci_g1_a_002': [
+    { id: 'q1', question: 'Why does a fish have fins?', answer: 'Fins help it swim and steer through water.' },
+    { id: 'q2', question: 'How does a camel survive in the desert?', answer: 'Its hump stores fat for energy, and it can go days without water.' },
+  ],
+  'sci_g1_a_003': [
+    { id: 'q1', question: 'What do plants need to make food?', answer: 'Sunlight, water, and carbon dioxide from the air.' },
+    { id: 'q2', question: 'What gas do plants release during photosynthesis?', answer: 'Oxygen — the gas we breathe.' },
+  ],
+  'eng_g1_b_001': [
+    { id: 'q1', question: 'What sound does the letter S make?', answer: '"Sss" like a snake.' },
+    { id: 'q2', question: 'Blend these sounds: b-a-g.', answer: 'Bag.' },
+  ],
+  'eng_g1_b_002': [
+    { id: 'q1', question: 'What is a sight word?', answer: 'A common word we recognise instantly without sounding it out, like "the" or "is".' },
+    { id: 'q2', question: 'Use "and" in a sentence.', answer: 'Example: "I have a cat and a dog."' },
+  ],
+  'eng_g1_b_003': [
+    { id: 'q1', question: 'What does every sentence start with?', answer: 'A capital letter.' },
+    { id: 'q2', question: 'What do we put at the end of a sentence?', answer: 'A full stop (.), question mark (?), or exclamation mark (!).' },
+  ],
+  'eng_g1_i_001': [
+    { id: 'q1', question: 'What is the setting of a story?', answer: 'Where and when the story takes place.' },
+    { id: 'q2', question: 'Who are the characters in a story?', answer: 'The people or animals the story is about.' },
+  ],
+  'eng_g1_i_002': [
+    { id: 'q1', question: 'Is "table" a noun or a verb?', answer: 'Noun — it is a thing.' },
+    { id: 'q2', question: 'Is "jump" a noun or a verb?', answer: 'Verb — it is an action.' },
+  ],
+  'eng_g1_i_003': [
+    { id: 'q1', question: 'What is an adjective?', answer: 'A word that describes a noun. Example: big, red, happy.' },
+    { id: 'q2', question: 'Add an adjective: "The ___ dog barked."', answer: 'Example: "The loud dog barked." or "The small dog barked."' },
+  ],
+  'eng_g1_a_001': [
+    { id: 'q1', question: 'What are the 4 parts of a story?', answer: 'Beginning, middle, problem, and end.' },
+    { id: 'q2', question: 'What is the main idea of a story?', answer: 'The most important thing the story is about.' },
+  ],
+  'eng_g1_a_002': [
+    { id: 'q1', question: 'How many sentences are in a paragraph?', answer: 'Usually 3–5 sentences all about the same topic.' },
+    { id: 'q2', question: 'What is a topic sentence?', answer: 'The first sentence that tells what the paragraph is about.' },
+  ],
+  'eng_g1_a_003': [
+    { id: 'q1', question: 'When do we use a question mark?', answer: 'At the end of a question. Example: "Where are you going?"' },
+    { id: 'q2', question: 'Fix this sentence: "the cat sat on the mat"', answer: '"The cat sat on the mat." — capital T and full stop.' },
+  ],
+  'soc_g1_b_001': [
+    { id: 'q1', question: 'What is a family?', answer: 'People who love and care for each other and live together.' },
+    { id: 'q2', question: 'Name 4 family members.', answer: 'Mother, father, sister, brother (or grandparent, uncle, aunt).' },
+  ],
+  'soc_g1_b_002': [
+    { id: 'q1', question: 'What does a doctor do?', answer: 'A doctor helps sick people get better.' },
+    { id: 'q2', question: 'Who do you call in an emergency?', answer: 'Police (100), Fire (101), Ambulance (108) in India.' },
+  ],
+  'soc_g1_b_003': [
+    { id: 'q1', question: 'Name one act of kindness you can do today.', answer: 'Help a friend, share food, say thank you, or tidy up without being asked.' },
+    { id: 'q2', question: 'Why is sharing important?', answer: 'Sharing makes others happy and builds friendship and trust.' },
+  ],
+  'soc_g1_i_001': [
+    { id: 'q1', question: 'What is the capital of India?', answer: 'New Delhi.' },
+    { id: 'q2', question: 'What is India\'s national animal?', answer: 'The Bengal Tiger.' },
+  ],
+  'soc_g1_i_002': [
+    { id: 'q1', question: 'Name 3 emotions.', answer: 'Happy, sad, angry (also: scared, surprised, proud).' },
+    { id: 'q2', question: 'What is a healthy way to handle anger?', answer: 'Take deep breaths, count to 10, or talk to someone you trust.' },
+  ],
+  'soc_g1_i_003': [
+    { id: 'q1', question: 'What does a red traffic light mean?', answer: 'Stop.' },
+    { id: 'q2', question: 'Name 2 road safety rules.', answer: 'Look both ways before crossing. Use the footpath, not the road.' },
+  ],
+  'soc_g1_a_001': [
+    { id: 'q1', question: 'Why is Gandhi called the Father of the Nation?', answer: 'He led India\'s independence movement peacefully and inspired millions.' },
+    { id: 'q2', question: 'What did Gandhi teach us?', answer: 'Non-violence, truth, and standing up for what is right.' },
+  ],
+  'soc_g1_a_002': [
+    { id: 'q1', question: 'What are the 4 cardinal directions?', answer: 'North, South, East, West.' },
+    { id: 'q2', question: 'Which direction does the sun rise from?', answer: 'East.' },
+  ],
+  'soc_g1_a_003': [
+    { id: 'q1', question: 'Name 3 festivals of India.', answer: 'Diwali, Eid, Christmas (also: Holi, Pongal, Navratri).' },
+    { id: 'q2', question: 'Why do we celebrate festivals?', answer: 'To honour traditions, spend time with family, and share joy with others.' },
   ],
 };
 
-// ============================================
-// HELPER FUNCTIONS FOR CARDS
-// ============================================
-
-export const getFlashcards = (nudgeId) => {
-  return flashcardsData[nudgeId] || [];
+// ── PROMPTS DATA ─────────────────────────────────────────────────────────────
+export const promptsData = {
+  'math_g1_b_001': [
+    { id: 'p1', prompt: 'Count all the chairs in your home. How many are there?', hint: 'Walk room to room and count each one.' },
+    { id: 'p2', prompt: 'Count backwards from 10 like a rocket launch!', hint: '10, 9, 8... blast off at 1!' },
+  ],
+  'math_g1_b_002': [
+    { id: 'p1', prompt: 'The Feelie Bag: Put a ball, a block, and a can in a bag. Have the child reach in and guess the shape just by touching it. This forces them to think about edges and curves without seeing them.', hint: 'Feel for flat faces, sharp corners, and curved surfaces.' },
+    { id: 'p2', prompt: 'Challenging Activity: Find a 3D shape in the house that has both a flat surface and a curved surface. A great example is a glue stick or a battery. Ask them to explain why it is a cylinder and not a sphere.', hint: 'A cylinder has two flat circles on the ends AND a curved middle.' },
+    { id: 'p3', prompt: 'Quick Recap Cue: 3D shapes are solid objects that occupy space and have depth, unlike flat 2D drawings. Recognising these solids is the first step in understanding how the physical world is constructed.', hint: 'Ask: "Is this flat like a drawing, or solid like a toy?"' },
+  ],
+  'math_g1_b_003': [
+    { id: 'p1', prompt: 'You have 3 pencils. Your friend gives you 4 more. How many now?', hint: 'Put them together and count all of them.' },
+    { id: 'p2', prompt: 'Make up your own addition story using toys.', hint: 'Start with: "I had ___ toys and got ___ more..."' },
+  ],
+  'math_g1_i_001': [
+    { id: 'p1', prompt: 'Show 23 using coins: group 10, then 10, then 3 ones.', hint: '2 groups of 10 = 2 tens. Plus 3 ones = 23.' },
+    { id: 'p2', prompt: 'Write the number 19 in tens and ones.', hint: '1 ten and 9 ones.' },
+  ],
+  'math_g1_i_002': [
+    { id: 'p1', prompt: 'You have 10 grapes. Eat 6. How many are left?', hint: 'Start at 10, count back 6 steps.' },
+    { id: 'p2', prompt: 'Write a subtraction story about birds flying away from a tree.', hint: 'Start with some birds, then some fly away...' },
+  ],
+  'math_g1_i_003': [
+    { id: 'p1', prompt: 'Measure 5 objects using a pencil as your ruler. Which is longest?', hint: 'Lay the pencil next to each object and count how many pencil-lengths it is.' },
+    { id: 'p2', prompt: 'Are you taller or shorter than the door handle? How do you know?', hint: 'Stand next to it and compare.' },
+  ],
+  'math_g1_i_004': [
+    { id: 'p1', prompt: 'The Slide Test: Use a cardboard plank as a ramp. Test which shapes roll down and which ones slide down. Have your child predict what will happen before you let the shape go.', hint: 'Curved surfaces roll. Flat surfaces slide. Ask: "Did it do what you expected?"' },
+    { id: 'p2', prompt: 'Challenging Activity: Can you find a shape that rolls in a straight line (cylinder) and one that rolls in a circle (cone)? Ask them to explain why the cone moves in a circle (because one end is smaller than the other).', hint: 'A cylinder rolls straight because both ends are equal. A cone curves because one end is a point.' },
+    { id: 'p3', prompt: 'Quick Recap Cue: We identify and group spatial shapes by counting their faces, edges, and vertices. These specific physical traits determine whether a shape is best suited for rolling, sliding, or stacking.', hint: 'Ask: "How many faces, edges, and vertices does this shape have?"' },
+  ],
+  'math_g1_a_001': [
+    { id: 'p1', prompt: 'Add 34 + 25 by breaking into tens and ones.', hint: '30+20=50, 4+5=9, so 50+9=59.' },
+    { id: 'p2', prompt: 'Subtract 47 − 13. Show your working.', hint: '40−10=30, 7−3=4, so 30+4=34.' },
+  ],
+  'math_g1_a_002': [
+    { id: 'p1', prompt: 'Write all even numbers from 2 to 20.', hint: 'They end in 0, 2, 4, 6, or 8.' },
+    { id: 'p2', prompt: 'Count by 5s from 5 to 50. Clap on each number.', hint: '5, 10, 15, 20... the pattern adds 5 each time.' },
+  ],
+  'math_g1_a_003': [
+    { id: 'p1', prompt: 'Make ₹15 in 3 different ways using coins.', hint: 'Try: three ₹5 coins, or one ₹10 + one ₹5, or fifteen ₹1 coins.' },
+    { id: 'p2', prompt: 'You buy a pencil for ₹4 and a rubber for ₹3. You pay ₹10. What is your change?', hint: 'First add ₹4 + ₹3, then subtract from ₹10.' },
+  ],
+  'math_g1_a_004': [
+    { id: 'p1', prompt: 'Shape Building: Use toothpicks and mini-marshmallows (or clay) to build the "skeleton" of a cube. This helps your child see the edges and vertices clearly while realizing that 3D shapes have an empty space inside.', hint: 'Count the toothpicks (edges = 12) and marshmallows (vertices = 8) after building.' },
+    { id: 'p2', prompt: 'Challenging Activity: Find an object in the house that is made of three different 3D shapes combined. Have your child point to each part and name it correctly. A toy robot or a fancy lamp are great examples.', hint: 'Look for objects with a clear base, middle, and top that are each different shapes.' },
+    { id: 'p3', prompt: 'Quick Recap Cue: Complex real-world structures are often composite shapes created by joining multiple simple solids together. By deconstructing these objects, we can better understand their volume, symmetry, and overall design.', hint: 'Ask: "What simple shapes make up this object? Could you build it with clay?"' },
+  ],
+  'sci_g1_b_001': [
+    { id: 'p1', prompt: 'Find a plant at home. Point to each part and say its job.', hint: 'Roots drink, stem carries, leaves make food, flower makes seeds.' },
+    { id: 'p2', prompt: 'Draw a plant and label all 5 parts.', hint: 'Roots, stem, leaves, flower, fruit.' },
+  ],
+  'sci_g1_b_002': [
+    { id: 'p1', prompt: 'Name 3 animals that live in water and 3 that live on land.', hint: 'Water: fish, frog, whale. Land: dog, elephant, rabbit.' },
+    { id: 'p2', prompt: 'Draw your favourite animal and write 2 facts about it.', hint: 'What does it eat? Where does it live?' },
+  ],
+  'sci_g1_b_003': [
+    { id: 'p1', prompt: 'Close your eyes. Name 5 things you can hear right now.', hint: 'Listen carefully for quiet sounds too.' },
+    { id: 'p2', prompt: 'Touch 5 objects. Describe each using only touch words.', hint: 'Rough, smooth, hard, soft, bumpy, cold, warm.' },
+  ],
+  'sci_g1_i_001': [
+    { id: 'p1', prompt: 'List 5 ways your family uses water in one day.', hint: 'Drinking, cooking, bathing, washing dishes, watering plants.' },
+    { id: 'p2', prompt: 'Make a "Water Hero" pledge: 3 things you will do to save water.', hint: 'Turn off taps, shorter showers, reuse water.' },
+  ],
+  'sci_g1_i_002': [
+    { id: 'p1', prompt: 'Look outside right now. Describe today\'s weather in 3 words.', hint: 'Is it sunny, cloudy, windy, rainy, hot, or cold?' },
+    { id: 'p2', prompt: 'Draw a weather chart for 3 days. Use symbols: sun, cloud, rain.', hint: 'Check the weather each morning and draw the symbol.' },
+  ],
+  'sci_g1_i_003': [
+    { id: 'p1', prompt: 'Draw your ideal healthy meal on a plate. Label each food.', hint: 'Include something from each food group.' },
+    { id: 'p2', prompt: 'Which foods give energy? Which help you grow? Name 2 of each.', hint: 'Energy: rice, bread. Growth: eggs, milk, dal.' },
+  ],
+  'sci_g1_a_001': [
+    { id: 'p1', prompt: 'Sort today\'s rubbish into: can recycle / cannot recycle.', hint: 'Paper, plastic, glass = recycle. Food scraps = compost.' },
+    { id: 'p2', prompt: 'Name 3 things you can do to help the environment this week.', hint: 'Plant a seed, pick up litter, use less plastic.' },
+  ],
+  'sci_g1_a_002': [
+    { id: 'p1', prompt: 'Pick 3 animals. For each, name one special body feature and why it helps.', hint: 'Fish: fins to swim. Camel: hump for energy. Penguin: thick feathers for cold.' },
+    { id: 'p2', prompt: 'If you could have one animal superpower, what would it be and why?', hint: 'Think about speed, camouflage, flying, or echolocation.' },
+  ],
+  'sci_g1_a_003': [
+    { id: 'p1', prompt: 'Draw a leaf and add arrows showing what goes in and what comes out during photosynthesis.', hint: 'In: sunlight, water, CO₂. Out: food and oxygen.' },
+    { id: 'p2', prompt: 'What would happen to animals if all plants disappeared?', hint: 'Think about food chains and oxygen.' },
+  ],
+  'eng_g1_b_001': [
+    { id: 'p1', prompt: 'Say the alphabet. Clap on every vowel: A, E, I, O, U.', hint: 'There are 5 vowels in the alphabet.' },
+    { id: 'p2', prompt: 'Sound out these words slowly: cat, dog, sun, hat, big.', hint: 'Say each sound separately, then blend them together.' },
+  ],
+  'eng_g1_b_002': [
+    { id: 'p1', prompt: 'Find the word "the" on any page of a book. How many times does it appear?', hint: '"The" is the most common word in English.' },
+    { id: 'p2', prompt: 'Make a sentence using 3 sight words: I, am, happy.', hint: '"I am happy today!"' },
+  ],
+  'eng_g1_b_003': [
+    { id: 'p1', prompt: 'Write 3 sentences about your day. Check: capital letter, full stop.', hint: 'Start with: "Today I..." or "I went to..."' },
+    { id: 'p2', prompt: 'Draw a picture and write one sentence describing it.', hint: 'Look at your drawing and describe what you see.' },
+  ],
+  'eng_g1_i_001': [
+    { id: 'p1', prompt: 'Read a short story. Tell it back in 3 sentences: beginning, middle, end.', hint: 'Who was in it? What happened? How did it end?' },
+    { id: 'p2', prompt: 'What was the problem in the last story you read? How was it solved?', hint: 'Every good story has a problem and a solution.' },
+  ],
+  'eng_g1_i_002': [
+    { id: 'p1', prompt: 'Write 5 nouns and 5 verbs you can see or do right now.', hint: 'Nouns: chair, book, window. Verbs: sit, read, look.' },
+    { id: 'p2', prompt: 'Make a sentence using one noun and one verb.', hint: '"The dog runs." or "The bird sings."' },
+  ],
+  'eng_g1_i_003': [
+    { id: 'p1', prompt: 'Describe your bedroom using 5 adjectives.', hint: 'Think about colours, sizes, and how things feel.' },
+    { id: 'p2', prompt: 'Take a plain sentence and add 2 adjectives to make it more interesting.', hint: '"A dog barked." → "A big, brown dog barked."' },
+  ],
+  'eng_g1_a_001': [
+    { id: 'p1', prompt: 'Retell your favourite story in 4 sentences.', hint: 'Sentence 1: who and where. 2: what happened. 3: the problem. 4: the ending.' },
+    { id: 'p2', prompt: 'Why did the main character make that choice? Do you agree?', hint: 'Think about what the character wanted and feared.' },
+  ],
+  'eng_g1_a_002': [
+    { id: 'p1', prompt: 'Write a paragraph about your favourite food. Use 4 sentences.', hint: 'What is it? What does it look like? What does it taste like? Why do you love it?' },
+    { id: 'p2', prompt: 'Does your paragraph have a topic sentence? Underline it.', hint: 'The topic sentence tells the reader what the paragraph is about.' },
+  ],
+  'eng_g1_a_003': [
+    { id: 'p1', prompt: 'Write 3 questions about your day. Use question marks.', hint: 'Start with: What, Where, When, Why, or How.' },
+    { id: 'p2', prompt: 'Fix these sentences: "where are you going" and "i love pizza"', hint: 'Add capital letters and correct punctuation at the end.' },
+  ],
+  'soc_g1_b_001': [
+    { id: 'p1', prompt: 'Draw your family tree. Write each person\'s name and relation.', hint: 'Start with yourself, then add parents, then grandparents.' },
+    { id: 'p2', prompt: 'What is one thing each family member does to help at home?', hint: 'Think about cooking, cleaning, earning, caring.' },
+  ],
+  'soc_g1_b_002': [
+    { id: 'p1', prompt: 'Draw a community helper and write 2 things they do.', hint: 'Doctor, teacher, police officer, firefighter, postman.' },
+    { id: 'p2', prompt: 'If you could be any community helper, which would you choose and why?', hint: 'Think about what you enjoy doing and how you like to help.' },
+  ],
+  'soc_g1_b_003': [
+    { id: 'p1', prompt: 'Do one kind act today. Write or draw what you did and how it felt.', hint: 'Help someone, share something, or say something kind.' },
+    { id: 'p2', prompt: 'How would you feel if someone was unkind to you? What would you do?', hint: 'Think about how words and actions affect others.' },
+  ],
+  'soc_g1_i_001': [
+    { id: 'p1', prompt: 'Draw the Indian flag and label its 3 colours and the symbol in the middle.', hint: 'Saffron, white, green — and the Ashoka Chakra.' },
+    { id: 'p2', prompt: 'Name India\'s national animal, bird, and flower.', hint: 'Tiger, peacock, lotus.' },
+  ],
+  'soc_g1_i_002': [
+    { id: 'p1', prompt: 'Draw 4 emotion faces. Under each, write what makes you feel that way.', hint: 'Happy, sad, angry, scared.' },
+    { id: 'p2', prompt: 'What do you do when you feel very angry? Is it helpful?', hint: 'Think about deep breathing, talking, or taking a break.' },
+  ],
+  'soc_g1_i_003': [
+    { id: 'p1', prompt: 'Act out crossing the road safely. What are the steps?', hint: 'Stop at the kerb. Look left, right, left again. Cross when clear.' },
+    { id: 'p2', prompt: 'Name 3 safety rules for being at home alone.', hint: 'Don\'t open the door to strangers. Don\'t use the stove. Call a trusted adult if scared.' },
+  ],
+  'soc_g1_a_001': [
+    { id: 'p1', prompt: 'Write 3 things Gandhi did and 1 thing you can learn from him.', hint: 'He led peaceful protests, promoted truth, and helped India become free.' },
+    { id: 'p2', prompt: 'Who is your personal hero and why?', hint: 'Think about someone who is brave, kind, or works hard for others.' },
+  ],
+  'soc_g1_a_002': [
+    { id: 'p1', prompt: 'Draw a map of your home with a compass rose showing N, S, E, W.', hint: 'Mark the front door, kitchen, and your bedroom.' },
+    { id: 'p2', prompt: 'If you face north, what direction is behind you? To your left?', hint: 'Behind = South. Left = West.' },
+  ],
+  'soc_g1_a_003': [
+    { id: 'p1', prompt: 'Pick 3 festivals. For each: when is it, how is it celebrated, one special food.', hint: 'Diwali: October/November, lights and fireworks, sweets. Eid: varies, prayers and feast, biryani.' },
+    { id: 'p2', prompt: 'Why is it important to respect festivals of other religions?', hint: 'Think about kindness, learning, and living together peacefully.' },
+  ],
 };
 
-export const getPrompts = (nudgeId) => {
-  return promptsData[nudgeId] || [];
-};
-
-export const getQACards = (nudgeId) => {
-  return qaCardsData[nudgeId] || [];
-};
-
-export const getVocabulary = (nudgeId) => {
-  return vocabularyData[nudgeId] || [];
-};
-
+// ── ACCESSOR FUNCTIONS ───────────────────────────────────────────────────────
+export const getFlashcards = (nudgeId) => flashcardsData[nudgeId] || [];
+export const getQACards = (nudgeId) => qaCardsData[nudgeId] || [];
+export const getPrompts = (nudgeId) => promptsData[nudgeId] || [];

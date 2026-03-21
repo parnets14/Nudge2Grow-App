@@ -11,11 +11,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle } from 'react-native-svg';
-import { getAllSubjects, getNudgesBySubject } from '../data/nudgesData';
+import { getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -76,47 +77,61 @@ const CircularProgress = ({ percentage, color, size = 40 }) => {
 
 const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const allSubjects = getAllSubjects();
   const child = userData?.children?.[0];
+
+  // Only show subjects that have at least 1 nudge for this child's grade/level
+  const filteredNudges = getNudgesByGradeAndLevel(child?.grade, child?.subjectLevels);
+  const availableSubjectNames = [...new Set(filteredNudges.map(n => n.subject))];
+  const allSubjects = getAllSubjects().filter(s => availableSubjectNames.includes(s.name));
 
   const subjectConfig = {
     'Math': {
-      icon: 'calculator',
+      image: require('../assets/images/math.png'),
       color: '#3B82F6',
       bgColor: '#EFF6FF',
       iconBg: '#DBEAFE',
     },
     'Science / EVS': {
-      icon: 'leaf',
+      image: require('../assets/images/sci.png'),
       color: '#10B981',
       bgColor: '#ECFDF5',
       iconBg: '#D1FAE5',
     },
     'English': {
-      icon: 'book-open-variant',
+      image: require('../assets/images/eng.png'),
       color: '#F59E0B',
       bgColor: '#FFFBEB',
       iconBg: '#FEF3C7',
     },
     'Social Studies': {
-      icon: 'earth',
+      image: require('../assets/images/social s.png'),
       color: '#EC4899',
       bgColor: '#FDF2F8',
       iconBg: '#FCE7F3',
     },
     'Artificial Intelligence': {
-      icon: 'brain',
+      image: require('../assets/images/Ai s.png'),
       color: '#8B5CF6',
       bgColor: '#F5F3FF',
       iconBg: '#EDE9FE',
     },
+    'Financial Literacy': {
+      image: require('../assets/images/Fl.png'),
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+      iconBg: '#D1FAE5',
+    },
+    'Sex & Safety Education': {
+      image: require('../assets/images/ss.png'),
+      color: '#EC4899',
+      bgColor: '#FDF2F8',
+      iconBg: '#FCE7F3',
+    },
   };
 
-  // Calculate overall progress
-  const totalNudges = allSubjects.reduce((sum, subject) => {
-    return sum + getNudgesBySubject(subject.name).length;
-  }, 0);
-  const completedNudges = Math.floor(totalNudges * 0.68); // 68% completion for demo
+  // Calculate overall progress (7 subjects × 12 activities each = 84 total)
+  const totalNudges = allSubjects.length * 12; // 7 subjects × 12 activities = 84
+  const completedNudges = Math.floor(totalNudges * 0.68); // 68% completion for demo (57 of 84)
   const overallProgress = 68;
   const activeSubjects = 5;
 
@@ -132,7 +147,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Learning Subjects</Text>
           <Text style={styles.headerSubtitle}>
-            {child?.name || 'Zues'} · Grade {child?.grade || '3'} · {allSubjects.length} subjects
+            {child?.name || 'Child'} · {child?.grade || 'Grade 1'} · {allSubjects.length} subjects
           </Text>
         </View>
       </View>
@@ -189,6 +204,15 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
 
         {/* Subjects List */}
         <View style={styles.subjectsContainer}>
+          {allSubjects.length === 0 ? (
+            <View style={styles.emptyStateCard}>
+              <MaterialIcon name="book-clock-outline" size={40} color="#9CA3AF" />
+              <Text style={styles.emptyStateTitle}>Content coming soon</Text>
+              <Text style={styles.emptyStateText}>
+                We're preparing topics for {child?.grade || 'this grade'}. Check back soon!
+              </Text>
+            </View>
+          ) : null}
           {(selectedFilter === 'all' || selectedFilter === 'progress') && allSubjects.map((subject, index) => {
             const config = subjectConfig[subject.name] || {
               icon: 'book-outline',
@@ -196,21 +220,23 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
               bgColor: '#F9FAFB',
               iconBg: '#E5E7EB',
             };
-            const nudgesCount = getNudgesBySubject(subject.name).length;
+            const nudgesCount = filteredNudges.filter(n => n.subject === subject.name).length || getNudgesBySubject(subject.name).length;
             
-            // Set specific progress for certain subjects
+            // Set specific progress for certain subjects (based on 12 total activities)
             let completedCount;
             if (subject.name === 'English') {
-              completedCount = Math.floor(nudgesCount * 0.65); // 65% progress
+              completedCount = 8; // 65% of 12 ≈ 8
             } else if (subject.name === 'Social Studies') {
-              completedCount = Math.floor(nudgesCount * 0.55); // 55% progress
+              completedCount = 7; // 55% of 12 ≈ 7
             } else if (subject.name === 'Artificial Intelligence') {
-              completedCount = Math.floor(nudgesCount * 0.45); // 45% progress
+              completedCount = 5; // 45% of 12 ≈ 5
+            } else if (subject.name === 'Math') {
+              completedCount = 4; // 33% of 12 ≈ 4
             } else {
-              completedCount = Math.floor(nudgesCount * (0.6 + Math.random() * 0.3));
+              completedCount = Math.floor(12 * (0.6 + Math.random() * 0.3)); // Random between 7-11
             }
             
-            const progress = Math.floor((completedCount / nudgesCount) * 100);
+            const progress = Math.floor((completedCount / 12) * 100);
             const streak = index === 0 ? 5 : 0; // First subject has streak
             const isActive = index === 0; // First subject is most active
             const status = progress >= 80 ? 'On Track' : progress >= 50 ? 'In Progress' : 'Started';
@@ -220,20 +246,29 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                 key={subject.name}
                 style={styles.subjectCard}
                 onPress={() => {
-                  const subjectNudges = getNudgesBySubject(subject.name);
-                  if (subjectNudges.length > 0) {
+                  const subjectNudges = filteredNudges.filter(n => n.subject === subject.name);
+                  const nudgesToShow = subjectNudges.length > 0 ? subjectNudges : getNudgesBySubject(subject.name);
+                  if (nudgesToShow.length > 0) {
                     onNavigate && onNavigate('topicDetail', { 
                       subjectName: subject.name,
-                      topicData: subjectNudges[0],
-                      allNudges: subjectNudges
+                      topicData: nudgesToShow[nudgesToShow.length - 1],
+                      allNudges: nudgesToShow
                     });
                   }
                 }}
               >
                 <View style={styles.subjectHeader}>
                   <View style={styles.subjectLeft}>
-                    <View style={[styles.subjectIconContainer, { backgroundColor: '#E5E7EB' }]}>
-                      <MaterialIcon name={config.icon} size={isSmallDevice ? 22 : 24} color={config.color} />
+                    <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
+                      {config.image ? (
+                        <Image 
+                          source={config.image}
+                          style={styles.subjectIconImage}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <MaterialIcon name={config.icon} size={isSmallDevice ? 22 : 24} color={config.color} />
+                      )}
                     </View>
                     <View style={styles.subjectInfo}>
                       <View style={styles.subjectTitleRow}>
@@ -265,7 +300,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                     <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: '#10B981' }]} />
                   </View>
                   <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressText}>{completedCount}/{nudgesCount}</Text>
+                    <Text style={styles.progressText}>{completedCount}/12</Text>
                     <TouchableOpacity style={styles.progressArrowButton}>
                       <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
                     </TouchableOpacity>
@@ -277,7 +312,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                   <View style={styles.subjectStats}>
                     <View style={styles.statItem}>
                       <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                      <Text style={styles.statText}>{nudgesCount} topics</Text>
+                      <Text style={styles.statText}>12 topics</Text>
                     </View>
                     {streak > 0 && (
                       <View style={styles.statItem}>
@@ -303,8 +338,12 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
               <TouchableOpacity style={styles.subjectCard}>
                 <View style={styles.subjectHeader}>
                   <View style={styles.subjectLeft}>
-                    <View style={[styles.subjectIconContainer, { backgroundColor: '#E5E7EB' }]}>
-                      <MaterialIcon name="wallet" size={isSmallDevice ? 22 : 24} color="#10B981" />
+                    <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
+                      <Image 
+                        source={require('../assets/images/Fl.png')}
+                        style={styles.subjectIconImage}
+                        resizeMode="contain"
+                      />
                     </View>
                     <View style={styles.subjectInfo}>
                       <View style={styles.subjectTitleRow}>
@@ -327,7 +366,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                     <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
                   </View>
                   <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressText}>0/7</Text>
+                    <Text style={styles.progressText}>0/12</Text>
                     <TouchableOpacity style={styles.progressArrowButton}>
                       <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
                     </TouchableOpacity>
@@ -338,7 +377,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                   <View style={styles.subjectStats}>
                     <View style={styles.statItem}>
                       <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                      <Text style={styles.statText}>7 topics</Text>
+                      <Text style={styles.statText}>12 topics</Text>
                     </View>
                   </View>
                   <View style={styles.lockedBadge}>
@@ -352,8 +391,12 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
               <TouchableOpacity style={styles.subjectCard}>
                 <View style={styles.subjectHeader}>
                   <View style={styles.subjectLeft}>
-                    <View style={[styles.subjectIconContainer, { backgroundColor: '#E5E7EB' }]}>
-                      <MaterialIcon name="heart-check" size={isSmallDevice ? 22 : 24} color="#EF4444" />
+                    <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
+                      <Image 
+                        source={require('../assets/images/ss.png')}
+                        style={styles.subjectIconImage}
+                        resizeMode="contain"
+                      />
                     </View>
                     <View style={styles.subjectInfo}>
                       <View style={styles.subjectTitleRow}>
@@ -376,7 +419,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                     <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
                   </View>
                   <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressText}>0/7</Text>
+                    <Text style={styles.progressText}>0/12</Text>
                     <TouchableOpacity style={styles.progressArrowButton}>
                       <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
                     </TouchableOpacity>
@@ -387,7 +430,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                   <View style={styles.subjectStats}>
                     <View style={styles.statItem}>
                       <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                      <Text style={styles.statText}>7 topics</Text>
+                      <Text style={styles.statText}>12 topics</Text>
                     </View>
                   </View>
                   <View style={styles.lockedBadge}>
@@ -422,7 +465,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                   </View>
                   <View>
                     <Text style={styles.premiumSubjectName}>Financial Literacy</Text>
-                    <Text style={styles.premiumSubjectActivities}>7 activities</Text>
+                    <Text style={styles.premiumSubjectActivities}>12 activities</Text>
                   </View>
                 </View>
 
@@ -432,7 +475,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                   </View>
                   <View>
                     <Text style={styles.premiumSubjectName}>Sex & Safety</Text>
-                    <Text style={styles.premiumSubjectActivities}>7 activities</Text>
+                    <Text style={styles.premiumSubjectActivities}>12 activities</Text>
                   </View>
                 </View>
               </View>
@@ -601,6 +644,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: isSmallDevice ? 16 : 20,
     gap: isSmallDevice ? 12 : 16,
   },
+  emptyStateCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  emptyStateText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   subjectCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: isSmallDevice ? 14 : 16,
@@ -643,6 +704,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: isSmallDevice ? 8 : 10,
+  },
+  subjectIconImage: {
+    width: '80%',
+    height: '80%',
   },
   subjectInfo: {
     flex: 1,

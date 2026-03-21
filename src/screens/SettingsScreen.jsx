@@ -19,24 +19,31 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
+import DatePicker from 'react-native-date-picker';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const SettingsScreen = ({ onBack, onNavigate }) => {
+const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
+  // Derive parent email and child from userData
+  const child = userData?.children?.[0] || null;
+
   // User Profile State
-  const [userName, setUserName] = useState('John Doe');
-  const [userEmail, setUserEmail] = useState('john.doe@example.com');
-  const [userPhone, setUserPhone] = useState('+91 98765 43210');
-  const [userAvatar, setUserAvatar] = useState(null); // null means use initials
-  const [avatarType, setAvatarType] = useState('initial'); // 'initial', 'avatar', 'image'
+  const [userName, setUserName] = useState(child?.name || 'Parent');
+  const [userEmail, setUserEmail] = useState(userData?.email || 'parent@example.com');
+  const [userAvatar, setUserAvatar] = useState(() => {
+    if (child?.uploadedPhoto) return { uri: child.uploadedPhoto };
+    const avatarMap = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
+    return child?.avatar ? avatarMap[child.avatar] || null : null;
+  });
+  const [avatarType, setAvatarType] = useState(child?.avatar || child?.uploadedPhoto ? 'image' : 'initial');
   
   // Notification Settings
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(true);
-  const [weeklyReports, setWeeklyReports] = useState(true);
   
   // Modals
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -45,13 +52,42 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
   const [showAbout, setShowAbout] = useState(false);
   const [showRateUs, setShowRateUs] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showAddChild, setShowAddChild] = useState(false);
+
+  // Add Child form fields
+  const [newChildName, setNewChildName] = useState('');
+  const [newChildDOB, setNewChildDOB] = useState('');
+  const [newChildGrade, setNewChildGrade] = useState('');
+  const [newChildBoard, setNewChildBoard] = useState('');
+  const [newChildAvatar, setNewChildAvatar] = useState('');
+  const [showNewGradeDropdown, setShowNewGradeDropdown] = useState(false);
+  const [showNewBoardDropdown, setShowNewBoardDropdown] = useState(false);
+  const [showNewDatePicker, setShowNewDatePicker] = useState(false);
+  const [newSelectedDate, setNewSelectedDate] = useState(new Date(2015, 0, 1));
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [editSelectedDate, setEditSelectedDate] = useState(new Date(2015, 0, 1));
   
   // Edit Profile Fields
   const [editName, setEditName] = useState(userName);
   const [editEmail, setEditEmail] = useState(userEmail);
-  const [editPhone, setEditPhone] = useState(userPhone);
-  const [editAvatar, setEditAvatar] = useState(userAvatar);
-  const [editAvatarType, setEditAvatarType] = useState(avatarType);
+  const [editAvatar, setEditAvatar] = useState(() => {
+    if (child?.uploadedPhoto) return { uri: child.uploadedPhoto };
+    const avatarMap = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
+    return child?.avatar ? avatarMap[child.avatar] || null : null;
+  });
+  const [editAvatarType, setEditAvatarType] = useState(child?.avatar || child?.uploadedPhoto ? 'image' : 'initial');
+
+  // Child edit fields (from PersonalSetupScreen)
+  const [editChildName, setEditChildName] = useState(child?.name || '');
+  const [editChildDOB, setEditChildDOB] = useState(child?.dateOfBirth || '');
+  const [editChildGrade, setEditChildGrade] = useState(child?.grade || '');
+  const [editChildBoard, setEditChildBoard] = useState(child?.educationBoard || '');
+  const [editChildFaith, setEditChildFaith] = useState(child?.faithBackground || '');
+  const [showGradeDropdown, setShowGradeDropdown] = useState(false);
+  const [showBoardDropdown, setShowBoardDropdown] = useState(false);
+
+  const grades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
+  const boards = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other'];
   
   // Rating
   const [rating, setRating] = useState(0);
@@ -67,14 +103,59 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
     { id: 'A6', image: require('../assets/images/A6.jpeg') },
   ];
 
+  // Resolve child's avatar ID to actual image source
+  const resolveAvatar = (avatarId) => {
+    if (!avatarId) return null;
+    const found = avatarImages.find(a => a.id === avatarId);
+    return found ? found.image : null;
+  };
+
   const handleSaveProfile = () => {
     setUserName(editName);
     setUserEmail(editEmail);
-    setUserPhone(editPhone);
     setUserAvatar(editAvatar);
     setAvatarType(editAvatarType);
+
+    // Save child data back to App via callback
+    if (onUpdateUserData && child) {
+      const updatedChild = {
+        ...child,
+        name: editChildName,
+        dateOfBirth: editChildDOB,
+        grade: editChildGrade,
+        educationBoard: editChildBoard,
+        faithBackground: editChildFaith,
+        uploadedPhoto: editAvatarType === 'image' && editAvatar?.uri ? editAvatar.uri : child.uploadedPhoto,
+      };
+      onUpdateUserData({ email: editEmail, children: [updatedChild] });
+    }
+
     setShowEditProfile(false);
     Alert.alert('Success', 'Profile updated successfully!');
+  };
+
+  const handleAddChild = () => {
+    if (!newChildName.trim() || !newChildDOB.trim() || !newChildGrade) {
+      Alert.alert('Missing Info', 'Please fill in name, date of birth and grade.');
+      return;
+    }
+    const newChild = {
+      name: newChildName.trim(),
+      dateOfBirth: newChildDOB.trim(),
+      grade: newChildGrade,
+      educationBoard: newChildBoard,
+      avatar: newChildAvatar,
+      topics: [],
+    };
+    const updatedChildren = [...(userData?.children || []), newChild];
+    if (onUpdateUserData) onUpdateUserData({ children: updatedChildren });
+    setNewChildName('');
+    setNewChildDOB('');
+    setNewChildGrade('');
+    setNewChildBoard('');
+    setNewChildAvatar('');
+    setShowAddChild(false);
+    Alert.alert('Success', `${newChild.name} has been added!`);
   };
 
   const handleSelectAvatar = (avatar, type) => {
@@ -84,8 +165,18 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
   };
 
   const handleUploadImage = () => {
-    // This would integrate with react-native-image-picker in production
-    Alert.alert('Upload Photo', 'Image upload feature will be available in the next update.');
+    launchImageLibrary(
+      { mediaType: 'photo', quality: 0.8, selectionLimit: 1 },
+      (response) => {
+        if (response.didCancel || response.errorCode) return;
+        const asset = response.assets?.[0];
+        if (asset?.uri) {
+          setEditAvatar({ uri: asset.uri });
+          setEditAvatarType('image');
+          setShowAvatarPicker(false);
+        }
+      }
+    );
   };
 
   const renderAvatar = (avatar, type, size = 60) => {
@@ -147,7 +238,6 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
               onPress={() => {
                 setEditName(userName);
                 setEditEmail(userEmail);
-                setEditPhone(userPhone);
                 setEditAvatar(userAvatar);
                 setEditAvatarType(avatarType);
                 setShowEditProfile(true);
@@ -166,6 +256,15 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
             <View style={styles.premiumBadge}>
               <Text style={styles.premiumBadgeText}>Premium</Text>
             </View>
+            <Icon name="chevron-forward" size={20} color="#999999" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => setShowAddChild(true)}
+          >
+            <MaterialIcon name="account-plus-outline" size={24} color="#666666" />
+            <Text style={styles.settingText}>Add Child</Text>
             <Icon name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
         </View>
@@ -207,16 +306,7 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
             />
           </View>
 
-          <View style={styles.settingItem}>
-            <MaterialIcon name="chart-line" size={24} color="#666666" />
-            <Text style={styles.settingText}>Weekly Reports</Text>
-            <Switch
-              value={weeklyReports}
-              onValueChange={setWeeklyReports}
-              trackColor={{ false: '#E0E0E0', true: '#90EE90' }}
-              thumbColor={weeklyReports ? '#45a578' : '#f4f3f4'}
-            />
-          </View>
+
         </View>
 
         {/* Privacy Section */}
@@ -294,7 +384,11 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView 
+              style={styles.modalBody}
+              contentContainerStyle={{ paddingBottom: 32 }}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Avatar Section */}
               <View style={styles.avatarSection}>
                 <Text style={styles.inputLabel}>Profile Photo</Text>
@@ -309,15 +403,8 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
                 </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter your name"
-                />
-              </View>
+              {/* Parent Details */}
+              <Text style={styles.sectionDividerLabel}>Parent Details</Text>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email</Text>
@@ -331,16 +418,99 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
                 />
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  placeholder="Enter your phone"
-                  keyboardType="phone-pad"
-                />
-              </View>
+              {/* Child Details */}
+              {child && (
+                <>
+                  <Text style={styles.sectionDividerLabel}>Child Details</Text>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Child's Name</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={editChildName}
+                      onChangeText={setEditChildName}
+                      placeholder="Enter child's name"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Date of Birth</Text>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => setShowEditDatePicker(true)}
+                    >
+                      <Text style={editChildDOB ? styles.dropdownText : styles.dropdownPlaceholder}>
+                        {editChildDOB || 'Select Date of Birth'}
+                      </Text>
+                      <Icon name="calendar-outline" size={20} color="#666" />
+                    </TouchableOpacity>
+                    <DatePicker
+                      modal
+                      open={showEditDatePicker}
+                      date={editSelectedDate}
+                      mode="date"
+                      maximumDate={new Date()}
+                      onConfirm={(date) => {
+                        setEditSelectedDate(date);
+                        const d = String(date.getDate()).padStart(2, '0');
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const y = date.getFullYear();
+                        setEditChildDOB(`${d}/${m}/${y}`);
+                        setShowEditDatePicker(false);
+                      }}
+                      onCancel={() => setShowEditDatePicker(false)}
+                    />
+                  </View>
+
+                  {/* Grade Dropdown */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Grade</Text>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => { setShowGradeDropdown(!showGradeDropdown); setShowBoardDropdown(false); setShowFaithDropdown(false); }}
+                    >
+                      <Text style={editChildGrade ? styles.dropdownText : styles.dropdownPlaceholder}>
+                        {editChildGrade || 'Select Grade'}
+                      </Text>
+                      <Icon name={showGradeDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
+                    </TouchableOpacity>
+                    {showGradeDropdown && (
+                      <View style={styles.dropdownList}>
+                        {grades.map((g) => (
+                          <TouchableOpacity key={g} style={styles.dropdownItem} onPress={() => { setEditChildGrade(g); setShowGradeDropdown(false); }}>
+                            <Text style={[styles.dropdownItemText, editChildGrade === g && styles.dropdownItemSelected]}>{g}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Education Board Dropdown */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Education Board</Text>
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      onPress={() => { setShowBoardDropdown(!showBoardDropdown); setShowGradeDropdown(false); setShowFaithDropdown(false); }}
+                    >
+                      <Text style={editChildBoard ? styles.dropdownText : styles.dropdownPlaceholder}>
+                        {editChildBoard || 'Select Board'}
+                      </Text>
+                      <Icon name={showBoardDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
+                    </TouchableOpacity>
+                    {showBoardDropdown && (
+                      <View style={styles.dropdownList}>
+                        {boards.map((b) => (
+                          <TouchableOpacity key={b} style={styles.dropdownItem} onPress={() => { setEditChildBoard(b); setShowBoardDropdown(false); }}>
+                            <Text style={[styles.dropdownItemText, editChildBoard === b && styles.dropdownItemSelected]}>{b}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+
+
+                </>
+              )}
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -711,23 +881,6 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
                 <Icon name="chevron-forward" size={24} color="#999999" />
               </TouchableOpacity>
 
-              {/* Use Initial Option */}
-              <TouchableOpacity 
-                style={styles.uploadOption}
-                onPress={() => handleSelectAvatar(null, 'initial')}
-              >
-                <View style={[styles.uploadIconContainer, { backgroundColor: '#45a578' }]}>
-                  <Text style={styles.initialText}>{editName.charAt(0)}</Text>
-                </View>
-                <View style={styles.uploadTextContainer}>
-                  <Text style={styles.uploadTitle}>Use Initial</Text>
-                  <Text style={styles.uploadSubtitle}>Default profile with your initial</Text>
-                </View>
-                {editAvatarType === 'initial' && (
-                  <Icon name="checkmark-circle" size={24} color="#45a578" />
-                )}
-              </TouchableOpacity>
-
               {/* Avatar Emojis */}
               <Text style={styles.avatarSectionTitle}>Choose Avatar</Text>
               <View style={styles.avatarGrid}>
@@ -761,6 +914,141 @@ const SettingsScreen = ({ onBack, onNavigate }) => {
                 onPress={() => setShowAvatarPicker(false)}
               >
                 <Text style={styles.fullButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Child Modal */}
+      <Modal
+        visible={showAddChild}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddChild(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { height: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Child</Text>
+              <TouchableOpacity onPress={() => setShowAddChild(false)}>
+                <Icon name="close" size={28} color="#333333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={{ paddingBottom: 32 }}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Child's Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newChildName}
+                  onChangeText={setNewChildName}
+                  placeholder="Enter child's name"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Date of Birth *</Text>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => setShowNewDatePicker(true)}
+                >
+                  <Text style={newChildDOB ? styles.dropdownText : styles.dropdownPlaceholder}>
+                    {newChildDOB || 'Select Date of Birth'}
+                  </Text>
+                  <Icon name="calendar-outline" size={20} color="#666" />
+                </TouchableOpacity>
+                <DatePicker
+                  modal
+                  open={showNewDatePicker}
+                  date={newSelectedDate}
+                  mode="date"
+                  maximumDate={new Date()}
+                  onConfirm={(date) => {
+                    setNewSelectedDate(date);
+                    const d = String(date.getDate()).padStart(2, '0');
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const y = date.getFullYear();
+                    setNewChildDOB(`${d}/${m}/${y}`);
+                    setShowNewDatePicker(false);
+                  }}
+                  onCancel={() => setShowNewDatePicker(false)}
+                />
+              </View>
+
+              {/* Grade Dropdown */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Grade *</Text>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => { setShowNewGradeDropdown(!showNewGradeDropdown); setShowNewBoardDropdown(false); }}
+                >
+                  <Text style={newChildGrade ? styles.dropdownText : styles.dropdownPlaceholder}>
+                    {newChildGrade || 'Select Grade'}
+                  </Text>
+                  <Icon name={showNewGradeDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
+                </TouchableOpacity>
+                {showNewGradeDropdown && (
+                  <View style={styles.dropdownList}>
+                    {grades.map((g) => (
+                      <TouchableOpacity key={g} style={styles.dropdownItem} onPress={() => { setNewChildGrade(g); setShowNewGradeDropdown(false); }}>
+                        <Text style={[styles.dropdownItemText, newChildGrade === g && styles.dropdownItemSelected]}>{g}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Education Board Dropdown */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Education Board</Text>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => { setShowNewBoardDropdown(!showNewBoardDropdown); setShowNewGradeDropdown(false); }}
+                >
+                  <Text style={newChildBoard ? styles.dropdownText : styles.dropdownPlaceholder}>
+                    {newChildBoard || 'Select Board'}
+                  </Text>
+                  <Icon name={showNewBoardDropdown ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
+                </TouchableOpacity>
+                {showNewBoardDropdown && (
+                  <View style={styles.dropdownList}>
+                    {boards.map((b) => (
+                      <TouchableOpacity key={b} style={styles.dropdownItem} onPress={() => { setNewChildBoard(b); setShowNewBoardDropdown(false); }}>
+                        <Text style={[styles.dropdownItemText, newChildBoard === b && styles.dropdownItemSelected]}>{b}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Avatar Selection */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Choose Avatar</Text>
+                <View style={styles.addChildAvatarGrid}>
+                  {avatarImages.map((a) => (
+                    <TouchableOpacity
+                      key={a.id}
+                      onPress={() => setNewChildAvatar(a.id)}
+                      style={[styles.addChildAvatarItem, newChildAvatar === a.id && styles.addChildAvatarSelected]}
+                    >
+                      <Image source={a.image} style={styles.addChildAvatarImage} resizeMode="cover" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowAddChild(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleAddChild}>
+                <Text style={styles.saveButtonText}>Add Child</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -911,6 +1199,31 @@ const styles = StyleSheet.create({
     height: 40,
   },
 
+  addChildAvatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+
+  addChildAvatarItem: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+
+  addChildAvatarSelected: {
+    borderColor: '#45a578',
+  },
+
+  addChildAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -922,9 +1235,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '80%',
+    height: '85%',
     marginHorizontal: 16,
     marginTop: 16,
+    flex: 0,
+    flexDirection: 'column',
   },
 
   modalHeader: {
@@ -945,12 +1260,70 @@ const styles = StyleSheet.create({
   },
 
   modalBody: {
+    flex: 1,
     paddingHorizontal: 32,
     paddingVertical: 28,
   },
 
   inputGroup: {
     marginBottom: 20,
+  },
+
+  sectionDividerLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#45a578',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+
+  dropdownButton: {
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  dropdownText: {
+    fontSize: 16,
+    color: '#333333',
+  },
+
+  dropdownPlaceholder: {
+    fontSize: 16,
+    color: '#AAAAAA',
+  },
+
+  dropdownList: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+
+  dropdownItemText: {
+    fontSize: 15,
+    color: '#333333',
+  },
+
+  dropdownItemSelected: {
+    color: '#45a578',
+    fontWeight: '700',
   },
 
   inputLabel: {

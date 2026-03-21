@@ -3110,11 +3110,12 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { getFlashcards, getQACards, getPrompts } from '../data/nudgesData';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 
-const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNavigate }) => {
+const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack, onNavigate }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [expandedUnit, setExpandedUnit] = useState(null);
   const [currentFlashcard, setCurrentFlashcard] = useState(0);
@@ -3192,7 +3193,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
         { day: 'Wednesday', topic: 'Patterns', icon: 'dots-horizontal', color: '#3B82F6' },
         { day: 'Thursday', topic: 'Measurement', icon: 'ruler', color: '#3B82F6' },
         { day: 'Friday', topic: 'Number Games', icon: 'numeric', color: '#3B82F6' },
-        { day: 'Saturday', topic: 'Math in Daily Life', icon: 'calculator', color: '#3B82F6' },
+        { day: 'Saturday', topic: 'Spatial Shapes', icon: 'cube-outline', color: '#3B82F6' },
       ];
     }
 
@@ -3296,7 +3297,9 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
   const selectedDayIndex = getSelectedDayIndex();
   const selectedDayTopic = weeklyTopics[selectedDayIndex];
 
-  const displayTopic = {
+  const displayTopic = topicData?.id ? {
+    ...topicData,
+  } : {
     ...topicData,
     topic: selectedDayTopic.topic,
     title: selectedDayTopic.topic,
@@ -3386,61 +3389,15 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
       name: 'Unit 3 — Conversation Prompts',
       description: 'Thought-provoking prompts to encourage deeper thinking and meaningful parent-child conversation.',
     },
-    {
-      id: 4,
-      name: 'Unit 4 — Vocabulary',
-      description: 'Key words from this topic — definitions, examples, and synonyms to build language skills.',
-    },
   ];
 
   const createPrompts = () => {
-    const subject = displayTopic?.subject;
-    if (subject === 'Mathematics') {
-      return [
-        { id: 1, prompt: 'If we\'re fencing our garden, would we need to find the area or perimeter? Why do you think that?', hint: 'Think about what goes around the edges versus what fills the inside space.' },
-        { id: 2, prompt: 'We know that 1 meter = 100 centimeters. How many millimeters do you think are in 1 meter? Let\'s figure it out together!', hint: 'Start with what you know and work step by step.' },
-        { id: 3, prompt: 'Look around the room. Can you find something that might be about 1 meter long? How could we check if we\'re right?', hint: 'Compare objects and use estimation before measuring.' },
-      ];
-    }
-    if (subject === 'Environmental Studies') {
-      return [
-        { id: 1, prompt: 'If we collected rainwater in a bucket, what are 3 different ways we could use it at home?', hint: 'Think about the garden, cleaning, or even drinking water in emergencies.' },
-        { id: 2, prompt: 'Imagine you\'re a plant. What would you need to grow big and strong? How would you get those things?', hint: 'Consider sunlight, water, soil, and air - how does each help?' },
-        { id: 3, prompt: 'What do you think would happen to our planet if everyone saved just one glass of water every day?', hint: 'Think about how small actions add up when many people do them.' },
-      ];
-    }
-    if (subject === 'Science') {
-      return [
-        { id: 1, prompt: 'If you could have any animal\'s special ability (like flying, swimming underwater, or running super fast), which would you choose and why?', hint: 'Think about what makes each ability useful and fun.' },
-        { id: 2, prompt: 'Close your eyes and listen carefully. What sounds can you hear right now? Which sense are you using?', hint: 'Pay attention to both loud and quiet sounds around you.' },
-        { id: 3, prompt: 'Why do you think our body needs different types of food? What happens if we only eat one type?', hint: 'Consider what different foods give us - energy, strength, health.' },
-      ];
-    }
-    if (subject === 'Language Arts') {
-      return [
-        { id: 1, prompt: 'If you could change one thing in your favorite story, what would it be? How would that change the ending?', hint: 'Think about cause and effect - how one change affects everything else.' },
-        { id: 2, prompt: 'Think of a character from a book you love. If they came to visit you for a day, what would you do together?', hint: 'Consider their personality and what they might enjoy.' },
-        { id: 3, prompt: 'What makes a story exciting for you? Is it adventure, mystery, funny parts, or something else?', hint: 'There\'s no wrong answer - everyone enjoys different things!' },
-      ];
-    }
-    if (subject === 'Values & Character') {
-      return [
-        { id: 1, prompt: 'Can you remember a time when someone was kind to you? How did it make you feel?', hint: 'Think about specific moments and the emotions you felt.' },
-        { id: 2, prompt: 'If you saw someone sitting alone and looking sad, what could you do to help them feel better?', hint: 'Sometimes just being there and listening helps a lot.' },
-        { id: 3, prompt: 'What\'s one kind thing you could do tomorrow that would make someone smile?', hint: 'Small gestures like sharing or helping can make a big difference.' },
-      ];
-    }
-    if (subject === 'Arts & Creativity') {
-      return [
-        { id: 1, prompt: 'If you could paint the sky any color you wanted, what color would you choose? What would that world look like?', hint: 'Imagine how everything else would look under that colored sky.' },
-        { id: 2, prompt: 'Look at something in the room. Can you draw it using only circles, squares, and triangles?', hint: 'Break down complex shapes into simple geometric forms.' },
-        { id: 3, prompt: 'If your feelings had colors, what color would happy be? What about excited or calm?', hint: 'Think about how colors make you feel and match them to emotions.' },
-      ];
-    }
+    const nudgeId = displayTopic?.id;
+    const dataPrompts = nudgeId ? getPrompts(nudgeId) : [];
+    if (dataPrompts.length > 0) return dataPrompts;
+
     return [
-      { id: 1, prompt: 'What interests you most about this topic? What would you like to learn more about?', hint: 'Follow your curiosity and ask questions.' },
-      { id: 2, prompt: 'Can you think of a way to use what you learned in your daily life?', hint: 'Look for connections between learning and everyday activities.' },
-      { id: 3, prompt: 'If you could teach this topic to a friend, how would you explain it?', hint: 'Teaching others helps you understand better too.' },
+      { id: 1, prompt: 'What interests you most about this topic?', hint: 'Follow your curiosity and ask questions.' },
     ];
   };
 
@@ -3529,306 +3486,40 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
   const articleContent = createArticleContent();
 
   const createFlashcards = () => {
-    const topic = displayTopic?.topic || 'This Topic';
-    const subject = displayTopic?.subject;
-    
-    // First card always uses the actual topic data
-    const firstCard = {
-      id: 1,
-      title: topic,
-      concept: displayTopic?.whatYouWillLearn || topicData?.whatYouWillLearn || 'Key concepts and learning objectives for this topic.',
-      parentOutcome: 'You\'ll be able to connect classroom learning to everyday experiences, helping your child observe and appreciate the world around them.',
-      keyFact: subject === 'Environmental Studies' 
-        ? 'A single mature tree can absorb up to 48 lbs of CO₂ per year.'
-        : subject === 'Mathematics'
-        ? 'The concept of zero was invented in India around 500 CE and revolutionized mathematics.'
-        : subject === 'Science'
-        ? 'Your nose can remember 50,000 different scents, and smell is the sense most closely linked to memory.'
-        : 'Learning through hands-on activities increases retention by up to 75% compared to passive learning.',
-    };
-    
-    // Additional cards based on subject
-    if (subject === 'Environmental Studies') {
-      return [
-        firstCard,
-        {
-          id: 2,
-          title: 'Water Conservation',
-          concept: 'Understanding the importance of water, how to save it, and why every drop counts for our planet\'s future.',
-          parentOutcome: 'You can teach water-saving habits at home, like turning off taps and collecting rainwater for plants.',
-          keyFact: 'Only 1% of Earth\'s water is fresh and available for human use. The rest is saltwater or frozen in glaciers.',
-        },
-        {
-          id: 3,
-          title: 'Plant Life Cycle',
-          concept: 'Learn how plants grow from seeds, develop roots and leaves, produce flowers, and create new seeds.',
-          parentOutcome: 'You can start a small garden together, watching seeds sprout and grow while discussing each stage.',
-          keyFact: 'Some seeds can remain dormant for hundreds of years before sprouting when conditions are right.',
-        },
-      ];
+    const nudgeId = displayTopic?.id;
+    const dataCards = nudgeId ? getFlashcards(nudgeId) : [];
+    if (dataCards.length > 0) return dataCards;
+
+    // Fallback: only Day 1
+    const day1 = displayTopic?.dayByDay?.[0];
+    if (day1) {
+      return [{
+        id: 'day1',
+        title: day1.topic,
+        concept: day1.activity,
+        parentOutcome: day1.question,
+      }];
     }
-    
-    if (subject === 'Mathematics') {
-      return [
-        firstCard,
-        {
-          id: 2,
-          title: 'Shapes Around Us',
-          concept: 'Identifying basic shapes like circles, squares, and triangles, and recognizing them in everyday objects.',
-          parentOutcome: 'You can spot shapes together during walks or while looking at buildings, signs, and nature.',
-          keyFact: 'Honeybees naturally create perfect hexagons in their hives because it\'s the most efficient shape for storing honey.',
-        },
-        {
-          id: 3,
-          title: 'Simple Addition',
-          concept: 'Understanding how to combine numbers and quantities to find totals using objects and visual aids.',
-          parentOutcome: 'You can practice addition during daily activities like counting toys, snacks, or steps.',
-          keyFact: 'Ancient people used their fingers for counting, which is why we have a base-10 number system (10 fingers).',
-        },
-      ];
-    }
-    
-    if (subject === 'Science') {
-      return [
-        firstCard,
-        {
-          id: 2,
-          title: 'Animal Adaptations',
-          concept: 'Discovering how animals have special features that help them survive in their environments.',
-          parentOutcome: 'You can discuss animal adaptations during zoo visits or while watching nature documentaries together.',
-          keyFact: 'Arctic foxes can survive in temperatures as low as -70°C by changing their fur color with the seasons.',
-        },
-        {
-          id: 3,
-          title: 'Healthy Eating',
-          concept: 'Learning about different food groups, nutrition, and making healthy choices for a strong body.',
-          parentOutcome: 'You can involve your child in meal planning and preparation, discussing why different foods are good for us.',
-          keyFact: 'Your body has about 37 trillion cells, and they all need proper nutrition to work together and keep you healthy.',
-        },
-      ];
-    }
-    
-    if (subject === 'Language Arts') {
-      return [
-        firstCard,
-        {
-          id: 2,
-          title: 'Story Elements',
-          concept: 'Understanding the parts of a story: characters, setting, beginning, middle, and end.',
-          parentOutcome: 'You can discuss stories together, asking questions about characters and what happens in the story.',
-          keyFact: 'Reading just 20 minutes a day exposes children to 1.8 million words per year.',
-        },
-        {
-          id: 3,
-          title: 'Rhyming Words',
-          concept: 'Recognizing and creating words that sound alike at the end, building phonemic awareness.',
-          parentOutcome: 'You can play rhyming games during car rides or make up silly rhyming songs together.',
-          keyFact: 'Dr. Seuss used only 50 different words to write "Green Eggs and Ham" to win a bet with his publisher.',
-        },
-      ];
-    }
-    
-    if (subject === 'Values & Character') {
-      return [
-        firstCard,
-        {
-          id: 2,
-          title: 'Sharing & Caring',
-          concept: 'Understanding the importance of sharing with others and showing kindness in daily interactions.',
-          parentOutcome: 'You can model sharing behavior and praise your child when they share toys or help others.',
-          keyFact: 'Studies show that children who practice kindness have better mental health and stronger friendships.',
-        },
-        {
-          id: 3,
-          title: 'Honesty',
-          concept: 'Learning why telling the truth is important and how honesty builds trust with family and friends.',
-          parentOutcome: 'You can create a safe space for truth-telling and discuss why honesty matters in your family.',
-          keyFact: 'Children who learn honesty early develop stronger moral reasoning and better decision-making skills.',
-        },
-      ];
-    }
-    
-    if (subject === 'Arts & Creativity') {
-      return [
-        firstCard,
-        {
-          id: 2,
-          title: 'Color Mixing',
-          concept: 'Discovering how primary colors (red, blue, yellow) combine to create secondary colors and beyond.',
-          parentOutcome: 'You can set up painting activities at home, letting your child experiment with mixing colors.',
-          keyFact: 'The human eye can distinguish about 10 million different colors.',
-        },
-        {
-          id: 3,
-          title: 'Creative Expression',
-          concept: 'Using art, music, and movement to express feelings, ideas, and imagination in unique ways.',
-          parentOutcome: 'You can provide various art materials and encourage free expression without judgment.',
-          keyFact: 'Creative activities activate both sides of the brain, improving problem-solving and emotional intelligence.',
-        },
-      ];
-    }
-    
-    // Default cards for other subjects
-    return [
-      firstCard,
-      {
-        id: 2,
-        title: 'Practical Application',
-        concept: 'Understanding how to apply what you\'ve learned in real-world situations and daily activities.',
-        parentOutcome: 'You can create opportunities for practice during everyday routines and activities.',
-        keyFact: 'Children learn best when they can see the practical purpose of what they\'re studying.',
-      },
-      {
-        id: 3,
-        title: 'Building Skills',
-        concept: 'Developing foundational skills that will support future learning and personal growth.',
-        parentOutcome: 'You can encourage skill development through play, exploration, and guided activities.',
-        keyFact: 'Skills learned in early childhood form the foundation for all future learning and development.',
-      },
-    ];
+    return [{
+      id: 'fc1',
+      title: displayTopic?.topic || 'Topic',
+      concept: displayTopic?.whatYouWillLearn || '',
+      parentOutcome: '',
+    }];
   };
 
   const flashcards = createFlashcards();
 
   const createQAFlashcards = () => {
-    const subject = displayTopic?.subject;
-    
-    if (subject === 'Environmental Studies') {
-      return [
-        { 
-          id: 1, 
-          question: 'How does rainwater harvesting help the environment?', 
-          answer: 'Rainwater harvesting reduces water waste, conserves groundwater, prevents flooding, and provides clean water for plants and other uses.' 
-        },
-        { 
-          id: 2, 
-          question: 'Why do leaves change colour in autumn?', 
-          answer: 'As daylight shortens, trees stop producing chlorophyll (green pigment). Other pigments — yellows, oranges, reds — are revealed as the green fades away.' 
-        },
-        { 
-          id: 3, 
-          question: 'What are the main parts of a plant and their functions?', 
-          answer: 'Roots absorb water and anchor the plant, stems transport water and nutrients, and leaves make food through photosynthesis using sunlight.' 
-        },
-      ];
-    }
-    
-    if (subject === 'Mathematics') {
-      return [
-        { 
-          id: 1, 
-          question: 'What is the difference between area and perimeter?', 
-          answer: 'Perimeter is the distance around the outside of a shape, while area is the space inside the shape. For example, a fence measures perimeter, but carpet measures area.' 
-        },
-        { 
-          id: 2, 
-          question: 'How can you tell if a number is even or odd?', 
-          answer: 'An even number can be divided by 2 with no remainder (like 2, 4, 6, 8). An odd number has a remainder of 1 when divided by 2 (like 1, 3, 5, 7).' 
-        },
-        { 
-          id: 3, 
-          question: 'Why do we use different units of measurement?', 
-          answer: 'Different units help us measure things accurately. We use meters for distance, kilograms for weight, and liters for volume. Smaller units like centimeters work better for small objects.' 
-        },
-      ];
-    }
-    
-    if (subject === 'Science') {
-      return [
-        { 
-          id: 1, 
-          question: 'How do animals adapt to their environment?', 
-          answer: 'Animals develop special features over time that help them survive. For example, polar bears have thick fur for cold weather, and camels store water in their humps for deserts.' 
-        },
-        { 
-          id: 2, 
-          question: 'What are the five senses and how do they help us?', 
-          answer: 'Our five senses are sight, hearing, touch, taste, and smell. They help us explore and understand the world around us, keep us safe, and enjoy experiences.' 
-        },
-        { 
-          id: 3, 
-          question: 'Why is it important to eat different types of food?', 
-          answer: 'Different foods provide different nutrients our body needs. Fruits and vegetables give vitamins, proteins build muscles, and carbohydrates provide energy for activities.' 
-        },
-      ];
-    }
-    
-    if (subject === 'Language Arts') {
-      return [
-        { 
-          id: 1, 
-          question: 'What makes a good story?', 
-          answer: 'A good story has interesting characters, a clear setting, a problem or challenge, exciting events, and a satisfying ending. It should make readers want to know what happens next.' 
-        },
-        { 
-          id: 2, 
-          question: 'How do rhyming words help with reading?', 
-          answer: 'Rhyming words help children recognize sound patterns and predict word endings. This makes reading easier and more fun, and helps build phonemic awareness.' 
-        },
-        { 
-          id: 3, 
-          question: 'Why is reading every day important?', 
-          answer: 'Daily reading improves vocabulary, comprehension, and imagination. Just 20 minutes a day exposes children to thousands of new words and ideas, building strong literacy skills.' 
-        },
-      ];
-    }
-    
-    if (subject === 'Values & Character') {
-      return [
-        { 
-          id: 1, 
-          question: 'What does it mean to be kind?', 
-          answer: 'Being kind means treating others with care, respect, and compassion. It includes helping others, sharing, using polite words, and thinking about how our actions affect people\'s feelings.' 
-        },
-        { 
-          id: 2, 
-          question: 'Why is honesty important?', 
-          answer: 'Honesty builds trust between people. When we tell the truth, others know they can rely on us. Being honest also helps us feel good about ourselves and makes relationships stronger.' 
-        },
-        { 
-          id: 3, 
-          question: 'How can we show respect to others?', 
-          answer: 'We show respect by listening when others speak, using kind words, following rules, accepting differences, and treating everyone the way we want to be treated.' 
-        },
-      ];
-    }
-    
-    if (subject === 'Arts & Creativity') {
-      return [
-        { 
-          id: 1, 
-          question: 'What are primary colors and why are they special?', 
-          answer: 'Primary colors are red, blue, and yellow. They\'re special because they can\'t be made by mixing other colors, but all other colors can be created by mixing these three.' 
-        },
-        { 
-          id: 2, 
-          question: 'How does art help us express feelings?', 
-          answer: 'Art lets us show emotions that are hard to put into words. Through colors, shapes, music, or movement, we can express happiness, sadness, excitement, or any feeling we have.' 
-        },
-        { 
-          id: 3, 
-          question: 'Why is creativity important?', 
-          answer: 'Creativity helps us solve problems in new ways, express ourselves uniquely, and think outside the box. It makes learning fun and helps us develop confidence and imagination.' 
-        },
-      ];
-    }
-    
-    // Default Q&A cards
+    const nudgeId = displayTopic?.id;
+    const dataQA = nudgeId ? getQACards(nudgeId) : [];
+    if (dataQA.length > 0) return dataQA;
+
     return [
-      { 
-        id: 1, 
-        question: `What will you learn in this topic?`, 
-        answer: topicData?.whatYouWillLearn || 'You will learn key concepts and practical applications that can be used in everyday life.' 
-      },
-      { 
-        id: 2, 
-        question: 'How can parents support this learning?', 
-        answer: 'Parents can create opportunities for practice during daily activities, ask open-ended questions, and celebrate progress to build confidence.' 
-      },
-      { 
-        id: 3, 
-        question: 'How long does this activity take?', 
-        answer: `This activity takes about ${topicData?.duration || '20 minutes'} of focused learning time, but can be extended based on interest.` 
+      {
+        id: 1,
+        question: `What will you learn in this topic?`,
+        answer: displayTopic?.whatYouWillLearn || 'You will learn key concepts and practical applications for everyday life.',
       },
     ];
   };
@@ -3839,6 +3530,10 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
     setExpandedUnit(expandedUnit === unitId ? null : unitId);
   };
 
+  const childGrade = userData?.children?.[0]?.grade;
+  const topicGrade = topicData?.grades?.[0];
+  const gradeMismatch = childGrade && topicGrade && childGrade !== topicGrade;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -3848,19 +3543,25 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Icon name="chevron-back" size={28} color="#333333" />
         </TouchableOpacity>
-
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {displayTopic?.topic || topicData?.topic || 'Learning Topic'}
-          </Text>
-          <Text style={[styles.headerSubject, { color: subjectColor }]}>
-            {displayTopic?.subject || subjectName || 'Learning'}
+            {subjectName || topicData?.subject || 'Learning Topic'}
           </Text>
         </View>
-
-        {/* Spacer to balance the back button so title stays truly centered */}
         <View style={styles.headerRight} />
       </View>
+
+      {gradeMismatch ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Icon name="book-outline" size={48} color="#9CA3AF" />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151', marginTop: 16, textAlign: 'center' }}>
+            Content coming soon
+          </Text>
+          <Text style={{ fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+            We're preparing topics for {childGrade}.{'\n'}Check back soon!
+          </Text>
+        </View>
+      ) : (
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -4081,132 +3782,64 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
         {/* ── UNITS ── */}
         <View style={styles.unitsSection}>
           {units.map((unit) => {
-            // Get icon for each unit
             const getUnitIcon = (unitId) => {
               switch(unitId) {
                 case 1: return 'book-open-page-variant';
                 case 2: return 'help-circle-outline';
                 case 3: return 'message-text-outline';
-                case 4: return 'book-alphabet';
                 default: return 'book-outline';
               }
             };
-            
-            // Get card count for each unit
             const getCardCount = (unitId) => {
               switch(unitId) {
                 case 1: return flashcards.length;
                 case 2: return qaFlashcards.length;
                 case 3: return prompts.length;
-                case 4: return vocabulary.length;
                 default: return 0;
               }
             };
-            
+            const getUnitDescription = (unitId) => {
+              switch(unitId) {
+                case 1: return 'Build your own understanding first - Quick, clear explanations with real-life connections so you can guide your child with confidence.';
+                case 2: return 'Check understanding through conversation - Thoughtfully designed questions that go beyond right or wrong answers to build thinking skills.';
+                case 3: return 'Bring learning into everyday life - Simple prompts that turn daily moments into meaningful learning and bonding experiences. the app should have this content ';
+                default: return '';
+              }
+            };
             return (
               <View key={unit.id} style={styles.unitCard}>
-                <TouchableOpacity style={styles.unitHeader} onPress={() => toggleUnit(unit.id)}>
-                  <View style={styles.unitHeaderLeft}>
-                    <View style={styles.unitIconContainer}>
-                      <MaterialIcon name={getUnitIcon(unit.id)} size={24} color="#6B7280" />
-                    </View>
-                    <View style={styles.unitTextContainer}>
-                      <Text style={styles.unitName}>
-                        <Text style={styles.unitNumberText}>{unit.name.split(' — ')[0]}</Text>
-                        {unit.name.includes(' — ') && (
-                          <Text style={styles.unitDescriptionText}> — {unit.name.split(' — ')[1]}</Text>
-                        )}
-                      </Text>
-                      <Text style={styles.cardCountText}>{getCardCount(unit.id)} cards</Text>
-                    </View>
-                  </View>
-                  <Icon name={expandedUnit === unit.id ? 'chevron-up' : 'chevron-down'} size={24} color="#B0B0B0" />
-                </TouchableOpacity>
-
-                {expandedUnit === unit.id && (
-                <View style={styles.unitContent}>
-                  {unit.id === 1 ? (
-                    <>
-                      <Text style={styles.unitIntroText}>
-                        Understand the core concept, learning goals, and what your child gains from this nudge.
-                      </Text>
-                      
-                      <View style={styles.conceptBox}>
-                        <Text style={styles.conceptBoxLabel}>CONCEPT</Text>
-                        <Text style={styles.conceptBoxText}>{unit.concept}</Text>
-                      </View>
-                      
-                      <View style={styles.conceptBox}>
-                        <Text style={styles.conceptBoxLabel}>PARENT OUTCOME</Text>
-                        <Text style={styles.conceptBoxText}>{unit.parentOutcome}</Text>
-                      </View>
-                      
-                      <TouchableOpacity
-                        style={styles.openButton}
-                        onPress={() => onNavigate && onNavigate('flashcards', { flashcards, topic: displayTopic?.topic, subject: displayTopic?.subject })}
-                      >
-                        <Text style={styles.openButtonText}>Open Flashcards</Text>
-                        <Icon name="arrow-forward" size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </>
-                  ) : unit.id === 2 ? (
-                    <>
-                      <Text style={styles.unitBodyText}>{unit.description}</Text>
-                      <TouchableOpacity
-                        style={styles.openButton}
-                        onPress={() => onNavigate && onNavigate('qaCards', { qaCards: qaFlashcards, topic: displayTopic?.topic, subject: displayTopic?.subject })}
-                      >
-                        <Text style={styles.openButtonText}>Open Q&A Cards</Text>
-                        <Icon name="arrow-forward" size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </>
-                  ) : unit.id === 3 ? (
-                    <>
-                      <Text style={styles.unitBodyText}>{unit.description}</Text>
-                      
-                      <View style={styles.parentTipsBox}>
-                        <Text style={styles.parentTipsTitle}>PARENT TIPS</Text>
-                        <View style={styles.parentTipItem}>
-                          <Text style={styles.parentTipBullet}>•</Text>
-                          <Text style={styles.parentTipText}>Don't expect 'right' answers immediately.</Text>
-                        </View>
-                        <View style={styles.parentTipItem}>
-                          <Text style={styles.parentTipBullet}>•</Text>
-                          <Text style={styles.parentTipText}>Celebrate their thinking process. "That's an interesting idea!"</Text>
-                        </View>
-                        <View style={styles.parentTipItem}>
-                          <Text style={styles.parentTipBullet}>•</Text>
-                          <Text style={styles.parentTipText}>Work together if they get stuck — deepening learning is the goal.</Text>
-                        </View>
-                      </View>
-                      
-                      <TouchableOpacity
-                        style={styles.openButton}
-                        onPress={() => onNavigate && onNavigate('promptCards', { prompts, topic: displayTopic?.topic, subject: displayTopic?.subject })}
-                      >
-                        <Text style={styles.openButtonText}>Open Prompts</Text>
-                        <Icon name="arrow-forward" size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </>
-                  ) : unit.id === 4 ? (
-                    <>
-                      <Text style={styles.unitBodyText}>{unit.description}</Text>
-                      <TouchableOpacity
-                        style={styles.openButton}
-                        onPress={() => onNavigate && onNavigate('vocabCards', { vocabulary, topic: displayTopic?.topic, subject: displayTopic?.subject })}
-                      >
-                        <Text style={styles.openButtonText}>Open Vocabulary</Text>
-                        <Icon name="arrow-forward" size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <Text style={styles.unitBodyText}>{unit.description}</Text>
-                  )}
+                <View style={styles.unitIconContainer}>
+                  <MaterialIcon name={getUnitIcon(unit.id)} size={22} color="#6B7280" />
                 </View>
-              )}
-            </View>
-          );
+                <View style={styles.unitTextContainer}>
+                  <Text style={styles.unitName}>{unit.name.split(' — ')[1] || unit.name}</Text>
+                  <Text style={styles.unitBodyText}>{getUnitDescription(unit.id)}</Text>
+                </View>
+                <Text style={styles.cardCountText}>{getCardCount(unit.id)} cards</Text>
+              </View>
+            );
           })}
+        </View>
+
+        {/* ── START FLASHCARDS BUTTON ── */}
+        <View style={styles.startFlashcardsSection}>
+          <TouchableOpacity
+            style={styles.startFlashcardsButton}
+            onPress={() => {
+              const allCards = [
+                ...flashcards.map(c => ({ ...c, type: 'about' })),
+                ...qaFlashcards.map(c => ({ ...c, type: 'qa' })),
+                ...prompts.map(p => ({ id: `p-${p.id}`, type: 'prompt', question: p.prompt, answer: p.hint })),
+              ];
+              onNavigate && onNavigate('flashcards', { flashcards: allCards, topic: displayTopic?.topic, subject: displayTopic?.subject });
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.startFlashcardsText}>Start Flashcards</Text>
+            <Icon name="chevron-forward" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.startFlashcardsHint}>Swipe through cards at your own pace</Text>
+          <Text style={styles.startFlashcardsCount}>{flashcards.length + qaFlashcards.length + prompts.length} cards total · ~5 min</Text>
         </View>
 
         {/* ── LEARNING STATUS ── */}
@@ -4263,6 +3896,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, onBack, onNaviga
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      )}
 
       {/* ── ARTICLE MODAL ── */}
       {showArticleModal && (
@@ -4670,43 +4304,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginBottom: 12,
-    overflow: 'hidden',
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
-  unitHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-  },
-  unitHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 16,
-  },
   unitIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 14,
+    flexShrink: 0,
   },
   unitTextContainer: {
     flex: 1,
+    paddingRight: 8,
   },
   unitName: {
-    fontSize: isTablet ? 17 : 16,
+    fontSize: isTablet ? 16 : 15,
+    fontWeight: '700',
     color: '#1A1A1A',
-    fontFamily: 'Montserrat-SemiBold',
-    fontWeight: '600',
+    fontFamily: 'Montserrat-Bold',
     marginBottom: 4,
-    lineHeight: isTablet ? 24 : 22,
   },
   unitNumberText: {
     fontWeight: '700',
@@ -4719,9 +4345,10 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   cardCountText: {
-    fontSize: isTablet ? 14 : 13,
-    color: '#7D8A96',
+    fontSize: isTablet ? 13 : 12,
+    color: '#9CA3AF',
     fontFamily: 'Montserrat-Regular',
+    flexShrink: 0,
     marginTop: 2,
   },
   unitContent: {
@@ -4737,11 +4364,44 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   unitBodyText: {
-    fontSize: isTablet ? 15 : 13,
-    color: '#666666',
-    lineHeight: isTablet ? 24 : 20,
+    fontSize: isTablet ? 14 : 12,
+    color: '#6B7280',
+    lineHeight: isTablet ? 22 : 18,
     fontFamily: 'Montserrat-Regular',
-    marginBottom: 12,
+  },
+  startFlashcardsSection: {
+    marginHorizontal: isTablet ? 20 : 16,
+    marginTop: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  startFlashcardsButton: {
+    backgroundColor: '#27AE60',
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    gap: 8,
+  },
+  startFlashcardsText: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+  },
+  startFlashcardsHint: {
+    fontSize: isTablet ? 13 : 12,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 10,
+  },
+  startFlashcardsCount: {
+    fontSize: isTablet ? 13 : 12,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 2,
   },
   conceptBox: {
     backgroundColor: '#F8F9FA',

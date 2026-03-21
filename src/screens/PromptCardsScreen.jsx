@@ -362,18 +362,7 @@ const PromptCardsScreen = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Progress Dots */}
-          <View style={styles.dotsContainer}>
-            {prompts.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index <= currentIndex && styles.dotActive,
-                ]}
-              />
-            ))}
-          </View>
+          
 
           <TouchableOpacity
             style={styles.nextBtn}
@@ -475,12 +464,12 @@ const styles = StyleSheet.create({
   cardPositioned: {
     position: 'absolute',
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
   },
 
   glassCard: {
     width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
@@ -522,13 +511,13 @@ const styles = StyleSheet.create({
   cardBody: {
     padding: isSmallDevice ? 16 : 20,
     paddingBottom: isSmallDevice ? 20 : 24,
-    minHeight: CARD_HEIGHT - 56,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    flexDirection: 'column',
   },
   promptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 0,
+    marginBottom: 18,
   },
   promptNumberBadge: {
     width: 32,
@@ -555,14 +544,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1A1A',
     lineHeight: isTablet ? 28 : 24,
-    marginTop: -70,
-    marginBottom: 0,
+    marginBottom: 38,
   },
   hintBox: {
     backgroundColor: '#FFF9E6',
     borderRadius: 12,
     padding: 16,
-    marginTop: 16,
+    marginTop: 0,
   },
   hintTitle: {
     fontSize: 11,
@@ -691,21 +679,12 @@ const styles = StyleSheet.create({
   prevBtnTextDisabled: {
     color: '#D1D5DB',
   },
-  dotsContainer: {
+  Container: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5E7EB',
-  },
-  dotActive: {
-    backgroundColor: '#27AE60',
-    width: 24,
-  },
+
   nextBtn: {
     flexDirection: 'row',
     alignItems: 'center',

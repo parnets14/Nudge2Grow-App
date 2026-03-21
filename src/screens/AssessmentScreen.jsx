@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -27,13 +28,13 @@ const AssessmentScreen = ({ onBack, onNavigate, knownTopics, practiceTopics }) =
 
   // Subject configuration
   const subjectConfig = {
-    'Math': { icon: 'calculator', color: '#3B82F6' },
-    'Science / EVS': { icon: 'leaf', color: '#10B981' },
-    'English': { icon: 'book-open-variant', color: '#F59E0B' },
-    'Social Studies': { icon: 'earth', color: '#EC4899' },
-    'Artificial Intelligence': { icon: 'brain', color: '#8B5CF6' },
-    'Financial Literacy': { icon: 'wallet', color: '#14B8A6' },
-    'Sex & Safety': { icon: 'heart-check', color: '#EF4444' },
+    'Math': { image: require('../assets/images/math.png'), color: '#3B82F6' },
+    'Science / EVS': { image: require('../assets/images/sci.png'), color: '#10B981' },
+    'English': { image: require('../assets/images/eng.png'), color: '#F59E0B' },
+    'Social Studies': { image: require('../assets/images/social s.png'), color: '#EC4899' },
+    'Artificial Intelligence': { image: require('../assets/images/Ai s.png'), color: '#8B5CF6' },
+    'Financial Literacy': { image: require('../assets/images/Fl.png'), color: '#14B8A6' },
+    'Sex & Safety': { image: require('../assets/images/ss.png'), color: '#EF4444' },
   };
 
   const toggleSubject = (subjectName) => {
@@ -119,8 +120,16 @@ const AssessmentScreen = ({ onBack, onNavigate, knownTopics, practiceTopics }) =
                     <Icon name="checkmark" size={16} color="#FFFFFF" />
                   </View>
                 )}
-                <View style={[styles.subjectIcon, { backgroundColor: `${config.color}20` }]}>
-                  <MaterialIcon name={config.icon} size={28} color={config.color} />
+                <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
+                  {config.image ? (
+                    <Image 
+                      source={config.image}
+                      style={styles.subjectIconImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <MaterialIcon name={config.icon} size={28} color={config.color} />
+                  )}
                 </View>
                 <Text style={styles.subjectName}>{subject.name}</Text>
                 <Text style={styles.topicCount}>{subject.topicCount} topics</Text>
@@ -257,6 +266,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  subjectIconImage: {
+    width: '75%',
+    height: '75%',
   },
   subjectName: {
     fontSize: isTablet ? 14 : 13,

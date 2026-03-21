@@ -19,7 +19,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { getAllNudges, getAllSubjects, getNudgesBySubject } from '../data/nudgesData';
+import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -151,9 +151,28 @@ const HomeScreen = ({ userData, onNavigate }) => {
   const child = userData?.children?.[0];
   const timeRecommendation = getTimeBasedRecommendation();
   
-  // Get all nudges from data file
-  const todaysNudges = getAllNudges();
-  
+  // Did You Know - config: max 5 facts per day, show 2 daily
+  const DID_YOU_KNOW_DAILY_COUNT = 2; // change to up to 5
+  const allFacts = [
+    { id: 1, fact: 'Bananas are berries, but strawberries are not. In botanical terms, a berry comes from a single flower with one ovary.', prompt: 'Can you think of other foods that might not be what we usually call them?', source: 'Britannica Kids' },
+    { id: 2, fact: 'Honey never spoils. Archaeologists have found 3,000-year-old honey in Egyptian tombs that was still perfectly edible.', prompt: 'Why do you think honey lasts so long? What makes it special?', source: 'Britannica Kids' },
+    { id: 3, fact: 'Octopuses have three hearts — two pump blood to the gills, and one pumps it to the rest of the body.', prompt: 'What other animals do you think might have unusual body features?', source: 'Britannica Kids' },
+    { id: 4, fact: 'The Great Wall of China is not visible from space with the naked eye — that\'s actually a popular myth!', prompt: 'Can you think of other things people believe that might not be true?', source: 'Britannica Kids' },
+    { id: 5, fact: 'A group of flamingos is called a "flamboyance." They get their pink colour from the food they eat.', prompt: 'What do you think would happen if flamingos stopped eating pink food?', source: 'Britannica Kids' },
+  ];
+  const todaysFacts = allFacts.slice(0, DID_YOU_KNOW_DAILY_COUNT);
+
+  // Get nudges filtered by child's grade and subject levels
+  const todaysNudges = getNudgesByGradeAndLevel(child?.grade, child?.subjectLevels);
+
+  // Pick one nudge per subject for Today's Nudges section (last added = most recent)
+  const todaysNudgesBySubject = Object.values(
+    todaysNudges.reduce((acc, nudge) => {
+      acc[nudge.subject] = nudge; // always overwrite → last one wins
+      return acc;
+    }, {})
+  );
+
   // Get all subjects dynamically from data
   const allSubjects = getAllSubjects();
   
@@ -166,34 +185,49 @@ const HomeScreen = ({ userData, onNavigate }) => {
   // Subject configuration for icons and colors
   const subjectConfig = {
     'Mathematics': {
-      icon: 'calculator-variant',
+      image: require('../assets/images/math.png'),
       color: '#42A5F5',
       bgColor: '#E3F2FD',
     },
     'Science': {
-      icon: 'flask-outline',
+      image: require('../assets/images/sci.png'),
       color: '#8B5CF6',
       bgColor: '#F5F3FF',
     },
-    'Language Arts': {
-      icon: 'book-alphabet',
-      color: '#F59E0B',
-      bgColor: '#FFFBEB',
+    'English': {
+      image: require('../assets/images/eng.png'),
+      color: '#42A5F5',
+      bgColor: '#E3F2FD',
     },
     'Environmental Studies': {
-      icon: 'leaf',
+      image: require('../assets/images/sci.png'),
       color: '#10B981',
       bgColor: '#ECFDF5',
     },
     'Values & Character': {
-      icon: 'heart-multiple-outline',
+      image: require('../assets/images/ss.png'),
       color: '#EC4899',
       bgColor: '#FDF2F8',
     },
     'Arts & Creativity': {
-      icon: 'palette-outline',
+      image: require('../assets/images/Ai s.png'),
       color: '#F59E0B',
       bgColor: '#FFFBEB',
+    },
+    'Financial Literacy': {
+      image: require('../assets/images/Fl.png'),
+      color: '#10B981',
+      bgColor: '#ECFDF5',
+    },
+    'Sex & Safety Education': {
+      image: require('../assets/images/ss.png'),
+      color: '#EC4899',
+      bgColor: '#FDF2F8',
+    },
+    'Artificial Intelligence': {
+      image: require('../assets/images/Ai s.png'),
+      color: '#8B5CF6',
+      bgColor: '#F5F3FF',
     },
   };
 
@@ -239,31 +273,12 @@ const HomeScreen = ({ userData, onNavigate }) => {
       >
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>
-            Good {getGreeting()}{child ? `, ${child.name}'s Parents` : ''}! 👋
+            Good {getGreeting()}! 👋
           </Text>
           <Text style={styles.subtitleText}>
             Ready to create magical learning moments? Here are today's conversation starters designed just for your family.
           </Text>
         </View>
-
-        {/* Quick Action Banner */}
-        {showQuickAction && (
-          <View style={styles.quickActionBanner}>
-            <View style={styles.quickActionContent}>
-              <MaterialIcon name={timeRecommendation.icon} size={24} color={timeRecommendation.color} />
-              <View style={styles.quickActionText}>
-                <Text style={styles.quickActionTitle}>{timeRecommendation.title}</Text>
-                <Text style={styles.quickActionDescription}>{timeRecommendation.description}</Text>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.quickActionClose}
-              onPress={() => setShowQuickAction(false)}
-            >
-              <Icon name="close" size={20} color="#666666" />
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* Featured Nudge of the Day */}
         <View style={styles.section}>
@@ -294,7 +309,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
                 </View>
                 <View style={styles.metaChip}>
                   <Icon name="people-outline" size={14} color="#666666" />
-                  <Text style={styles.metaChipText}>Ages 6-10</Text>
+                  <Text style={styles.metaChipText}>Grade {child?.grade || '3'}</Text>
                 </View>
                 <View style={styles.metaChip}>
                   <MaterialIcon name="star" size={14} color="#FFB84D" />
@@ -322,13 +337,21 @@ const HomeScreen = ({ userData, onNavigate }) => {
             <Text style={styles.sectionTitle}>Today's Nudges</Text>
           </View>
 
-          {todaysNudges.slice(0, 2).map((nudge) => (
+          {todaysNudgesBySubject.length === 0 ? (
+            <View style={styles.emptyNudgesCard}>
+              <MaterialIcon name="book-clock-outline" size={36} color="#9CA3AF" />
+              <Text style={styles.emptyNudgesTitle}>Content coming soon</Text>
+              <Text style={styles.emptyNudgesText}>
+                We're preparing nudges for {child?.grade || 'this grade'}. Check back soon!
+              </Text>
+            </View>
+          ) : (
+            todaysNudgesBySubject.slice(0, 2).map((nudge) => (
             <TouchableOpacity 
               key={nudge.id}
               style={styles.card}
               onPress={() => {
                 handleNudgeComplete(nudge.id);
-                // Navigate directly to TopicDetailScreen
                 if (onNavigate) onNavigate('topicDetail', { 
                   subjectName: nudge.subject,
                   topicData: nudge 
@@ -361,9 +384,28 @@ const HomeScreen = ({ userData, onNavigate }) => {
                 <Icon name="chevron-forward" size={24} color="#45a578" />
               )}
             </TouchableOpacity>
-          ))}
+          ))
+          )}
         </View>
-
+ {/* Did You Know */}
+        <View style={styles.section}>
+          <View style={styles.didYouKnowCard}>
+            <View style={styles.didYouKnowHeader}>
+              <MaterialIcon name="lightbulb-on-outline" size={22} color="#1D4ED8" />
+              <Text style={styles.didYouKnowTitle}>DID YOU KNOW?</Text>
+            </View>
+            {todaysFacts.map((item, index) => (
+              <View key={item.id} style={[styles.didYouKnowFactBlock, index < todaysFacts.length - 1 && styles.didYouKnowFactDivider]}>
+                <Text style={styles.didYouKnowFact}>{item.fact}</Text>
+                <View style={styles.didYouKnowPromptRow}>
+                  <MaterialIcon name="arrow-right" size={16} color="#2563EB" />
+                  <Text style={styles.didYouKnowPrompt}>{item.prompt}</Text>
+                </View>
+                <Text style={styles.didYouKnowSource}>Source: {item.source}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
         {/* Weekly Streak */}
         <View style={styles.section}>
           <View style={styles.streakCard}>
@@ -388,74 +430,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
           </View>
         </View>
 
-        {/* Did You Know? */}
-        <View style={styles.section}>
-          <View style={styles.didYouKnowCard}>
-            <View style={styles.didYouKnowHeader}>
-              <MaterialIcon name="lightbulb-on" size={24} color="#000000" />
-              <Text style={styles.didYouKnowTitle}>DID YOU KNOW?</Text>
-            </View>
-            <Text style={styles.didYouKnowFact}>
-              Bananas are berries, but strawberries are not. In botanical terms, a berry comes from a single flower with one ovary.
-            </Text>
-            <View style={styles.didYouKnowQuestion}>
-              <Icon name="arrow-forward" size={16} color="#45a578" />
-              <Text style={styles.didYouKnowQuestionText}>
-                Can you think of other foods that might not be what we usually call them?
-              </Text>
-            </View>
-            <Text style={styles.didYouKnowSource}>Source: Britannica Kids</Text>
-          </View>
-        </View>
-
-        {/* For This Phase - 3 Card Carousel */}
-        <View style={styles.section}>
-          <View style={styles.phaseCardWrapper}>
-            <View style={styles.phaseCardHeader}>
-              <View style={styles.phaseCardHeaderContent}>
-                <MaterialIcon name="lightning-bolt" size={24} color="#1A1A1A" />
-                <Text style={styles.phaseCardHeaderTitle}>For This Phase</Text>
-              </View>
-            </View>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.phaseCarouselScroll}
-            >
-              {/* Card 1 */}
-              <View style={styles.phaseCard}>
-                <View style={styles.phaseCardContent}>
-                  <Text style={styles.phaseCardTitle}>Thinks like a philosopher</Text>
-                  <Text style={styles.phaseCardDescription}>You help them learn when you ask questions.</Text>
-                </View>
-              </View>
-
-              {/* Card 2 */}
-              <View style={styles.phaseCard}>
-                <View style={styles.phaseCardContent}>
-                  <Text style={styles.phaseCardTitle}>Explores with curiosity</Text>
-                  <Text style={styles.phaseCardDescription}>You encourage them when you explore together.</Text>
-                </View>
-              </View>
-
-              {/* Card 3 */}
-              <View style={styles.phaseCard}>
-                <View style={styles.phaseCardContent}>
-                  <Text style={styles.phaseCardTitle}>Creates with imagination</Text>
-                  <Text style={styles.phaseCardDescription}>You inspire them when you create together.</Text>
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.phaseCarouselDots}>
-              <View style={[styles.phaseDot, styles.phaseDotActive]} />
-              <View style={styles.phaseDot} />
-              <View style={styles.phaseDot} />
-            </View>
-          </View>
-        </View>
-
+     
         {/* Today's Riddles */}
         <View style={styles.section}>
           <View style={styles.riddlesCard}>
@@ -463,7 +438,9 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <MaterialIcon name="head-question" size={24} color="#000000" />
               <Text style={styles.riddlesTitle}>TODAY'S RIDDLES</Text>
               <View style={styles.riddlesBadge}>
-                <Text style={styles.riddlesBadgeText}>4 riddles</Text>
+                <TouchableOpacity onPress={() => onNavigate && onNavigate('riddles')}>
+                  <Text style={styles.riddlesBadgeText}>Explore more</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -663,8 +640,12 @@ const HomeScreen = ({ userData, onNavigate }) => {
           </View>
         </View>
 
+
+      
+
         {/* Laughing at Parenthood */}
-        <View style={styles.section}>
+       
+        {/* <View style={styles.section}>
           <View style={styles.laughingCard}>
             <View style={styles.laughingHeader}>
               <Icon name="happy-outline" size={24} color="#45a578" />
@@ -721,7 +702,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
             </ScrollView>
            
           </View>
-        </View>
+        </View> */}
 
         {/* This Week's Impact */}
         <View style={styles.section}>
@@ -782,14 +763,14 @@ const HomeScreen = ({ userData, onNavigate }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Learning Subjects</Text>
-              <Text style={styles.sectionSubtitle}>Explore {allSubjects.length} enriching subjects</Text>
+              <Text style={styles.sectionTitle}>Nudge Library</Text>
+              
             </View>
             <TouchableOpacity 
               style={styles.addMoreButton}
               onPress={() => onNavigate && onNavigate('subjectsList')}
             >
-              <Text style={styles.addMoreText}>Read More</Text>
+              <Text style={styles.addMoreText}>Browse All →</Text>
             </TouchableOpacity>
           </View>
 
@@ -801,8 +782,8 @@ const HomeScreen = ({ userData, onNavigate }) => {
                 bgColor: '#F5F5F5',
               };
               const nudgesCount = getNudgesBySubject(subject.name).length;
-              const completedCount = Math.floor(nudgesCount * (0.6 + Math.random() * 0.3));
-              const progress = Math.floor((completedCount / nudgesCount) * 100);
+              const completedCount = Math.floor(12 * (0.6 + Math.random() * 0.3)); // Based on 12 total activities
+              const progress = Math.floor((completedCount / 12) * 100);
               
               // Define different bar colors for each subject
               const barColors = [
@@ -813,14 +794,18 @@ const HomeScreen = ({ userData, onNavigate }) => {
               ];
               const barColor = barColors[index] || '#666666';
 
-              // Define images for each subject
-              const subjectImages = {
-                'Math': require('../assets/images/Maths.png'),
-                'English': require('../assets/images/English.jpg'),
-                'Science / EVS': require('../assets/images/Science.png'),
-                'Social Studies': require('../assets/images/social.png'),
-                'Artificial Intelligence': require('../assets/images/AI.jpg'),
+              // Define icons and colors for each subject
+              const subjectIcons = {
+                'Math': { image: require('../assets/images/math.png'), color: '#3B82F6', bgColor: '#EFF6FF' },
+                'English': { image: require('../assets/images/eng.png'), color: '#EC4899', bgColor: '#FDF2F8' },
+                'Science / EVS': { image: require('../assets/images/sci.png'), color: '#10B981', bgColor: '#ECFDF5' },
+                'Social Studies': { image: require('../assets/images/social s.png'), color: '#F59E0B', bgColor: '#FFFBEB' },
+                'Artificial Intelligence': { image: require('../assets/images/Ai s.png'), color: '#8B5CF6', bgColor: '#F5F3FF' },
+                'Financial Literacy': { image: require('../assets/images/Fl.png'), color: '#10B981', bgColor: '#ECFDF5' },
+                'Sex & Safety Education': { image: require('../assets/images/ss.png'), color: '#EC4899', bgColor: '#FDF2F8' },
               };
+
+              const iconConfig = subjectIcons[subject.name] || { icon: 'book-outline', color: '#666666', bgColor: '#F5F5F5' };
 
               return (
                 <TouchableOpacity 
@@ -836,45 +821,26 @@ const HomeScreen = ({ userData, onNavigate }) => {
                     }
                   }}
                 >
-                  <View style={styles.subjectImageGradient}>
-                    <Image 
-                      source={subjectImages[subject.name] || subjectImages['Mathematics']}
-                      style={styles.subjectImageBackground}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.subjectTopicsBadge}>
-                      <Icon name="book-outline" size={12} color="#FFFFFF" />
-                      <Text style={styles.subjectTopicsBadgeText}>{nudgesCount}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.subjectImageCardContent}>
-                    <Text style={styles.subjectImageCardTitle}>{subject.name}</Text>
-                    <Text style={styles.subjectImageCardSubtitle}>
-                      {subject.name === 'Mathematics' ? 'Problem solving & logical thinking' :
-                       subject.name === 'Language Arts' ? 'Reading, writing & communication' :
-                       subject.name === 'Environmental Studies' ? 'Nature, environment & sustainability' :
-                       subject.name === 'Science' ? 'Experiments, discovery & exploration' :
-                       'Learning and growth'}
-                    </Text>
-                    
-                    <View style={styles.subjectProgressSection}>
-                      <Text style={styles.subjectProgressLabel}>Progress</Text>
-                      <Text style={styles.subjectProgressText}>{completedCount}/{nudgesCount}</Text>
-                    </View>
-                    
-                    <View style={styles.subjectProgressBarContainer}>
-                      <View style={styles.subjectProgressBarBg}>
-                        <View 
-                          style={[
-                            styles.subjectProgressBarFill, 
-                            { 
-                              width: `${progress}%`,
-                              backgroundColor: barColor 
-                            }
-                          ]} 
+                  <View style={[styles.subjectImageGradient, { backgroundColor: '#FFFFFF' }]}>
+                    <View style={styles.subjectIconBox}>
+                      {iconConfig.image ? (
+                        <Image 
+                          source={iconConfig.image}
+                          style={styles.subjectImage}
+                          resizeMode="contain"
                         />
-                      </View>
+                      ) : (
+                        <MaterialIcon 
+                          name={iconConfig.icon}
+                          size={28}
+                          color={iconConfig.color}
+                        />
+                      )}
+                    </View>
+                    
+                    <View style={styles.subjectImageCardContent}>
+                      <Text style={styles.subjectImageCardTitle}>{subject.name}</Text>
+                      <Text style={styles.subjectImageCardActivityCount}>12 activities</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -899,7 +865,68 @@ const HomeScreen = ({ userData, onNavigate }) => {
             </View>
           </TouchableOpacity>
         </View>
+  {/* For This Phase - 3 Card Carousel */}
+        <View style={styles.section}>
+          <View style={styles.phaseCardWrapper}>
+            <View style={styles.phaseCardHeader}>
+              <View style={styles.phaseCardHeaderContent}>
+                <MaterialIcon name="lightning-bolt" size={24} color="#1A1A1A" />
+                <Text style={styles.phaseCardHeaderTitle}>For This Phase</Text>
+              </View>
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.phaseCarouselScroll}
+            >
+              {/* Card 1 */}
+              <View style={styles.phaseCard}>
+                <Image 
+                  source={require('../assets/images/phase 1.png')}
+                  style={styles.phaseCardImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.phaseCardContent}>
+                  <Text style={styles.phaseCardTitle}>Thinks like a philosopher</Text>
+                  <Text style={styles.phaseCardDescription}>You help them learn when you... ask questions.</Text>
+                </View>
+              </View>
 
+              {/* Card 2 */}
+              <View style={styles.phaseCard}>
+                <Image 
+                  source={require('../assets/images/phase 2.png')}
+                  style={styles.phaseCardImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.phaseCardContent}>
+                  <Text style={styles.phaseCardTitle}>Wants to know, "Why should I believe?"</Text>
+                  <Text style={styles.phaseCardDescription}>You capture their heart when you... clarify their values.</Text>
+                </View>
+              </View>
+
+              {/* Card 3 */}
+              <View style={[styles.phaseCard, styles.phaseCardLast]}>
+                <Image 
+                  source={require('../assets/images/phase 3.png')}
+                  style={styles.phaseCardImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.phaseCardContent}>
+                  <Text style={styles.phaseCardTitle}>Is motivated by freedom.</Text>
+                  <Text style={styles.phaseCardDescription}>You coach them when you... catch them doing somthing good.</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.phaseCarouselDots}>
+              <View style={[styles.phaseDot, styles.phaseDotActive]} />
+              <View style={styles.phaseDot} />
+              <View style={styles.phaseDot} />
+            </View>
+          </View>
+        </View>
         {/* Parenting Tips */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -1016,7 +1043,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
             }}
           >
             <MaterialIcon name="chart-line" size={24} color="#45a578" />
-            <Text style={styles.menuItemText}>Learning Summary</Text>
+            <Text style={styles.menuItemText}>Progress</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -1027,10 +1054,10 @@ const HomeScreen = ({ userData, onNavigate }) => {
             }}
           >
             <MaterialIcon name="file-document-outline" size={24} color="#45a578" />
-            <Text style={styles.menuItemText}>Quiz</Text>
+            <Text style={styles.menuItemText}>Create Quiz</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => {
               toggleMenu();
@@ -1039,7 +1066,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
           >
             <MaterialIcon name="trophy-outline" size={24} color="#45a578" />
             <Text style={styles.menuItemText}>Milestones</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity 
             style={styles.menuItem}
@@ -1049,7 +1076,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
             }}
           >
             <MaterialIcon name="book-open-variant" size={24} color="#45a578" />
-            <Text style={styles.menuItemText}>Learning Subjects</Text>
+            <Text style={styles.menuItemText}>Nudge Library</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -1186,7 +1213,7 @@ const styles = StyleSheet.create({
   },
 
   welcomeSection: {
-    padding: 20,
+    padding: 10,
     backgroundColor: '#FFFFFF',
     marginBottom: 0,
   },
@@ -1207,7 +1234,8 @@ const styles = StyleSheet.create({
   quickActionBanner: {
     backgroundColor: '#FFF9E6',
     marginHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 0,
+    marginTop: 0,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -1216,15 +1244,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  quickActionSection: {
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
+    marginBottom: 0,
+  },
+
   quickActionContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-
-  quickActionText: {
-    flex: 1,
   },
 
   quickActionTitle: {
@@ -1252,7 +1282,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 8,
     gap: 4,
   },
 
@@ -1273,13 +1303,13 @@ const styles = StyleSheet.create({
   },
 
   featuredContent: {
-    padding: 20,
+    padding: 18,
   },
 
   featuredHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   featuredIconLarge: {
@@ -1313,14 +1343,14 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 15 : isSmallDevice ? 13 : 14,
     color: '#444444',
     lineHeight: isTablet ? 22 : isSmallDevice ? 19 : 20,
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   featuredMeta: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   metaChip: {
@@ -1340,7 +1370,7 @@ const styles = StyleSheet.create({
   },
 
   featuredButton: {
-    marginTop: 4,
+    marginTop: 2,
   },
 
   featuredButtonGradient: {
@@ -1359,7 +1389,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    padding: 20,
+    padding: 10,
     backgroundColor: '#FFFFFF',
     marginBottom: 0,
   },
@@ -1368,7 +1398,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   sectionTitle: {
@@ -1396,7 +1426,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F9F9',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
@@ -1451,6 +1481,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  emptyNudgesCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyNudgesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 4,
+  },
+  emptyNudgesText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
   cardTimeSpacer: {
     flex: 1,
   },
@@ -1500,10 +1552,11 @@ const styles = StyleSheet.create({
 
   streakCard: {
     backgroundColor: '#FFEDD5',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 20,
     marginBottom: 0,
+    marginTop: -10,
     borderWidth: 2,
     borderColor: '#FDBA74',
   },
@@ -1512,7 +1565,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
 
   streakTitle: {
@@ -1525,7 +1578,7 @@ const styles = StyleSheet.create({
   streakSubtitle: {
     fontSize: 15,
     color: '#555555',
-    marginBottom: 18,
+    marginBottom: 14,
     fontFamily: 'Montserrat-Regular',
     lineHeight: 20,
   },
@@ -1533,7 +1586,7 @@ const styles = StyleSheet.create({
   streakMessage: {
     fontSize: 14,
     color: '#555555',
-    marginTop: 18,
+    marginTop: 12,
     fontFamily: 'Montserrat-Regular',
     lineHeight: 20,
   },
@@ -1541,7 +1594,7 @@ const styles = StyleSheet.create({
   streakDays: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   streakDayContainer: {
@@ -1985,7 +2038,7 @@ const styles = StyleSheet.create({
   addMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'transparent',
     paddingHorizontal: isSmallDevice ? 10 : 12,
     paddingVertical: isSmallDevice ? 6 : 8,
     borderRadius: isSmallDevice ? 8 : 10,
@@ -1994,14 +2047,14 @@ const styles = StyleSheet.create({
 
   addMoreText: {
     fontSize: isTablet ? 14 : isSmallDevice ? 12 : 13,
-    fontWeight: '600',
-    color: '#333333',
-    fontFamily: 'Montserrat-SemiBold',
+    fontWeight: '700',
+    color: '#45a578',
+    fontFamily: 'Montserrat-Bold',
   },
 
   subjectImageCard: {
     width: '48.5%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: isSmallDevice ? 14 : 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -2013,92 +2066,61 @@ const styles = StyleSheet.create({
   },
 
   subjectImageGradient: {
-    height: isSmallDevice ? 110 : 120,
+    height: isSmallDevice ? 150 : 170,
     position: 'relative',
     overflow: 'hidden',
-    borderTopLeftRadius: isSmallDevice ? 14 : 16,
-    borderTopRightRadius: isSmallDevice ? 14 : 16,
+    borderRadius: isSmallDevice ? 14 : 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: isSmallDevice ? 16 : 20,
+    flexDirection: 'column',
   },
 
-  subjectImageBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  subjectIconBox: {
+    width: isSmallDevice ? 56 : 64,
+    height: isSmallDevice ? 56 : 64,
+    borderRadius: isSmallDevice ? 12 : 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 12 : 14,
+    backgroundColor: 'transparent',
+  },
+
+  subjectImage: {
     width: '100%',
     height: '100%',
-    borderTopLeftRadius: isSmallDevice ? 14 : 16,
-    borderTopRightRadius: isSmallDevice ? 14 : 16,
   },
 
-  subjectTopicsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-    gap: 3,
-    zIndex: 1,
+  subjectAccentShape: {
     position: 'absolute',
-    top: isSmallDevice ? 10 : 12,
-    left: isSmallDevice ? 10 : 12,
-  },
-
-  subjectTopicsBadgeText: {
-    fontSize: isSmallDevice ? 10 : 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'Montserrat-Bold',
+    bottom: -40,
+    right: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    opacity: 0.25,
   },
 
   subjectImageCardContent: {
-    padding: isSmallDevice ? 8 : 10,
-    paddingTop: isSmallDevice ? 6 : 8,
+    zIndex: 10,
+    width: '100%',
+    alignItems: 'center',
   },
 
   subjectImageCardTitle: {
     fontSize: isTablet ? 16 : isSmallDevice ? 14 : 15,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 3,
-    marginTop: isSmallDevice ? 0 : 0,
+    marginBottom: 4,
     fontFamily: 'Montserrat-Bold',
+    textAlign: 'center',
   },
 
-  subjectImageCardSubtitle: {
-    fontSize: isTablet ? 11 : isSmallDevice ? 10 : 10,
-    color: '#6B7280',
-    marginBottom: isSmallDevice ? 9 : 10,
+  subjectImageCardActivityCount: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 12 : 13,
+    color: '#9CA3AF',
     fontFamily: 'Montserrat-Regular',
-    lineHeight: isSmallDevice ? 14 : 15,
-  },
-
-  subjectProgressSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-
-  subjectProgressLabel: {
-    fontSize: isTablet ? 11 : isSmallDevice ? 10 : 10,
-    color: '#6B7280',
-    fontWeight: '500',
-    fontFamily: 'Montserrat-Medium',
-  },
-
-  subjectProgressText: {
-    fontSize: isTablet ? 12 : isSmallDevice ? 11 : 11,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    fontFamily: 'Montserrat-Bold',
-  },
-
-  subjectProgressBarContainer: {
-    marginBottom: 3,
+    textAlign: 'center',
   },
 
   subjectProgressBarBg: {
@@ -2407,17 +2429,17 @@ const styles = StyleSheet.create({
 
   // Did You Know styles
   didYouKnowCard: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
-    padding: 20,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#BFDBFE',
   },
 
   didYouKnowHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 8,
   },
 
@@ -2433,7 +2455,7 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : isSmallDevice ? 14 : 15,
     color: '#333333',
     lineHeight: isTablet ? 24 : isSmallDevice ? 21 : 22,
-    marginBottom: 12,
+    marginBottom: 10,
     fontFamily: 'Montserrat-Regular',
   },
 
@@ -2441,9 +2463,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 8,
     gap: 8,
   },
 
@@ -2466,7 +2488,7 @@ const styles = StyleSheet.create({
   riddlesCard: {
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
@@ -2474,7 +2496,7 @@ const styles = StyleSheet.create({
   riddlesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     gap: 8,
   },
 
@@ -2503,14 +2525,14 @@ const styles = StyleSheet.create({
 
   riddlesCarouselScroll: {
     marginBottom: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
 
   riddleItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     marginRight: 12,
     minWidth: 240,
     maxWidth: 240,
@@ -2522,7 +2544,7 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 14 : isSmallDevice ? 12 : 13,
     color: '#1A1A1A',
     lineHeight: isTablet ? 20 : isSmallDevice ? 18 : 19,
-    marginBottom: 16,
+    marginBottom: 12,
     fontFamily: 'Montserrat-SemiBold',
     fontWeight: '600',
     flexWrap: 'wrap',
@@ -2638,11 +2660,82 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
   },
 
+  // Did You Know styles
+  didYouKnowCard: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+
+  didYouKnowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+
+  didYouKnowTitle: {
+    fontSize: isTablet ? 15 : 13,
+    fontWeight: '800',
+    color: '#1E40AF',
+    letterSpacing: 1,
+    fontFamily: 'Montserrat-Bold',
+  },
+
+  didYouKnowFactBlock: {
+    paddingBottom: 14,
+    marginBottom: 2,
+  },
+
+  didYouKnowFactDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#BFDBFE',
+    marginBottom: 14,
+  },
+
+  didYouKnowFact: {
+    fontSize: isTablet ? 15 : 14,
+    color: '#1A1A1A',
+    lineHeight: 22,
+    marginBottom: 10,
+    fontFamily: 'Montserrat-Regular',
+    fontWeight: '500',
+  },
+
+  didYouKnowPromptRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+
+  didYouKnowPrompt: {
+    flex: 1,
+    fontSize: isTablet ? 14 : 13,
+    color: '#1A1A1A',
+    lineHeight: 20,
+    fontFamily: 'Montserrat-Italic',
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+
+  didYouKnowSource: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    fontFamily: 'Montserrat-Regular',
+  },
+
   // Laughing at Parenthood styles
   laughingCard: {
     backgroundColor: '#FFF9E6',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#FFE4A3',
   },
@@ -2651,7 +2744,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   laughingTitle: {
@@ -2662,14 +2755,14 @@ const styles = StyleSheet.create({
   },
 
   laughingScroll: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
 
   memeCard: {
     width: 280,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     marginRight: 12,
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -2679,7 +2772,7 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : isSmallDevice ? 14 : 15,
     color: '#333333',
     lineHeight: isTablet ? 22 : isSmallDevice ? 20 : 21,
-    marginBottom: 12,
+    marginBottom: 10,
     fontFamily: 'Montserrat-Regular',
   },
 
@@ -2729,7 +2822,7 @@ const styles = StyleSheet.create({
   phaseCardHeader: {
     backgroundColor: '#E3F2FD',
     paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingVertical: 14,
     borderBottomWidth: 0,
   },
 
@@ -2749,7 +2842,8 @@ const styles = StyleSheet.create({
 
   phaseCarouselScroll: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    paddingRight: 30,
     backgroundColor: '#E3F2FD',
   },
 
@@ -2761,7 +2855,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#D8D8D8',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    flexDirection: 'column',
+  },
+
+  phaseCardLast: {
+    marginRight: 30,
+  },
+
+  phaseCardImage: {
+    width: '100%',
+    height: 160,
   },
 
   phaseCardImageArea: {
@@ -2769,15 +2873,16 @@ const styles = StyleSheet.create({
   },
 
   phaseCardContent: {
-    padding: 20,
+    padding: 18,
     backgroundColor: '#FFFFFF',
+    marginTop: 0,
   },
 
   phaseCardTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 10,
+    marginBottom: 8,
     fontFamily: 'Montserrat-Bold',
     lineHeight: 22,
   },
@@ -2794,7 +2899,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 10,
     backgroundColor: '#E3F2FD',
     borderTopWidth: 0,
   },
