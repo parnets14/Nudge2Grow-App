@@ -3,7 +3,8 @@
  * @format
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Storage } from './src/utils/storage';
 import SplashScreen from './src/screens/SplashScreen';
 import IntroScreen from './src/screens/IntroScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -38,6 +39,23 @@ const App = () => {
   const [setupToken, setSetupToken] = useState(null);
   const [navigationParams, setNavigationParams] = useState({});
   const [navigationHistory, setNavigationHistory] = useState([]);
+  const [completedTopics, setCompletedTopics] = useState(new Set());
+
+  // Load persisted progress on mount
+  useEffect(() => {
+    const saved = Storage.getItem('completedTopics');
+    if (saved) {
+      try { setCompletedTopics(new Set(JSON.parse(saved))); } catch (_) {}
+    }
+  }, []);
+
+  const markTopicComplete = (key) => {
+    setCompletedTopics(prev => {
+      const next = new Set([...prev, key]);
+      Storage.setItem('completedTopics', JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   const handleSplashFinish = () => {
     setCurrentScreen('intro');
@@ -63,7 +81,13 @@ const App = () => {
     if (!data.isNewUser && data.parent?.childrenCount > 0 && data.token) {
       try {
         const profile = await fetchProfile(data.token);
-        setUserData({ ...merged, children: profile.children, email: profile.email });
+        // Reorder children so activeChildIndex is first
+        let children = profile.children || [];
+        const activeIdx = profile.activeChildIndex || 0;
+        if (activeIdx > 0 && children.length > activeIdx) {
+          children = [children[activeIdx], ...children.filter((_, i) => i !== activeIdx)];
+        }
+        setUserData({ ...merged, children, email: profile.email });
         setCurrentScreen('home');
         return;
       } catch (err) {
@@ -190,6 +214,11 @@ const App = () => {
     } else {
       setCurrentScreen('topicDetail');
     }
+  };
+
+  const handleFlashcardsComplete = () => {
+    const key = `${navigationParams.subject}::${navigationParams.topic}`;
+    markTopicComplete(key);
   };
 
   const handleQACardsBack = () => {
@@ -426,7 +455,7 @@ const App = () => {
       case 'home':
         return <HomeScreen userData={userData} onBack={handleHomeBack} onNavigate={handleHomeNavigate} />;
       case 'subjectsList':
-        return <SubjectsListScreen userData={userData} onNavigate={handleSubjectsListNavigate} onBack={handleSubjectsListBack} />;
+        return <SubjectsListScreen userData={userData} completedTopics={completedTopics} onNavigate={handleSubjectsListNavigate} onBack={handleSubjectsListBack} />;
       case 'topicDetail':
         return (
           <TopicDetailScreen 
@@ -446,6 +475,7 @@ const App = () => {
             subject={navigationParams.subject}
             startIndex={navigationParams.startIndex || 0}
             onBack={handleFlashcardsBack}
+            onComplete={handleFlashcardsComplete}
           />
         );
       case 'qaCards':
@@ -498,6 +528,7 @@ const App = () => {
           <AssessmentHubScreen 
             onBack={handleAssessmentBack}
             onNavigate={handleAssessmentNavigate}
+            userData={userData}
           />
         );
       case 'assessment':

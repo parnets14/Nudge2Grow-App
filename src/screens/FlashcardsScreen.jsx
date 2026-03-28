@@ -273,6 +273,7 @@ const FlashcardsScreen = ({
   topic = '',
   subject = '',
   startIndex = 0,
+  onComplete,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -319,6 +320,7 @@ const FlashcardsScreen = ({
     }
     if (next >= flashcards.length) {
       setShowCompletion(true);
+      onComplete?.();
       Animated.parallel([
         Animated.spring(completionScale, { toValue: 1, friction: 6, useNativeDriver: true }),
         Animated.timing(completionOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),

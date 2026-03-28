@@ -1,4 +1,4 @@
-// /**
+﻿// /**
 //  * Topic Detail Screen - Shows daily nudge with calendar, units, and flashcards
 //  */
 
@@ -3331,11 +3331,14 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
     subject: subjectName || topicData?.subject,
     description: selectedApiTopic.description,
     imageUrl: fixUrl(selectedApiTopic.imageUrl),
+  } : topicData?.id ? {
+    ...topicData,
   } : {
     ...topicData,
-    topic: topicData?.topic || topicData?.title || subjectName || '',
-    title: topicData?.title || topicData?.topic || subjectName || '',
-    subject: subjectName || topicData?.subject,
+    topic: selectedDayTopic.topic,
+    title: selectedDayTopic.topic,
+    icon: selectedDayTopic.icon,
+    iconColor: selectedDayTopic.color,
   };
 
   const generateFullCalendar = () => {
@@ -3565,8 +3568,8 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* ── CALENDAR — only show for local/static content, hide for API topics ── */}
-        {!hasApiTopics && <View style={styles.calendarSection}>
+        {/* ── CALENDAR ── */}
+        <View style={styles.calendarSection}>
           <View style={styles.calendarHeader}>
             <View>
               <Text style={styles.calendarMonth}>{currentMonth} {currentYear}</Text>
@@ -3635,26 +3638,69 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
               );
             })}
           </View>
-        </View>}
+        </View>
 
         {/* ── TOPIC CARD ── */}
         <View style={styles.topicCard}>
           
 
           <View style={styles.topicImageContainer}>
-            {displayTopic?.imageUrl ? (
+            {displayTopic?.subject === 'Science / EVS' ? (
               <View style={styles.topicImagePlaceholder}>
                 <Image
-                  source={{ uri: fixUrl(displayTopic.imageUrl) }}
+                  source={require('../assets/images/Science.png')}
                   style={styles.subjectImage}
                   resizeMode="cover"
                 />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
+              </View> 
+              
+            ) : displayTopic?.subject === 'Math' ? (
+              <View style={styles.topicImagePlaceholder}>
+                <Image
+                  source={require('../assets/images/Maths.png')}
+                  style={styles.subjectImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : displayTopic?.subject === 'Science / EVS' ? (
+              <View style={styles.topicImagePlaceholder}>
+                <Image
+                  source={require('../assets/images/Science.png')}
+                  style={styles.subjectImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : displayTopic?.subject === 'English' ? (
+              <View style={styles.topicImagePlaceholder}>
+                <Image
+                  source={require('../assets/images/English.jpg')}
+                  style={styles.subjectImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : displayTopic?.subject === 'Social Studies' ? (
+              <View style={styles.topicImagePlaceholder}>
+                <Image
+                  source={require('../assets/images/social.png')}
+                  style={styles.subjectImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : displayTopic?.subject === 'Artificial Intelligence' ? (
+              <View style={styles.topicImagePlaceholder}>
+                <Image
+                  source={require('../assets/images/AI.jpg')}
+                  style={styles.subjectImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : displayTopic?.subject === 'Arts & Creativity' ? (
+              <View style={styles.topicImagePlaceholder}>
+                <Image
+                  source={require('../assets/images/art.png')}
+                  style={styles.subjectImage}
+                  resizeMode="cover"
+                />
               </View>
             ) : (
               <LinearGradient
@@ -3664,13 +3710,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
                 end={{ x: 1, y: 1 }}
               >
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                  <MaterialIcon name="book-open-variant" size={70} color={subjectColor} />
-                </View>
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
+                  <MaterialIcon name={displayTopic?.icon || 'book-open-variant'} size={70} color={subjectColor} />
                 </View>
               </LinearGradient>
             )}
@@ -3754,7 +3794,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
             <Icon name="chevron-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.startFlashcardsHint}>Swipe through cards at your own pace</Text>
-          <Text style={styles.startFlashcardsCount}>{flashcards.length + qaFlashcards.length + prompts.length} cards total · ~5 min</Text>
+          <Text style={styles.startFlashcardsCount}>{flashcards.length + qaFlashcards.length + prompts.length} cards total </Text>
         </View>
 
         {/* ── LEARNING STATUS ── */}
@@ -4780,3 +4820,4 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
   },
 });
+

@@ -76,7 +76,7 @@ const CircularProgress = ({ percentage, color, size = 40 }) => {
   );
 };
 
-const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
+const SubjectsListScreen = ({ onBack, onNavigate, userData, completedTopics = new Set() }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [apiSubjects, setApiSubjects] = useState([]);
   const [subjectTopicsMap, setSubjectTopicsMap] = useState({});
@@ -169,8 +169,8 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
   const totalTopics = apiSubjects.length > 0
     ? apiSubjects.reduce((sum, s) => sum + (subjectTopicsMap[s._id]?.length || 0), 0)
     : allSubjects.length * 12;
-  const completedNudges = 0;
-  const overallProgress = 0;
+  const completedNudges = completedTopics.size;
+  const overallProgress = totalTopics > 0 ? Math.round((completedNudges / totalTopics) * 100) : 0;
   const activeSubjects = apiSubjects.filter(s => s.type !== 'premium').length || allSubjects.length;
 
   return (
@@ -288,7 +288,9 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                 })
               : null;
             const topicCount = topicsLoaded ? (gradeFilteredTopics?.length || 0) : 12;
-            const completedCount = 0;
+            const completedCount = gradeFilteredTopics
+              ? gradeFilteredTopics.filter(t => completedTopics.has(`${subject.name}::${t.title}`)).length
+              : 0;
             const progress = topicCount > 0 ? Math.floor((completedCount / topicCount) * 100) : 0;
             const streak = index === 0 ? 5 : 0;
             const isActive = index === 0;

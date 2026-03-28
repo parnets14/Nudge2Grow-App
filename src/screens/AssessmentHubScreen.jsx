@@ -21,8 +21,18 @@ const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const AssessmentHubScreen = ({ onBack, onNavigate }) => {
+const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
   const allSubjects = getAllSubjects();
+
+  const child = userData?.children?.[0];
+  const childName = child?.name || '';
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning 🌅';
+    if (hour < 17) return 'Good afternoon ☀️';
+    return 'Good evening 👋';
+  };
 
   // Subject configuration with images
   const subjectConfig = {
@@ -78,11 +88,15 @@ const AssessmentHubScreen = ({ onBack, onNavigate }) => {
           <Icon name="arrow-back" size={24} color="#1A1A1A" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerGreeting}>Good evening 👋</Text>
-          <Text style={styles.headerTitle}>Parent's Hub</Text>
+          <Text style={styles.headerGreeting}>{getGreeting()}</Text>
+          <Text style={styles.headerTitle}>
+            {childName ? `${childName}'s Hub` : "Parent's Hub"}
+          </Text>
         </View>
         <View style={styles.profileBadge}>
-          <Text style={styles.profileBadgeText}>P</Text>
+          <Text style={styles.profileBadgeText}>
+            {childName ? childName.charAt(0).toUpperCase() : 'P'}
+          </Text>
         </View>
       </View>
 

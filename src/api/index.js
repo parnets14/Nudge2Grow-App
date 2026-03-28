@@ -354,3 +354,71 @@ export const fetchLearnDetailByTopic = async (topicId) => {
     return null;
   }
 };
+
+export const sendPhoneChangeOTP = async (token, newPhone, countryCode) => {
+  const res = await fetch(`${BASE_URL}/user/change-phone/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ newPhone, countryCode }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+  return data;
+};
+
+export const verifyPhoneChange = async (token, newPhone, countryCode, otp) => {
+  const res = await fetch(`${BASE_URL}/user/change-phone/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ newPhone, countryCode, otp }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Phone verification failed');
+  return data;
+};
+
+export const updatePhone = async (token, phone, countryCode) => {
+  const res = await fetch(`${BASE_URL}/user/update-phone`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ phone, countryCode }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to update phone');
+  return data;
+};
+
+export const deleteChild = async (token, childId) => {
+  const res = await fetch(`${BASE_URL}/user/children/${childId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to delete child');
+  return data;
+};
+
+export const switchActiveChild = async (token, childId) => {
+  const res = await fetch(`${BASE_URL}/user/switch-child`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ childId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to switch child');
+  return data;
+};
+
+export const addChild = async (token, childData) => {
+  const res = await fetch(`${BASE_URL}/user/children`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(childData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to add child');
+  return data; // { message, child }
+};

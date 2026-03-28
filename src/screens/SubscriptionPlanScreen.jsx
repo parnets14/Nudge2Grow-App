@@ -210,8 +210,8 @@ const SubscriptionPlanScreen = ({ onBack }) => {
     },
     {
       id: 2,
-      question: 'Is there a free trial available?',
-      answer: 'Absolutely! All paid plans come with a 7-day free trial. You can explore all premium features risk-free. Cancel anytime during the trial period and you won\'t be charged.',
+      question: 'Can I switch plans later?',
+      answer: 'Yes! You can upgrade or downgrade your plan at any time from the Settings page.',
     },
     {
       id: 3,
@@ -514,6 +514,7 @@ const SubscriptionPlanScreen = ({ onBack }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+
         {/* Current Plan Status */}
         <View style={styles.currentPlanCard}>
           <View style={styles.currentPlanHeader}>
@@ -687,7 +688,7 @@ const SubscriptionPlanScreen = ({ onBack }) => {
                     styles.subscribeButtonText,
                     selectedPlan === plan.id && styles.subscribeButtonTextSelected
                   ]}>
-                    {plan.id === 'free' ? 'Downgrade to Free' : 'Start 7-Day Free Trial'}
+                    {plan.id === 'free' ? 'Downgrade to Free' : 'Subscribe Now'}
                   </Text>
                   <Icon 
                     name="arrow-forward" 
@@ -866,7 +867,7 @@ const SubscriptionPlanScreen = ({ onBack }) => {
                   </Text>
                   <View style={styles.trialBanner}>
                     <MaterialIcon name="gift" size={20} color="#45a578" />
-                    <Text style={styles.trialText}>7-Day Free Trial Included</Text>
+                    <Text style={styles.trialText}>Instant Access After Payment</Text>
                   </View>
                 </View>
               )}
@@ -1148,11 +1149,11 @@ const SubscriptionPlanScreen = ({ onBack }) => {
                     </View>
                   )}
 
-                  {/* Trial Info */}
+                  {/* Payment Info */}
                   <View style={styles.trialInfoBox}>
                     <MaterialIcon name="information" size={20} color="#4A90E2" />
                     <Text style={styles.trialInfoText}>
-                      You won't be charged until your 7-day free trial ends on {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}. Cancel anytime before to avoid charges.
+                      You will be charged {getPrice(plans.find(p => p.id === selectedPlan))} {getPeriod(plans.find(p => p.id === selectedPlan))} immediately after payment. Cancel anytime from Settings.
                     </Text>
                   </View>
 
@@ -1238,27 +1239,27 @@ const SubscriptionPlanScreen = ({ onBack }) => {
                 Welcome to {plans.find(p => p.id === selectedPlan)?.name}
               </Text>
 
-              {/* Trial Information Card */}
+              {/* Subscription Active Card */}
               <View style={styles.successTrialCard}>
                 <View style={styles.successTrialHeader}>
-                  <MaterialIcon name="gift" size={28} color="#45a578" />
-                  <Text style={styles.successTrialTitle}>Your Free Trial</Text>
+                  <MaterialIcon name="check-circle" size={28} color="#45a578" />
+                  <Text style={styles.successTrialTitle}>Subscription Active</Text>
                 </View>
                 <Text style={styles.successTrialText}>
-                  Your 7-day free trial starts now! Enjoy full access to all premium features.
+                  Your {plans.find(p => p.id === selectedPlan)?.name} plan is now active. Enjoy full access to all features.
                 </Text>
                 <View style={styles.successTrialDates}>
                   <View style={styles.successDateItem}>
-                    <Text style={styles.successDateLabel}>Trial Starts</Text>
+                    <Text style={styles.successDateLabel}>Start Date</Text>
                     <Text style={styles.successDateValue}>
                       {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                   </View>
                   <View style={styles.successDateDivider} />
                   <View style={styles.successDateItem}>
-                    <Text style={styles.successDateLabel}>Trial Ends</Text>
+                    <Text style={styles.successDateLabel}>Next Billing</Text>
                     <Text style={styles.successDateValue}>
-                      {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                   </View>
                 </View>
@@ -1308,7 +1309,7 @@ const SubscriptionPlanScreen = ({ onBack }) => {
               <View style={styles.successNote}>
                 <MaterialIcon name="information" size={20} color="#4A90E2" />
                 <Text style={styles.successNoteText}>
-                  Cancel anytime before trial ends to avoid charges. Manage subscription in Settings.
+                  You can manage or cancel your subscription anytime from Settings.
                 </Text>
               </View>
 
@@ -1389,8 +1390,75 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  currentPlanCard: {
-    backgroundColor: '#FFFFFF',
+  // ── FREE TRIAL HERO BANNER ──────────────────────────────────────────────────
+  trialHeroBanner: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 4,
+    borderRadius: 20,
+    padding: 24,
+  },
+  trialHeroGiftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  trialHeroBadge: {
+    backgroundColor: '#FFB84D',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  trialHeroBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#1a1a2e',
+    letterSpacing: 0.8,
+  },
+  trialHeroTitle: {
+    fontSize: isTablet ? 28 : 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    letterSpacing: 0.3,
+  },
+  trialHeroSubtitle: {
+    fontSize: isTablet ? 14 : 13,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  trialHeroPerks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  trialHeroPerk: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  trialHeroPerkText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  trialHeroFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 12,
+  },
+  trialHeroFooterText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+  },
+
+  currentPlanCard: {    backgroundColor: '#FFFFFF',
     margin: 20,
     padding: 20,
     borderRadius: 16,

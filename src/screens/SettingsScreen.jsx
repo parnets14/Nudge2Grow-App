@@ -21,7 +21,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DatePicker from 'react-native-date-picker';
-import { BASE_URL, fetchAvatars, saveProfile, updateChild, updateParentEmail, uploadAvatar } from '../api';
+import { BASE_URL, fetchAvatars, fetchBeyondSchool, fetchProfile, saveProfile, addChild as addChildApi, sendPhoneChangeOTP, verifyPhoneChange, updatePhone, updateChild, deleteChild, switchActiveChild, updateParentEmail, uploadAvatar } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -67,6 +67,8 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   const [newChildGrade, setNewChildGrade] = useState('');
   const [newChildBoard, setNewChildBoard] = useState('');
   const [newChildAvatar, setNewChildAvatar] = useState('');
+  const [newChildSubjectLevels, setNewChildSubjectLevels] = useState({});
+  const [newChildTopics, setNewChildTopics] = useState([]);
   const [showNewGradeDropdown, setShowNewGradeDropdown] = useState(false);
   const [showNewBoardDropdown, setShowNewBoardDropdown] = useState(false);
   const [showNewDatePicker, setShowNewDatePicker] = useState(false);
@@ -87,9 +89,36 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   const [editChildBoard, setEditChildBoard] = useState(child?.educationBoard || '');
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
+  const [editChildTopics, setEditChildTopics] = useState(child?.topics || []);
+  const [editSubjectLevels, setEditSubjectLevels] = useState(child?.subjectLevels || {});
+
+  // Phone change flow
+  const [newPhone, setNewPhone] = useState(userData?.phoneNumber || userData?.phone || '');
+  const [newCountryCode, setNewCountryCode] = useState(userData?.countryCode || '+91');
+
+  const coreAreas = [
+    { id: 'mathematics', name: 'Mathematics', icon: 'calculator-variant-outline' },
+    { id: 'science', name: 'Science', icon: 'flask-outline' },
+    { id: 'english', name: 'English', icon: 'book-open-outline' },
+    { id: 'social-studies', name: 'Social Studies', icon: 'earth' },
+  ];
+  const levels = ['Basic', 'Intermediate', 'Advanced'];
 
   const grades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
   const boards = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other'];
+
+  // Beyond School interest options (mirrors PersonalSetupScreen)
+  const [exploratoryAreas, setExploratoryAreas] = useState([
+    { _id: 'ai',            name: 'Artificial Intelligence', rnIcon: 'brain' },
+    { _id: 'financial',     name: 'Financial Literacy',      rnIcon: 'cash-multiple' },
+    { _id: 'safety',        name: 'Sex & Safety',            rnIcon: 'shield-check' },
+  ]);
+
+  useEffect(() => {
+    fetchBeyondSchool()
+      .then(data => { if (data.length > 0) setExploratoryAreas(data); })
+      .catch(() => {});
+  }, []);
   
   // Rating
   const [rating, setRating] = useState(0);
@@ -153,6 +182,8 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
       dateOfBirth: editChildDOB,
       grade: editChildGrade,
       educationBoard: editChildBoard,
+      topics: editChildTopics,
+      subjectLevels: editSubjectLevels,
       avatar: updatedAvatar,
     } : null;
 
@@ -195,6 +226,12 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
         if (editEmail !== userData?.email) {
           await updateParentEmail(userData.token, editEmail);
         }
+        // Update phone if changed
+        const currentPhone = userData?.phoneNumber || userData?.phone || '';
+        if (newPhone && (newPhone !== currentPhone || newCountryCode !== (userData?.countryCode || '+91'))) {
+          await updatePhone(userData.token, newPhone, newCountryCode);
+          if (onUpdateUserData) onUpdateUserData({ phoneNumber: newPhone, countryCode: newCountryCode });
+        }
         // Update child record using its _id
         if (updatedChild?._id) {
           await updateChild(userData.token, updatedChild._id, {
@@ -202,8 +239,20 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
             dateOfBirth: updatedChild.dateOfBirth,
             grade: updatedChild.grade,
             educationBoard: updatedChild.educationBoard,
+            topics: updatedChild.topics,
+            subjectLevels: updatedChild.subjectLevels,
             avatar: avatarForBackend,
           });
+        }
+
+        // Re-fetch full profile so app state matches what admin sees
+        try {
+          const freshProfile = await fetchProfile(userData.token);
+          if (onUpdateUserData) {
+            onUpdateUserData({ email: freshProfile.email, children: freshProfile.children });
+          }
+        } catch (refreshErr) {
+          console.error('[Settings] profile refresh failed:', refreshErr.message);
         }
       } catch (err) {
         console.error('[Settings] sync failed:', err.message);
@@ -214,7 +263,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
     Alert.alert('Success', 'Profile updated successfully!');
   };
 
-  const handleAddChild = () => {
+  const handleAddChild = async () => {
     if (!newChildName.trim() || !newChildDOB.trim() || !newChildGrade) {
       Alert.alert('Missing Info', 'Please fill in name, date of birth and grade.');
       return;
@@ -225,21 +274,59 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
       grade: newChildGrade,
       educationBoard: newChildBoard,
       avatar: newChildAvatar,
-      topics: [],
+      topics: newChildTopics,
+      subjectLevels: newChildSubjectLevels,
     };
+
+    // Update local state immediately
     const updatedChildren = [...(userData?.children || []), newChild];
     if (onUpdateUserData) onUpdateUserData({ children: updatedChildren });
+
+    // Save to backend
+    if (userData?.token) {
+      try {
+        const res = await addChildApi(userData.token, newChild);
+        // Refresh full profile so _id is populated
+        const fresh = await fetchProfile(userData.token);
+        if (onUpdateUserData) onUpdateUserData({ children: fresh.children });
+      } catch (e) {
+        console.error('[Settings] addChild failed:', e.message);
+      }
+    }
+
     setNewChildName('');
     setNewChildDOB('');
     setNewChildGrade('');
     setNewChildBoard('');
     setNewChildAvatar('');
+    setNewChildSubjectLevels({});
+    setNewChildTopics([]);
     setShowAddChild(false);
     Alert.alert('Success', `${newChild.name} has been added!`);
   };
 
-  const handleSelectAvatar = (avatar, type) => {
-    setEditAvatar(avatar);
+  const handleDeleteChild = (c) => {
+    Alert.alert(
+      'Remove Child',
+      `Remove ${c.name} from your account?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = (userData?.children || []).filter(ch => ch._id !== c._id);
+            if (onUpdateUserData) onUpdateUserData({ children: updated });
+            if (userData?.token && c._id) {
+              try { await deleteChild(userData.token, c._id); } catch (e) { console.error('[Settings] deleteChild:', e.message); }
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSelectAvatar = (avatar, type) => {    setEditAvatar(avatar);
     setEditAvatarType(type);
     setShowAvatarPicker(false);
   };
@@ -317,18 +404,21 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Profile Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile</Text>
-          
-          <View style={styles.profileCard}>
-            {renderAvatar(userAvatar, avatarType, 60)}
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{userName}</Text>
-              <Text style={styles.profileEmail}>{userEmail}</Text>
+        {/* ── PROFILE HERO CARD ── */}
+        <View style={styles.profileHeroCard}>
+          <View style={styles.profileHeroTop}>
+            {renderAvatar(userAvatar, avatarType, 72)}
+            <View style={styles.profileHeroInfo}>
+              <Text style={styles.profileHeroName}>
+                {userData?.children?.[0]?.name || userName}
+              </Text>
+              <Text style={styles.profileHeroPhone}>
+                {userData?.countryCode || ''} {userData?.phoneNumber || userData?.phone || '—'}
+              </Text>
+              <Text style={styles.profileHeroEmail} numberOfLines={1}>{userEmail}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.editButton}
+            <TouchableOpacity
+              style={styles.profileHeroEdit}
               onPress={() => {
                 setEditName(userName);
                 setEditEmail(userEmail);
@@ -337,11 +427,156 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                 setShowEditProfile(true);
               }}
             >
-              <MaterialIcon name="pencil" size={20} color="#45a578" />
+              <MaterialIcon name="pencil-outline" size={18} color="#45a578" />
             </TouchableOpacity>
           </View>
+        </View>
 
-          <TouchableOpacity 
+        {/* ── CHILDREN SECTION ── */}
+        <View style={styles.childrenSection}>
+          <View style={styles.childrenSectionHeader}>
+            <Text style={styles.childrenSectionTitle}>My Children</Text>
+            {(!userData?.children || userData.children.length < 2) && (
+              <TouchableOpacity style={styles.addChildBtn} onPress={() => setShowAddChild(true)}>
+                <MaterialIcon name="plus" size={16} color="#45a578" />
+                <Text style={styles.addChildBtnText}>Add Child</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {userData?.children?.length > 0 ? (
+            userData.children.map((c, i) => {
+              const isActive = i === 0;
+              const avatarSrc = (() => {
+                if (!c.avatar) return null;
+                const local = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
+                if (local[c.avatar]) return local[c.avatar];
+                const apiMatch = avatarImages.find(a => a.id === c.avatar);
+                if (apiMatch?.uri) return { uri: apiMatch.uri };
+                if (c.avatar.startsWith('http') || c.avatar.startsWith('file')) return { uri: c.avatar };
+                return null;
+              })();
+              const resolvedTopics = (c.topics || [])
+                .map(t => exploratoryAreas.find(a => a._id === t || a.name === t)?.name)
+                .filter(Boolean);
+
+              return (
+                <TouchableOpacity
+                  key={c._id || i}
+                  activeOpacity={isActive ? 1 : 0.7}
+                  style={[styles.childCard, isActive && styles.childCardActive]}
+                  onPress={() => {
+                    if (isActive) return;
+                    Alert.alert(
+                      'Switch Account',
+                      `Switch to ${c.name}?`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Switch',
+                          onPress: async () => {
+                            const all = userData?.children || [];
+                            const idx = all.findIndex(ch => (ch._id || ch.name) === (c._id || c.name));
+                            const reordered = [all[idx], ...all.filter((_, j) => j !== idx)];
+                            if (onUpdateUserData) onUpdateUserData({ children: reordered });
+                            if (userData?.token && c._id) {
+                              try { await switchActiveChild(userData.token, c._id); }
+                              catch (e) { console.error('[Settings] switchActiveChild:', e.message); }
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  {/* Active badge */}
+                  {isActive && (
+                    <View style={styles.activeBadgeRow}>
+                      <View style={styles.activeBadge}>
+                        <MaterialIcon name="check-circle" size={12} color="#45a578" />
+                        <Text style={styles.activeBadgeText}>Active Account</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Avatar + Name row */}
+                  <View style={styles.childCardTop}>
+                    <View style={styles.childAvatarWrap}>
+                      {avatarSrc ? (
+                        <Image source={avatarSrc} style={styles.childAvatar} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.childAvatar, styles.childAvatarFallback]}>
+                          <Text style={styles.childAvatarInitial}>{c.name?.charAt(0)?.toUpperCase()}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.childCardInfo}>
+                      <Text style={styles.childCardName}>{c.name}</Text>
+                      <Text style={styles.childCardSub}>{c.grade}{c.educationBoard ? ` · ${c.educationBoard}` : ''}</Text>
+                      {c.dateOfBirth ? <Text style={styles.childCardDob}>DOB: {c.dateOfBirth}</Text> : null}
+                    </View>
+                    {/* Actions — only delete for non-active */}
+                    <View style={styles.childCardActions}>
+                      {!isActive && (
+                        <View style={styles.switchHintBadge}>
+                          <MaterialIcon name="gesture-tap" size={13} color="#45a578" />
+                          <Text style={styles.switchHintText}>Tap to switch</Text>
+                        </View>
+                      )}
+                      {!isActive && (
+                        <TouchableOpacity
+                          style={[styles.childActionBtn, styles.childActionBtnDelete]}
+                          onPress={(e) => { e.stopPropagation?.(); handleDeleteChild(c); }}
+                        >
+                          <MaterialIcon name="trash-can-outline" size={20} color="#EF4444" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Subject levels */}
+                  {c.subjectLevels && Object.keys(c.subjectLevels).length > 0 && (
+                    <View style={styles.childCardChipsRow}>
+                      {Object.entries(c.subjectLevels).map(([sid, lvl]) => {
+                        const name = coreAreas.find(a => a.id === sid)?.name || sid;
+                        return (
+                          <View key={sid} style={styles.childSubjectChip}>
+                            <Text style={styles.childSubjectChipName}>{name}</Text>
+                            <Text style={styles.childSubjectChipLevel}>{lvl}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {/* Beyond school */}
+                  {resolvedTopics.length > 0 && (
+                    <View style={styles.childCardChipsRow}>
+                      {resolvedTopics.map((t, ti) => (
+                        <View key={ti} style={styles.childTopicChip}>
+                          <MaterialIcon name="star-four-points-small" size={11} color="#3B82F6" />
+                          <Text style={styles.childTopicChipText}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <TouchableOpacity style={styles.noChildCard} onPress={() => setShowAddChild(true)}>
+              <MaterialIcon name="account-child-circle-outline" size={36} color="#D1D5DB" />
+              <Text style={styles.noChildText}>No children added yet</Text>
+              <Text style={styles.noChildHint}>Tap to add your first child</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── ACCOUNT SECTION ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => onNavigate && onNavigate('SubscriptionPlan')}
           >
@@ -350,15 +585,6 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
             <View style={styles.premiumBadge}>
               <Text style={styles.premiumBadgeText}>Premium</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#999999" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => setShowAddChild(true)}
-          >
-            <MaterialIcon name="account-plus-outline" size={24} color="#666666" />
-            <Text style={styles.settingText}>Add Child</Text>
             <Icon name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
         </View>
@@ -399,15 +625,13 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
               thumbColor={dailyReminders ? '#45a578' : '#f4f3f4'}
             />
           </View>
-
-
         </View>
 
         {/* Privacy Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Privacy</Text>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => setShowPrivacyPolicy(true)}
           >
@@ -416,7 +640,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
             <Icon name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => setShowTerms(true)}
           >
@@ -429,8 +653,8 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
         {/* Support Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => onNavigate && onNavigate('HelpSupport')}
           >
@@ -439,7 +663,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
             <Icon name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => setShowRateUs(true)}
           >
@@ -448,7 +672,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
             <Icon name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingItem}
             onPress={() => setShowAbout(true)}
           >
@@ -499,6 +723,27 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
               {/* Parent Details */}
               <Text style={styles.sectionDividerLabel}>Parent Details</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <View style={styles.phoneEditRow}>
+                  <TextInput
+                    style={styles.phoneEditCode}
+                    value={newCountryCode}
+                    onChangeText={setNewCountryCode}
+                    keyboardType="phone-pad"
+                    maxLength={4}
+                  />
+                  <TextInput
+                    style={styles.phoneEditInput}
+                    value={newPhone}
+                    onChangeText={setNewPhone}
+                    placeholder="Phone number"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                  />
+                </View>
+              </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email</Text>
@@ -600,6 +845,70 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                         ))}
                       </View>
                     )}
+                  </View>
+
+                  {/* Subject Levels */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Subject Levels</Text>
+                    <View style={styles.subjectLevelsEditGrid}>
+                      {coreAreas.map((area) => {
+                        const active = editSubjectLevels[area.id] || 'Intermediate';
+                        return (
+                          <View key={area.id} style={styles.subjectLevelCard}>
+                            <View style={styles.subjectLevelCardHeader}>
+                              <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                              <Text style={styles.subjectLevelCardName}>{area.name}</Text>
+                            </View>
+                            <View style={styles.levelPillRow}>
+                              {levels.map((lvl) => (
+                                <TouchableOpacity
+                                  key={lvl}
+                                  style={[styles.levelPill, active === lvl && styles.levelPillActive]}
+                                  onPress={() => setEditSubjectLevels(prev => ({ ...prev, [area.id]: lvl }))}
+                                >
+                                  <Text style={[styles.levelPillText, active === lvl && styles.levelPillTextActive]}>
+                                    {lvl}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Beyond School Interests */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Beyond School Interests</Text>
+                    <View style={styles.topicsEditGrid}>
+                      {exploratoryAreas.map((area) => {
+                        const selected = editChildTopics.includes(area._id || area.name);
+                        const key = area._id || area.name;
+                        return (
+                          <TouchableOpacity
+                            key={key}
+                            style={[styles.topicEditChip, selected && styles.topicEditChipSelected]}
+                            onPress={() => {
+                              setEditChildTopics(prev =>
+                                prev.includes(key)
+                                  ? prev.filter(t => t !== key)
+                                  : [...prev, key]
+                              );
+                            }}
+                          >
+                            <MaterialIcon
+                              name={area.rnIcon || 'star-outline'}
+                              size={14}
+                              color={selected ? '#FFFFFF' : '#6B7280'}
+                            />
+                            <Text style={[styles.topicEditChipText, selected && styles.topicEditChipTextSelected]}>
+                              {area.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   </View>
 
                 </>
@@ -1018,7 +1327,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
         onRequestClose={() => setShowAddChild(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { height: '85%' }]}>
+          <View style={[styles.modalContent, { height: '92%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Child</Text>
               <TouchableOpacity onPress={() => setShowAddChild(false)}>
@@ -1031,6 +1340,9 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
               contentContainerStyle={{ paddingBottom: 32 }}
               showsVerticalScrollIndicator={false}
             >
+              {/* ── Basic Info ── */}
+              <Text style={styles.sectionDividerLabel}>Basic Info</Text>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Child's Name *</Text>
                 <TextInput
@@ -1070,7 +1382,6 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                 />
               </View>
 
-              {/* Grade Dropdown */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Grade *</Text>
                 <TouchableOpacity
@@ -1093,7 +1404,6 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                 )}
               </View>
 
-              {/* Education Board Dropdown */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Education Board</Text>
                 <TouchableOpacity
@@ -1116,23 +1426,79 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                 )}
               </View>
 
-              {/* Avatar Selection */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Choose Avatar</Text>
-                <View style={styles.addChildAvatarGrid}>
-                  {avatarImages.map((a) => {
-                    const source = a.uri ? { uri: a.uri } : a.image;
-                    return (
-                      <TouchableOpacity
-                        key={a.id}
-                        onPress={() => setNewChildAvatar(a.id)}
-                        style={[styles.addChildAvatarItem, newChildAvatar === a.id && styles.addChildAvatarSelected]}
-                      >
-                        <Image source={source} style={styles.addChildAvatarImage} resizeMode="cover" />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+              {/* ── Subject Levels ── */}
+              <Text style={styles.sectionDividerLabel}>Foundation Skills</Text>
+              <Text style={styles.sectionDividerHint}>Tap a subject to set the level</Text>
+              <View style={styles.subjectLevelsEditGrid}>
+                {coreAreas.map((area) => {
+                  const active = newChildSubjectLevels[area.id] || 'Intermediate';
+                  return (
+                    <View key={area.id} style={styles.subjectLevelCard}>
+                      <View style={styles.subjectLevelCardHeader}>
+                        <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                        <Text style={styles.subjectLevelCardName}>{area.name}</Text>
+                      </View>
+                      <View style={styles.levelPillRow}>
+                        {levels.map((lvl) => (
+                          <TouchableOpacity
+                            key={lvl}
+                            style={[styles.levelPill, active === lvl && styles.levelPillActive]}
+                            onPress={() => setNewChildSubjectLevels(prev => ({ ...prev, [area.id]: lvl }))}
+                          >
+                            <Text style={[styles.levelPillText, active === lvl && styles.levelPillTextActive]}>
+                              {lvl}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* ── Beyond School ── */}
+              <Text style={[styles.sectionDividerLabel, { marginTop: 20 }]}>Beyond School</Text>
+              <Text style={styles.sectionDividerHint}>Select topics your child is interested in</Text>
+              <View style={styles.topicsEditGrid}>
+                {exploratoryAreas.map((area) => {
+                  const key = area._id || area.name;
+                  const selected = newChildTopics.includes(key);
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.topicEditChip, selected && styles.topicEditChipSelected]}
+                      onPress={() => setNewChildTopics(prev =>
+                        prev.includes(key) ? prev.filter(t => t !== key) : [...prev, key]
+                      )}
+                    >
+                      <MaterialIcon
+                        name={area.rnIcon || 'star-outline'}
+                        size={14}
+                        color={selected ? '#FFFFFF' : '#6B7280'}
+                      />
+                      <Text style={[styles.topicEditChipText, selected && styles.topicEditChipTextSelected]}>
+                        {area.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* ── Avatar ── */}
+              <Text style={[styles.sectionDividerLabel, { marginTop: 20 }]}>Choose Avatar</Text>
+              <View style={styles.addChildAvatarGrid}>
+                {avatarImages.map((a) => {
+                  const source = a.uri ? { uri: a.uri } : a.image;
+                  return (
+                    <TouchableOpacity
+                      key={a.id}
+                      onPress={() => setNewChildAvatar(a.id)}
+                      style={[styles.addChildAvatarItem, newChildAvatar === a.id && styles.addChildAvatarSelected]}
+                    >
+                      <Image source={source} style={styles.addChildAvatarImage} resizeMode="cover" />
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
 
@@ -1204,8 +1570,568 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  profileCard: {
+  // ── NEW PROFILE HERO & INFO CARDS ────────────────────────────────────────
+  profileHeroCard: {
+    margin: 16,
+    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  profileHeroTop: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  profileHeroInfo: {
+    flex: 1,
+  },
+  profileHeroName: {
+    fontSize: isTablet ? 20 : 17,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 3,
+  },
+  profileHeroPhone: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  profileHeroEmail: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  profileHeroEdit: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  infoCard: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  infoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  infoCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    width: 100,
+  },
+  infoValue: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    textAlign: 'right',
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+  },
+  infoSubHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 0.6,
+    marginTop: 12,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  subjectLevelsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  subjectLevelChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  subjectLevelName: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  subjectLevelBadge: {
+    fontSize: 11,
+    color: '#45a578',
+    fontWeight: '700',
+  },
+  topicsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  topicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  topicChipText: {
+    fontSize: 12,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+
+  // ── EDIT MODAL EXTRAS ────────────────────────────────────────────────────
+  inputReadOnly: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
+  inputReadOnlyText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+  },
+  phoneEditRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  phoneEditCode: {
+    width: 64,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
+    textAlign: 'center',
+  },
+  phoneEditInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
+  },
+  changePhoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  changePhoneBadgeText: {
+    fontSize: 11,
+    color: '#45a578',
+    fontWeight: '700',
+  },
+  phoneChangeBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    gap: 10,
+  },
+  phoneChangeHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  phoneChangeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  phoneChangeCode: {
+    width: 60,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
+    textAlign: 'center',
+  },
+  phoneChangeInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
+  },
+  phoneChangeError: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 2,
+  },
+  phoneChangeBtns: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  phoneChangeCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  phoneChangeCancelText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  phoneChangeSendBtn: {
+    flex: 2,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#45a578',
+    alignItems: 'center',
+  },
+  phoneChangeSendText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  topicsEditGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  topicEditChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F9FAFB',
+  },
+  topicEditChipSelected: {
+    backgroundColor: '#45a578',
+    borderColor: '#45a578',
+  },
+  topicEditChipText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  topicEditChipTextSelected: {
+    color: '#FFFFFF',
+  },
+
+  // Subject level row in edit modal
+  subjectLevelsEditGrid: {
+    gap: 10,
+  },
+  subjectLevelCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    gap: 10,
+  },
+  subjectLevelCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subjectLevelCardName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  levelPillRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  levelPill: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  levelPillActive: {
+    backgroundColor: '#45a578',
+    borderColor: '#45a578',
+  },
+  levelPillText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  levelPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  // ── CHILDREN SECTION ─────────────────────────────────────────────────────
+  childrenSection: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  childrenSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  childrenSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  addChildBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  addChildBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#45a578',
+  },
+  childCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    gap: 12,
+  },
+  childCardActive: {
+    borderWidth: 1.5,
+    borderColor: '#45a578',
+  },
+  activeBadgeRow: {
+    flexDirection: 'row',
+  },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#45a578',
+  },
+  childCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  childCardActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  childActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  childActionBtnDelete: {
+    backgroundColor: '#FEF2F2',
+  },
+  switchHintBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  switchHintText: {
+    fontSize: 11,
+    color: '#45a578',
+    fontWeight: '600',
+  },
+  childAvatarWrap: {
+    shadowColor: '#45a578',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  childAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#BBF7D0',
+  },
+  childAvatarFallback: {
+    backgroundColor: '#45a578',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  childAvatarInitial: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  childCardInfo: {
+    flex: 1,
+  },
+  childCardName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  childCardSub: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  childCardDob: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  childCardChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  childSubjectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  childSubjectChipName: {
+    fontSize: 11,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  childSubjectChipLevel: {
+    fontSize: 11,
+    color: '#45a578',
+    fontWeight: '700',
+  },
+  childTopicChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  childTopicChipText: {
+    fontSize: 11,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  noChildCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    gap: 6,
+  },
+  noChildText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  noChildHint: {
+    fontSize: 12,
+    color: '#D1D5DB',
+  },
+
+  profileCard: {    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -1368,8 +2294,13 @@ const styles = StyleSheet.create({
     color: '#45a578',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 12,
+    marginBottom: 4,
     marginTop: 4,
+  },
+  sectionDividerHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 12,
   },
 
   dropdownButton: {
