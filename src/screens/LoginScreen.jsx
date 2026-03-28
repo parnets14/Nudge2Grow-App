@@ -15,10 +15,13 @@ import {
   ScrollView,
   FlatList,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { sendOTP as apiSendOTP, verifyOTP as apiVerifyOTP } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -31,6 +34,9 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
   const [countryCode, setCountryCode] = useState('+91');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [devOtp, setDevOtp] = useState(''); // shows OTP on screen (dev only)
 
   const countryCodes = [
     { code: '+93', country: 'Afghanistan', flag: '🇦🇫' },
@@ -193,24 +199,56 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
     setPhoneNumber(cleaned);
   };
 
-  const handleSendOTP = () => {
-    if (phoneNumber.length === 10) {
+  const handleSendOTP = async () => {
+    if (phoneNumber.length < 7) return;
+    setLoading(true);
+    setErrorMsg('');
+    setDevOtp('');
+    try {
+      const res = await apiSendOTP(phoneNumber, countryCode);
       setShowOTP(true);
-      setTimeout(() => setOtp('123456'), 400);
+      // Show OTP on screen in dev mode (backend returns it)
+      if (res.otp) setDevOtp(res.otp);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to send OTP');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleVerifyOTP = () => {
-    if (otp.length === 6 && onSendOTP) {
-      onSendOTP({ phoneNumber, otp });
+  const handleVerifyOTP = async () => {
+    if (otp.length !== 6) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const data = await apiVerifyOTP(phoneNumber, otp);
+      // data = { token, isNewUser, parent }
+      if (onSendOTP) onSendOTP({ phoneNumber, countryCode, token: data.token, isNewUser: data.isNewUser, parent: data.parent });
+    } catch (err) {
+      setErrorMsg(err.message || 'Invalid OTP');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const isPhoneValid = phoneNumber.length === 10;
+  const isPhoneValid = phoneNumber.length >= 7;
   const isOTPValid = otp.length === 6;
 
   const renderButton = () => {
     const enabled = showOTP ? isOTPValid : isPhoneValid;
+
+    if (loading) {
+      return (
+        <LinearGradient
+          colors={['#00CED1', '#45a578', '#90EE90']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.gradientButton}
+        >
+          <ActivityIndicator color="#FFFFFF" />
+        </LinearGradient>
+      );
+    }
 
     if (!enabled) {
       return (
@@ -391,14 +429,26 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
             <Text style={styles.otpSentText}>
               OTP sent to {countryCode}-{phoneNumber}
             </Text>
+            {devOtp ? (
+              <Text style={{ color: '#45a578', fontSize: 15, fontWeight: '700', textAlign: 'center', marginTop: 8, letterSpacing: 4 }}>
+                🔑 {devOtp}
+              </Text>
+            ) : null}
           </View>
         )}
+
+        {/* Error message */}
+        {errorMsg ? (
+          <Text style={{ color: '#e53e3e', fontSize: 13, textAlign: 'center', marginBottom: 8, paddingHorizontal: 20 }}>
+            {errorMsg}
+          </Text>
+        ) : null}
 
         {/* Button */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={showOTP ? handleVerifyOTP : handleSendOTP}
-          disabled={showOTP ? !isOTPValid : !isPhoneValid}
+          disabled={loading || (showOTP ? !isOTPValid : !isPhoneValid)}
         >
           {renderButton()}
         </TouchableOpacity>

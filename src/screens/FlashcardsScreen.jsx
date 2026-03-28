@@ -185,29 +185,27 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
               <View style={styles.aboutBadge}>
                 <Text style={styles.aboutBadgeText}>ABOUT</Text>
               </View>
-              
+
+              {/* Title — dark bold */}
               <Text style={styles.cardTitle}>{item.title}</Text>
-              
-              {item.concept && (
-                <>
-                  <Text style={styles.sectionLabel}>CONCEPT</Text>
-                  <Text style={styles.sectionText}>{item.concept}</Text>
-                </>
-              )}
-              
-              {item.section2Title && (
-                <>
-                  <Text style={styles.sectionLabel}>{item.section2Title.toUpperCase()}</Text>
-                  <Text style={styles.sectionText}>{item.section2}</Text>
-                </>
-              )}
-              
-              {item.parentOutcome && (
-                <>
-                  <Text style={styles.sectionLabel}>PARENT OUTCOME</Text>
-                  <Text style={styles.sectionText}>{item.parentOutcome}</Text>
-                </>
-              )}
+
+              {/* Description — normal (was concept) */}
+              {(item.concept || item.description) ? (
+                <Text style={styles.sectionText}>{item.concept || item.description}</Text>
+              ) : null}
+
+              {/* Subtitle — bold (was parentOutcome) */}
+              {(item.parentOutcome || item.subtitle) ? (
+                <Text style={[styles.sectionText, { fontWeight: '700', color: '#1A1A1A', marginTop: 16 }]}>
+                  {item.parentOutcome || item.subtitle}
+                </Text>
+              ) : null}
+
+              {/* Sub Description — normal (was section2) */}
+              {(item.section2 || item.subdescription) ? (
+                <Text style={styles.sectionText}>{item.section2 || item.subdescription}</Text>
+              ) : null}
+
               <View style={{ height: 20 }} />
             </ScrollView>
           ) : item.type === 'qa' ? (

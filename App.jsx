@@ -8,6 +8,7 @@ import SplashScreen from './src/screens/SplashScreen';
 import IntroScreen from './src/screens/IntroScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import PersonalSetupScreen from './src/screens/PersonalSetupScreen';
+import { fetchProfile } from './src/api';
 import HomeScreen from './src/screens/HomeScreen';
 import SubscriptionPlanScreen from './src/screens/SubscriptionPlanScreen';
 import MyChildrenScreen from './src/screens/MyChildrenScreen';
@@ -34,6 +35,7 @@ import RiddlesScreen from './src/screens/RiddlesScreen';
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('splash');
   const [userData, setUserData] = useState(null);
+  const [setupToken, setSetupToken] = useState(null);
   const [navigationParams, setNavigationParams] = useState({});
   const [navigationHistory, setNavigationHistory] = useState([]);
 
@@ -53,9 +55,23 @@ const App = () => {
     setCurrentScreen('intro');
   };
 
-  const handleLoginSuccess = (data) => {
-    setUserData({ ...userData, ...data });
-    // After successful login, go to personal setup screen
+  const handleLoginSuccess = async (data) => {
+    const merged = { ...userData, ...data };
+    setUserData(merged);
+
+    // If returning user with children, fetch full profile and go to home
+    if (!data.isNewUser && data.parent?.childrenCount > 0 && data.token) {
+      try {
+        const profile = await fetchProfile(data.token);
+        setUserData({ ...merged, children: profile.children, email: profile.email });
+        setCurrentScreen('home');
+        return;
+      } catch (err) {
+        console.error('[App] fetchProfile failed:', err.message);
+      }
+    }
+    // New user or no children — go to setup, pass token directly
+    setSetupToken(data.token || null);
     setCurrentScreen('setup');
   };
 
@@ -104,6 +120,7 @@ const App = () => {
       setCurrentScreen('helpSupport');
     } else if (screen === 'riddles') {
       setNavigationHistory([...navigationHistory, 'home']);
+      if (params) setNavigationParams(params);
       setCurrentScreen('riddles');
     } else if (screen === 'notifications') {
       setCurrentScreen('notifications');
@@ -405,7 +422,7 @@ const App = () => {
           />
         );
       case 'setup':
-        return <PersonalSetupScreen onFinish={handleSetupFinish} onBack={handleSetupBack} />;
+        return <PersonalSetupScreen token={setupToken} onFinish={handleSetupFinish} onBack={handleSetupBack} />;
       case 'home':
         return <HomeScreen userData={userData} onBack={handleHomeBack} onNavigate={handleHomeNavigate} />;
       case 'subjectsList':
@@ -544,7 +561,7 @@ const App = () => {
       case 'notifications':
         return <NotificationsScreen onBack={handleNotificationsBack} />;
       case 'riddles':
-        return <RiddlesScreen onBack={() => { setNavigationHistory(navigationHistory.slice(0, -1)); setCurrentScreen('home'); }} />;
+        return <RiddlesScreen riddles={navigationParams?.riddles} onBack={() => { setNavigationHistory(navigationHistory.slice(0, -1)); setCurrentScreen('home'); }} />;
       case 'helpSupport':
         return <HelpSupportScreen onBack={handleHelpSupportBack} onNavigate={handleHelpSupportNavigate} />;
       default:

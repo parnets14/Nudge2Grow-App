@@ -2,7 +2,7 @@
  * Personal Setup Screen - Add Your Child
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,13 +20,15 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import LinearGradient from 'react-native-linear-gradient';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { fetchGrades, fetchBoards, fetchAvatars, fetchBeyondSchool, saveProfile, checkEmail as apiCheckEmail } from '../api';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
 
-const PersonalSetupScreen = ({ onFinish, onBack }) => {
+const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const [email, setEmail] = useState('');
   const [children, setChildren] = useState([]);
   const [isValid, setIsValid] = useState(false);
@@ -43,12 +45,12 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
   // Child form fields
   const [childName, setChildName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date(2010, 0, 1)); // Default to Jan 1, 2010
+  const [selectedDate, setSelectedDate] = useState(new Date(2010, 0, 1));
   const [grade, setGrade] = useState('');
   const [educationBoard, setEducationBoard] = useState('');
-  const [faithBackground, setFaithBackground] = useState('');
   const [childEmail, setChildEmail] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
+  const [customPhoto, setCustomPhoto] = useState(null); // { uri } from gallery
   const [selectedTopics, setSelectedTopics] = useState([]);
   
   // Refs
@@ -57,25 +59,46 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
   // Dropdown states
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
-  const [showFaithDropdown, setShowFaithDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedLevel, setSelectedLevel] = useState('Intermediate');
   const [subjectLevels, setSubjectLevels] = useState({}); // { subjectId: level }
 
-  const grades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
-  const boards = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other'];
+  // Grades loaded from backend (admin panel)
+  const [grades, setGrades] = useState([]);
+  useEffect(() => {
+    fetchGrades()
+      .then(data => setGrades(data.map(g => g.title)))
+      .catch(() => setGrades(['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'])); // fallback
+  }, []);
+
+  // Boards loaded from backend (admin panel)
+  const [boards, setBoards] = useState([]);
+  useEffect(() => {
+    fetchBoards()
+      .then(data => setBoards(data.map(b => b.name)))
+      .catch(() => setBoards(['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other'])); // fallback
+  }, []);
   const faithOptions = ['Christian', 'Hindu', 'Muslim', 'Buddhist', 'Jewish', 'Sikh', 'Other', 'Prefer not to say'];
 
-  const avatars = [
-    { id: 'A1', image: require('../assets/images/A1.jpeg') },
-    { id: 'A2', image: require('../assets/images/A2.jpeg') },
-    { id: 'A3', image: require('../assets/images/A3.jpeg') },
-    { id: 'A4', image: require('../assets/images/A4.jpeg') },
-    { id: 'A5', image: require('../assets/images/A5.jpeg') },
-    { id: 'A6', image: require('../assets/images/A6.jpeg') },
+  // Local fallback avatars (used if API is unreachable)
+  const fallbackAvatars = [
+    { _id: 'A1', image: null, local: require('../assets/images/A1.jpeg') },
+    { _id: 'A2', image: null, local: require('../assets/images/A2.jpeg') },
+    { _id: 'A3', image: null, local: require('../assets/images/A3.jpeg') },
+    { _id: 'A4', image: null, local: require('../assets/images/A4.jpeg') },
+    { _id: 'A5', image: null, local: require('../assets/images/A5.jpeg') },
+    { _id: 'A6', image: null, local: require('../assets/images/A6.jpeg') },
   ];
+
+  // Avatars loaded from backend (admin panel)
+  const [avatars, setAvatars] = useState([]);
+  useEffect(() => {
+    fetchAvatars()
+      .then(data => setAvatars(data.length > 0 ? data : fallbackAvatars))
+      .catch(() => setAvatars(fallbackAvatars));
+  }, []);
 
   const coreAreas = [
     { id: 'mathematics', name: 'Mathematics', icon: 'calculator', recommended: true },
@@ -84,12 +107,22 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
     { id: 'social-studies', name: 'Social Studies', icon: 'earth', recommended: true },
   ];
 
-  const exploratoryAreas = [
-    { id: 'ai', name: 'Artificial Intelligence', icon: 'brain' },
-    { id: 'financial', name: 'Financial Literacy', icon: 'wallet' },
-    { id: 'humor', name: 'Britannica/ Did you know', icon: 'palette' },
-    { id: 'safety', name: 'Sex & Safety Education', icon: 'shield-check' },
-  ];
+  // Beyond School subjects loaded from admin panel
+  const [exploratoryAreas, setExploratoryAreas] = useState([
+    { _id: 'ai',        name: 'Artificial Intelligence',  rnIcon: 'brain' },
+    { _id: 'financial', name: 'Financial Literacy',       rnIcon: 'wallet' },
+    { _id: 'humor',     name: 'Britannica/ Did you know', rnIcon: 'palette' },
+    { _id: 'safety',    name: 'Sex & Safety Education',   rnIcon: 'shield-check' },
+  ]);
+  useEffect(() => {
+    fetchBeyondSchool()
+      .then(data => {
+        if (data.length > 0) {
+          setExploratoryAreas(data.map(i => ({ _id: i._id, name: i.name, rnIcon: i.rnIcon || 'book' })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleEmailChange = (text) => {
     setEmail(text);
@@ -105,35 +138,31 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
     }
   };
 
-  const handleEmailBlur = () => {
-    // Check email when user finishes typing (on blur)
+  const handleEmailBlur = async () => {
     if (isValid && !emailStatus) {
       setCheckingEmail(true);
       setEmailMessage('');
       setEmailStatus('');
-      
-      // Simulate API call to check if email is registered
-      setTimeout(() => {
-        // Check if email is registered (for demo, emails ending with @test.com are considered registered)
-        if (email.endsWith('@test.com')) {
-          // Email is registered - redirect to home
+      try {
+        const result = await apiCheckEmail(token, email);
+        if (result.registered) {
           setEmailStatus('registered');
           setEmailMessage('Welcome back! Your account has been found. Redirecting to home...');
           setCheckingEmail(false);
-          
-          // Redirect to home after showing message
           setTimeout(() => {
-            if (onFinish) {
-              onFinish({ email, children: [], isReturningUser: true });
-            }
+            if (onFinish) onFinish({ email, children: [], isReturningUser: true });
           }, 1500);
         } else {
-          // Email is not registered - show message and Next button
           setEmailStatus('new');
           setEmailMessage('Email not registered. Please continue to add your child details.');
           setCheckingEmail(false);
         }
-      }, 1000); // Simulate network delay
+      } catch {
+        // If check fails, allow user to continue
+        setEmailStatus('new');
+        setEmailMessage('');
+        setCheckingEmail(false);
+      }
     }
   };
 
@@ -199,9 +228,8 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
         dateOfBirth,
         grade,
         educationBoard,
-        faithBackground,
         email: childEmail,
-        avatar: selectedAvatar,
+        avatar: selectedAvatar === 'custom' ? customPhoto : selectedAvatar,
         topics: selectedTopics,
         subjectLevels,
       };
@@ -214,9 +242,9 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
       setDateOfBirth('');
       setGrade('');
       setEducationBoard('');
-      setFaithBackground('');
       setChildEmail('');
       setSelectedAvatar('');
+      setCustomPhoto(null);
       setSelectedTopics([]);
       setShowTopicPreferences(false);
       setShowLifeSkills(false);
@@ -224,9 +252,35 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
     }
   };
 
-  const handleStartNudge = () => {
+  const handleStartNudge = async () => {
+    const childrenData = childrenRef.current;
+    // Save to backend if we have a token
+    if (token) {
+      try {
+        // Strip base64 from avatar before sending to backend (too large)
+        // Store only the avatar ID or a flag; the full URI stays in local state
+        const childrenForBackend = childrenData.map(c => ({
+          ...c,
+          avatar: c.avatar && c.avatar.startsWith('data:') ? 'custom' : c.avatar,
+        }));
+        const result = await saveProfile(token, email, childrenForBackend);
+        console.log('[Setup] Profile saved to backend');
+        // Merge back the original avatar (with base64) for local display
+        const savedChildren = (result?.parent?.children || childrenForBackend).map((sc, i) => ({
+          ...sc,
+          avatar: childrenData[i]?.avatar || sc.avatar,
+        }));
+        if (onFinish) {
+          onFinish({ email, children: savedChildren });
+        }
+        return;
+      } catch (err) {
+        console.error('[Setup] Save failed:', err.message);
+        // Continue to home even if save fails
+      }
+    }
     if (onFinish) {
-      onFinish({ email, children: childrenRef.current });
+      onFinish({ email, children: childrenData });
     }
   };
 
@@ -394,16 +448,16 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
             <View style={styles.avatarGrid}>
               {avatars.map((avatar) => (
                 <TouchableOpacity
-                  key={avatar.id}
+                  key={avatar._id}
                   style={[
                     styles.avatarOption,
-                    selectedAvatar === avatar.id && styles.avatarOptionSelected
+                    selectedAvatar === avatar._id && styles.avatarOptionSelected
                   ]}
-                  onPress={() => setSelectedAvatar(avatar.id)}
+                  onPress={() => setSelectedAvatar(avatar._id)}
                   activeOpacity={0.7}
                 >
                   <Image 
-                    source={avatar.image} 
+                    source={avatar.local ? avatar.local : { uri: avatar.image }}
                     style={styles.avatarImage}
                     resizeMode="cover"
                   />
@@ -414,12 +468,39 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
             {/* Or Text */}
             <Text style={styles.orText}>Or</Text>
 
+            {/* Custom photo preview — shown after picking from gallery */}
+            {customPhoto && (
+              <TouchableOpacity
+                style={[styles.avatarOption, styles.avatarOptionSelected, { alignSelf: 'center', marginBottom: 12 }]}
+                activeOpacity={0.7}
+                onPress={() => setSelectedAvatar('custom')}
+              >
+                <Image source={{ uri: customPhoto }} style={styles.avatarImage} resizeMode="cover" />
+              </TouchableOpacity>
+            )}
+
             {/* Upload Photo Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.uploadPhotoButton}
               activeOpacity={0.7}
+              onPress={() => {
+                launchImageLibrary({ mediaType: 'photo', quality: 0.5, includeBase64: true }, (response) => {
+                  if (response.didCancel || response.errorCode) return;
+                  const asset = response.assets?.[0];
+                  if (asset) {
+                    // Store as base64 data URI so it persists after app restart
+                    const base64Uri = asset.base64
+                      ? `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`
+                      : asset.uri;
+                    setCustomPhoto(base64Uri);
+                    setSelectedAvatar('custom');
+                  }
+                });
+              }}
             >
-              <Text style={styles.uploadPhotoText}>Upload Photo</Text>
+              <Text style={styles.uploadPhotoText}>
+                {customPhoto ? 'Change Photo' : 'Upload Photo'}
+              </Text>
             </TouchableOpacity>
           </ScrollView>
 
@@ -561,27 +642,22 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
               <View style={styles.exploratoryList}>
                 {exploratoryAreas.map((area) => (
                   <TouchableOpacity
-                    key={area.id}
+                    key={area._id}
                     style={[
                       styles.exploratoryCard,
-                      selectedTopics.includes(area.id) && styles.exploratoryCardSelected,
-                      area.disabled && styles.exploratoryCardDisabled
+                      selectedTopics.includes(area._id) && styles.exploratoryCardSelected,
                     ]}
-                    onPress={() => !area.disabled && toggleTopic(area.id)}
-                    activeOpacity={area.disabled ? 1 : 0.7}
-                    disabled={area.disabled}
+                    onPress={() => toggleTopic(area._id)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[
-                      styles.exploratoryCardText,
-                      area.disabled && styles.exploratoryCardTextDisabled
-                    ]}>{area.name}</Text>
-                    {selectedTopics.includes(area.id) ? (
+                    <Text style={styles.exploratoryCardText}>{area.name}</Text>
+                    {selectedTopics.includes(area._id) ? (
                       <Icon name="checkmark" size={20} color="#4A90E2" />
                     ) : (
                       <MaterialIcon
-                        name={area.icon}
+                        name={area.rnIcon || 'book'}
                         size={22}
-                        color={area.disabled ? "#CCCCCC" : "#666666"}
+                        color="#666666"
                       />
                     )}
                   </TouchableOpacity>
@@ -726,7 +802,6 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
                 onPress={() => {
                   setShowGradeDropdown(!showGradeDropdown);
                   setShowBoardDropdown(false);
-                  setShowFaithDropdown(false);
                 }}
               >
                 <Text style={[styles.dropdownText, grade && styles.dropdownTextFilled]}>
@@ -765,7 +840,6 @@ const PersonalSetupScreen = ({ onFinish, onBack }) => {
                 onPress={() => {
                   setShowBoardDropdown(!showBoardDropdown);
                   setShowGradeDropdown(false);
-                  setShowFaithDropdown(false);
                 }}
               >
                 <Text style={[styles.dropdownText, educationBoard && styles.dropdownTextFilled]}>

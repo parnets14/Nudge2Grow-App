@@ -2,7 +2,7 @@
  * Learning Progress Screen - Learning Summary with Weekly/Monthly data
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle, Polyline } from 'react-native-svg';
+import { fetchAvatars } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -82,6 +83,13 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
   const [selectedBar, setSelectedBar] = useState(null);
   const [showAllKnownTopics, setShowAllKnownTopics] = useState(false);
   const [showAllPracticeTopics, setShowAllPracticeTopics] = useState(false);
+  const [apiAvatars, setApiAvatars] = useState([]); // { id, uri } from admin panel
+
+  useEffect(() => {
+    fetchAvatars()
+      .then(data => { if (data.length > 0) setApiAvatars(data.map(a => ({ id: a._id, uri: a.image }))); })
+      .catch(() => {});
+  }, []);
 
   const child = userData?.children?.[0];
 
@@ -256,15 +264,16 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
   const currentData = selectedPeriod === 'weekly' ? weeklyData : monthlyData;
 
   const getAvatarSource = (avatarId) => {
-    const avatarMap = {
-      'A1': require('../assets/images/A1.jpeg'),
-      'A2': require('../assets/images/A2.jpeg'),
-      'A3': require('../assets/images/A3.jpeg'),
-      'A4': require('../assets/images/A4.jpeg'),
-      'A5': require('../assets/images/A5.jpeg'),
-      'A6': require('../assets/images/A6.jpeg'),
-    };
-    return avatarMap[avatarId] || avatarMap['A1'];
+    if (!avatarId) return require('../assets/images/A1.jpeg');
+    // Local preset IDs
+    const localMap = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
+    if (localMap[avatarId]) return localMap[avatarId];
+    // URI / base64
+    if (avatarId.startsWith('data:') || avatarId.startsWith('http') || avatarId.startsWith('file') || avatarId.startsWith('/')) return { uri: avatarId };
+    // DB _id — look up in API avatars
+    const found = apiAvatars.find(a => a.id === avatarId);
+    if (found?.uri) return { uri: found.uri };
+    return require('../assets/images/A1.jpeg');
   };
 
   return (

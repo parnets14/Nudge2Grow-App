@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Home Screen with Side Menu - Enhanced with Full Functionality
  */
 
@@ -20,6 +20,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
+import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -32,18 +33,14 @@ const HomeScreen = ({ userData, onNavigate }) => {
   const [completedNudges, setCompletedNudges] = useState([]);
   const [showQuickAction, setShowQuickAction] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [riddleAnswers, setRiddleAnswers] = useState({
-    riddle1: false,
-    riddle2: false,
-    riddle3: false,
-    riddle4: false,
-  });
-  const [riddleHints, setRiddleHints] = useState({
-    riddle1: false,
-    riddle2: false,
-    riddle3: false,
-    riddle4: false,
-  });
+  const [avatarCache, setAvatarCache] = useState({}); // { _id: base64 }
+  const [didYouKnowFacts, setDidYouKnowFacts] = useState([]);
+  const [riddlesData, setRiddlesData] = useState([]);
+  const [parentingInsights, setParentingInsights] = useState([]);
+  const [phaseCards, setPhaseCards] = useState([]);
+  const [riddleAnswers, setRiddleAnswers] = useState({}); // { [id]: bool }
+  const [riddleHints, setRiddleHints] = useState({});    // { [id]: bool }
+  const [showAllRiddles, setShowAllRiddles] = useState(false);
   
   // Track completed days for 7-day streak (true = completed, false = not completed)
   const [streakDays, setStreakDays] = useState([
@@ -74,6 +71,40 @@ const HomeScreen = ({ userData, onNavigate }) => {
       setCurrentTime(new Date());
     }, 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Fetch admin avatars to resolve _id → base64 image
+  useEffect(() => {
+    fetch(`${BASE_URL}/avatars`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const cache = {};
+          data.forEach(a => { cache[a._id] = a.image; });
+          setAvatarCache(cache);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Did You Know facts from admin panel
+    fetchDidYouKnow()
+      .then(data => setDidYouKnowFacts(data))
+      .catch(() => {});
+
+    // Fetch Riddles from admin panel
+    fetchRiddles()
+      .then(data => setRiddlesData(data))
+      .catch(() => {});
+
+    // Fetch Parenting Insights from admin panel
+    fetchParentingInsights()
+      .then(data => setParentingInsights(data))
+      .catch(() => {});
+
+    // Fetch Phase Cards from admin panel
+    fetchPhaseCards()
+      .then(data => setPhaseCards(data))
+      .catch(() => {});
   }, []);
 
   const onRefresh = () => {
@@ -137,7 +168,14 @@ const HomeScreen = ({ userData, onNavigate }) => {
   };
 
   const getAvatarSource = (avatarId) => {
-    const avatarMap = {
+    if (!avatarId) return require('../assets/images/A1.jpeg');
+    // Custom uploaded photo (file URI)
+    if (avatarId.startsWith('file://') || avatarId.startsWith('content://') ||
+        avatarId.startsWith('data:') || avatarId.startsWith('http')) {
+      return { uri: avatarId };
+    }
+    // Local fallback avatars (A1-A6)
+    const localMap = {
       'A1': require('../assets/images/A1.jpeg'),
       'A2': require('../assets/images/A2.jpeg'),
       'A3': require('../assets/images/A3.jpeg'),
@@ -145,22 +183,25 @@ const HomeScreen = ({ userData, onNavigate }) => {
       'A5': require('../assets/images/A5.jpeg'),
       'A6': require('../assets/images/A6.jpeg'),
     };
-    return avatarMap[avatarId] || avatarMap['A1'];
+    if (localMap[avatarId]) return localMap[avatarId];
+    // MongoDB ObjectId (24-char hex) — resolve from cache
+    if (/^[a-f0-9]{24}$/i.test(avatarId) && avatarCache[avatarId]) {
+      return { uri: avatarCache[avatarId] };
+    }
+    return require('../assets/images/A1.jpeg');
   };
 
   const child = userData?.children?.[0];
+  console.log('[HomeScreen] child:', child?.name, '| avatar:', child?.avatar?.substring(0, 20));
   const timeRecommendation = getTimeBasedRecommendation();
   
-  // Did You Know - config: max 5 facts per day, show 2 daily
-  const DID_YOU_KNOW_DAILY_COUNT = 2; // change to up to 5
-  const allFacts = [
-    { id: 1, fact: 'Bananas are berries, but strawberries are not. In botanical terms, a berry comes from a single flower with one ovary.', prompt: 'Can you think of other foods that might not be what we usually call them?', source: 'Britannica Kids' },
-    { id: 2, fact: 'Honey never spoils. Archaeologists have found 3,000-year-old honey in Egyptian tombs that was still perfectly edible.', prompt: 'Why do you think honey lasts so long? What makes it special?', source: 'Britannica Kids' },
-    { id: 3, fact: 'Octopuses have three hearts — two pump blood to the gills, and one pumps it to the rest of the body.', prompt: 'What other animals do you think might have unusual body features?', source: 'Britannica Kids' },
-    { id: 4, fact: 'The Great Wall of China is not visible from space with the naked eye — that\'s actually a popular myth!', prompt: 'Can you think of other things people believe that might not be true?', source: 'Britannica Kids' },
-    { id: 5, fact: 'A group of flamingos is called a "flamboyance." They get their pink colour from the food they eat.', prompt: 'What do you think would happen if flamingos stopped eating pink food?', source: 'Britannica Kids' },
+  // Did You Know — show 2 most recently added active facts from admin panel
+  const fallbackFacts = [
+    { _id: '1', fact: 'Bananas are berries, but strawberries are not.', prompt: 'Can you think of other foods that might not be what we usually call them?', source: 'Britannica Kids' },
+    { _id: '2', fact: 'Honey never spoils. Archaeologists have found 3,000-year-old honey in Egyptian tombs that was still perfectly edible.', prompt: 'Why do you think honey lasts so long?', source: 'Britannica Kids' },
   ];
-  const todaysFacts = allFacts.slice(0, DID_YOU_KNOW_DAILY_COUNT);
+  // API already filters isActive — take last 2 (most recently added)
+  const todaysFacts = (didYouKnowFacts.length > 0 ? didYouKnowFacts : fallbackFacts).slice(-2).reverse();
 
   // Get nudges filtered by child's grade and subject levels
   const todaysNudges = getNudgesByGradeAndLevel(child?.grade, child?.subjectLevels);
@@ -253,14 +294,22 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
           </TouchableOpacity>
-          {child && (
-            <TouchableOpacity style={styles.avatarContainer}>
-              <Image 
-                source={getAvatarSource(child.avatar)} 
+          {/* Always show avatar — child data or placeholder */}
+          <TouchableOpacity style={styles.avatarContainer}>
+            {child?.avatar ? (
+              <Image
+                source={getAvatarSource(child.avatar)}
                 style={styles.avatar}
+                onError={() => {}}
               />
-            </TouchableOpacity>
-          )}
+            ) : child?.name ? (
+              <View style={[styles.avatar, { backgroundColor: '#45a578', justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>
+                  {child.name[0].toUpperCase()}
+                </Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -395,7 +444,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <Text style={styles.didYouKnowTitle}>DID YOU KNOW?</Text>
             </View>
             {todaysFacts.map((item, index) => (
-              <View key={item.id} style={[styles.didYouKnowFactBlock, index < todaysFacts.length - 1 && styles.didYouKnowFactDivider]}>
+              <View key={item._id || item.id || index} style={[styles.didYouKnowFactBlock, index < todaysFacts.length - 1 && styles.didYouKnowFactDivider]}>
                 <Text style={styles.didYouKnowFact}>{item.fact}</Text>
                 <View style={styles.didYouKnowPromptRow}>
                   <MaterialIcon name="arrow-right" size={16} color="#2563EB" />
@@ -431,217 +480,67 @@ const HomeScreen = ({ userData, onNavigate }) => {
         </View>
 
      
-        {/* Today's Riddles */}
-        <View style={styles.section}>
-          <View style={styles.riddlesCard}>
-            <View style={styles.riddlesHeader}>
-              <MaterialIcon name="head-question" size={24} color="#000000" />
-              <Text style={styles.riddlesTitle}>TODAY'S RIDDLES</Text>
-              <View style={styles.riddlesBadge}>
-                <TouchableOpacity onPress={() => onNavigate && onNavigate('riddles')}>
-                  <Text style={styles.riddlesBadgeText}>Explore more</Text>
-                </TouchableOpacity>
+                {/* Today's Riddles */}
+        {(() => {
+          const fallbackRiddles = [
+            { _id: 'r1', question: 'I have cities, but no houses live there. I have mountains, but no trees grow there. What am I?', answer: 'A map', hint: 'You might find me folded up in a car.' },
+            { _id: 'r2', question: 'The more you take, the more you leave behind. What am I?', answer: 'Footsteps', hint: 'Think about what you create when you walk.' },
+            { _id: 'r3', question: 'I speak without a mouth and hear without ears. I come alive with wind. What am I?', answer: 'An echo', hint: 'You might hear me in a canyon.' },
+          ];
+          const allRiddles = riddlesData.length > 0 ? riddlesData : fallbackRiddles;
+          const displayedRiddles = allRiddles.slice(-3).reverse(); // last 3 added, newest first
+          return (
+            <View style={styles.section}>
+              <View style={styles.riddlesCard}>
+                <View style={styles.riddlesHeader}>
+                  <MaterialIcon name="head-question" size={24} color="#000000" />
+                  <Text style={styles.riddlesTitle}>TODAY'S RIDDLES</Text>
+                  <View style={styles.riddlesBadge}>
+                    <TouchableOpacity onPress={() => onNavigate && onNavigate('riddles', { riddles: allRiddles })}>
+                      <Text style={styles.riddlesBadgeText}>Explore more</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.riddlesCarouselScroll}>
+                  {displayedRiddles.map((riddle) => {
+                    const id = riddle._id;
+                    return (
+                      <View key={id} style={styles.riddleItem}>
+                        <Text style={styles.riddleQuestion}>{riddle.question}</Text>
+                        {riddleHints[id] && !riddleAnswers[id] && (
+                          <TouchableOpacity style={styles.riddleHintBox} onPress={() => setRiddleHints(p => ({ ...p, [id]: false }))}>
+                            <Text style={styles.riddleHintText}>{riddle.hint || 'Think carefully!'}</Text>
+                          </TouchableOpacity>
+                        )}
+                        {riddleAnswers[id] ? (
+                          <TouchableOpacity style={styles.riddleAnswerBox} onPress={() => setRiddleAnswers(p => ({ ...p, [id]: false }))}>
+                            <View style={styles.riddleAnswerLabelContainer}>
+                              <MaterialIcon name="eye-off" size={18} color="#10B981" />
+                              <Text style={styles.riddleAnswerLabel}>ANSWER</Text>
+                            </View>
+                            <Text style={styles.riddleAnswerText}>{riddle.answer}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <>
+                            {riddle.hint && !riddleHints[id] && (
+                              <TouchableOpacity style={styles.riddleNeedHintButton} onPress={() => setRiddleHints(p => ({ ...p, [id]: true }))}>
+                                <Text style={styles.riddleNeedHintText}>Need a hint?</Text>
+                              </TouchableOpacity>
+                            )}
+                            <TouchableOpacity style={styles.riddleRevealButton} onPress={() => setRiddleAnswers(p => ({ ...p, [id]: true }))}>
+                              <Icon name="eye-outline" size={16} color="#999999" />
+                              <Text style={styles.riddleRevealText}>Tap to reveal answer</Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
+                      </View>
+                    );
+                  })}
+                </ScrollView>
               </View>
             </View>
-
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.riddlesCarouselScroll}
-            >
-              {/* Riddle 1 */}
-              <View style={styles.riddleItem}>
-                <Text style={styles.riddleQuestion}>
-                  I have cities, but no houses live there. I have mountains, but no trees grow there. I have water, but no fish swim there. What am I?
-                </Text>
-                
-                {riddleHints.riddle1 && !riddleAnswers.riddle1 && (
-                  <TouchableOpacity 
-                    style={styles.riddleHintBox}
-                    onPress={() => setRiddleHints({...riddleHints, riddle1: false})}
-                  >
-                    <Text style={styles.riddleHintText}>You might find me folded up in a car or hanging on a classroom wall.</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {riddleAnswers.riddle1 ? (
-                  <TouchableOpacity 
-                    style={styles.riddleAnswerBox}
-                    onPress={() => setRiddleAnswers({...riddleAnswers, riddle1: false})}
-                  >
-                    <View style={styles.riddleAnswerLabelContainer}>
-                      <MaterialIcon name="eye-off" size={18} color="#10B981" />
-                      <Text style={styles.riddleAnswerLabel}>ANSWER</Text>
-                    </View>
-                    <Text style={styles.riddleAnswerText}>A map</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <>
-                    {!riddleHints.riddle1 && (
-                      <TouchableOpacity 
-                        style={styles.riddleNeedHintButton}
-                        onPress={() => setRiddleHints({...riddleHints, riddle1: true})}
-                      >
-                        <Text style={styles.riddleNeedHintText}>Need a hint?</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity 
-                      style={styles.riddleRevealButton}
-                      onPress={() => setRiddleAnswers({...riddleAnswers, riddle1: true})}
-                    >
-                      <Icon name="eye-outline" size={16} color="#999999" />
-                      <Text style={styles.riddleRevealText}>Tap to reveal answer</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-
-              {/* Riddle 2 */}
-              <View style={styles.riddleItem}>
-                <Text style={styles.riddleQuestion}>
-                  The more you take, the more you leave behind. What am I?
-                </Text>
-                
-                {riddleHints.riddle2 && !riddleAnswers.riddle2 && (
-                  <TouchableOpacity 
-                    style={styles.riddleHintBox}
-                    onPress={() => setRiddleHints({...riddleHints, riddle2: false})}
-                  >
-                    <Text style={styles.riddleHintText}>Think about what you create when you walk.</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {riddleAnswers.riddle2 ? (
-                  <TouchableOpacity 
-                    style={styles.riddleAnswerBox}
-                    onPress={() => setRiddleAnswers({...riddleAnswers, riddle2: false})}
-                  >
-                    <View style={styles.riddleAnswerLabelContainer}>
-                      <MaterialIcon name="eye-off" size={18} color="#10B981" />
-                      <Text style={styles.riddleAnswerLabel}>ANSWER</Text>
-                    </View>
-                    <Text style={styles.riddleAnswerText}>Footsteps</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <>
-                    {!riddleHints.riddle2 && (
-                      <TouchableOpacity 
-                        style={styles.riddleNeedHintButton}
-                        onPress={() => setRiddleHints({...riddleHints, riddle2: true})}
-                      >
-                        <Text style={styles.riddleNeedHintText}>Need a hint?</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity 
-                      style={styles.riddleRevealButton}
-                      onPress={() => setRiddleAnswers({...riddleAnswers, riddle2: true})}
-                    >
-                      <Icon name="eye-outline" size={16} color="#999999" />
-                      <Text style={styles.riddleRevealText}>Tap to reveal answer</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-
-              {/* Riddle 3 */}
-              <View style={styles.riddleItem}>
-                <Text style={styles.riddleQuestion}>
-                  I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?
-                </Text>
-                
-                {riddleHints.riddle3 && !riddleAnswers.riddle3 && (
-                  <TouchableOpacity 
-                    style={styles.riddleHintBox}
-                    onPress={() => setRiddleHints({...riddleHints, riddle3: false})}
-                  >
-                    <Text style={styles.riddleHintText}>You might hear me in a canyon or between mountains.</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {riddleAnswers.riddle3 ? (
-                  <TouchableOpacity 
-                    style={styles.riddleAnswerBox}
-                    onPress={() => setRiddleAnswers({...riddleAnswers, riddle3: false})}
-                  >
-                    <View style={styles.riddleAnswerLabelContainer}>
-                      <MaterialIcon name="eye-off" size={18} color="#10B981" />
-                      <Text style={styles.riddleAnswerLabel}>ANSWER</Text>
-                    </View>
-                    <Text style={styles.riddleAnswerText}>An echo</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <>
-                    {!riddleHints.riddle3 && (
-                      <TouchableOpacity 
-                        style={styles.riddleNeedHintButton}
-                        onPress={() => setRiddleHints({...riddleHints, riddle3: true})}
-                      >
-                        <Text style={styles.riddleNeedHintText}>Need a hint?</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity 
-                      style={styles.riddleRevealButton}
-                      onPress={() => setRiddleAnswers({...riddleAnswers, riddle3: true})}
-                    >
-                      <Icon name="eye-outline" size={16} color="#999999" />
-                      <Text style={styles.riddleRevealText}>Tap to reveal answer</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-
-              {/* Riddle 4 */}
-              <View style={styles.riddleItem}>
-                <Text style={styles.riddleQuestion}>
-                  I have keys but no locks. I have space but no room. You can enter but you can't go inside. What am I?
-                </Text>
-                
-                {riddleHints.riddle4 && !riddleAnswers.riddle4 && (
-                  <TouchableOpacity 
-                    style={styles.riddleHintBox}
-                    onPress={() => setRiddleHints({...riddleHints, riddle4: false})}
-                  >
-                    <Text style={styles.riddleHintText}>You use me to make music or type messages.</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {riddleAnswers.riddle4 ? (
-                  <TouchableOpacity 
-                    style={styles.riddleAnswerBox}
-                    onPress={() => setRiddleAnswers({...riddleAnswers, riddle4: false})}
-                  >
-                    <View style={styles.riddleAnswerLabelContainer}>
-                      <MaterialIcon name="eye-off" size={18} color="#10B981" />
-                      <Text style={styles.riddleAnswerLabel}>ANSWER</Text>
-                    </View>
-                    <Text style={styles.riddleAnswerText}>A keyboard</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <>
-                    {!riddleHints.riddle4 && (
-                      <TouchableOpacity 
-                        style={styles.riddleNeedHintButton}
-                        onPress={() => setRiddleHints({...riddleHints, riddle4: true})}
-                      >
-                        <Text style={styles.riddleNeedHintText}>Need a hint?</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity 
-                      style={styles.riddleRevealButton}
-                      onPress={() => setRiddleAnswers({...riddleAnswers, riddle4: true})}
-                    >
-                      <Icon name="eye-outline" size={16} color="#999999" />
-                      <Text style={styles.riddleRevealText}>Tap to reveal answer</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-
-
-      
+          );
+        })()}
 
         {/* Laughing at Parenthood */}
        
@@ -865,84 +764,68 @@ const HomeScreen = ({ userData, onNavigate }) => {
             </View>
           </TouchableOpacity>
         </View>
-  {/* For This Phase - 3 Card Carousel */}
-        <View style={styles.section}>
-          <View style={styles.phaseCardWrapper}>
-            <View style={styles.phaseCardHeader}>
-              <View style={styles.phaseCardHeaderContent}>
-                <MaterialIcon name="lightning-bolt" size={24} color="#1A1A1A" />
-                <Text style={styles.phaseCardHeaderTitle}>For This Phase</Text>
+  {/* For This Phase - Dynamic Card Carousel */}
+        {(() => {
+          const fallbackCards = [
+            { _id: 'p1', title: 'Thinks like a philosopher', description: 'You help them learn when you... ask questions.', image: null },
+            { _id: 'p2', title: 'Wants to know, "Why should I believe?"', description: 'You capture their heart when you... clarify their values.', image: null },
+            { _id: 'p3', title: 'Is motivated by freedom.', description: 'You coach them when you... catch them doing something good.', image: null },
+          ];
+          const cards = (phaseCards.length > 0 ? phaseCards : fallbackCards).slice(-3).reverse();
+          return (
+            <View style={styles.section}>
+              <View style={styles.phaseCardWrapper}>
+                <View style={styles.phaseCardHeader}>
+                  <View style={styles.phaseCardHeaderContent}>
+                    <MaterialIcon name="lightning-bolt" size={24} color="#1A1A1A" />
+                    <Text style={styles.phaseCardHeaderTitle}>For This Phase</Text>
+                  </View>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.phaseCarouselScroll}>
+                  {cards.map((card, idx) => (
+                    <View key={card._id || idx} style={[styles.phaseCard, idx === cards.length - 1 && styles.phaseCardLast]}>
+                      {card.image ? (
+                        <Image source={{ uri: card.image }} style={styles.phaseCardImage} resizeMode="cover" />
+                      ) : (
+                        <Image source={require('../assets/images/phase 1.png')} style={styles.phaseCardImage} resizeMode="cover" />
+                      )}
+                      <View style={styles.phaseCardContent}>
+                        <Text style={styles.phaseCardTitle}>{card.title}</Text>
+                        {card.description ? <Text style={styles.phaseCardDescription}>{card.description}</Text> : null}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+                <View style={styles.phaseCarouselDots}>
+                  {cards.map((_, idx) => (
+                    <View key={idx} style={[styles.phaseDot, idx === 0 && styles.phaseDotActive]} />
+                  ))}
+                </View>
               </View>
             </View>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.phaseCarouselScroll}
-            >
-              {/* Card 1 */}
-              <View style={styles.phaseCard}>
-                <Image 
-                  source={require('../assets/images/phase 1.png')}
-                  style={styles.phaseCardImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.phaseCardContent}>
-                  <Text style={styles.phaseCardTitle}>Thinks like a philosopher</Text>
-                  <Text style={styles.phaseCardDescription}>You help them learn when you... ask questions.</Text>
-                </View>
-              </View>
-
-              {/* Card 2 */}
-              <View style={styles.phaseCard}>
-                <Image 
-                  source={require('../assets/images/phase 2.png')}
-                  style={styles.phaseCardImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.phaseCardContent}>
-                  <Text style={styles.phaseCardTitle}>Wants to know, "Why should I believe?"</Text>
-                  <Text style={styles.phaseCardDescription}>You capture their heart when you... clarify their values.</Text>
-                </View>
-              </View>
-
-              {/* Card 3 */}
-              <View style={[styles.phaseCard, styles.phaseCardLast]}>
-                <Image 
-                  source={require('../assets/images/phase 3.png')}
-                  style={styles.phaseCardImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.phaseCardContent}>
-                  <Text style={styles.phaseCardTitle}>Is motivated by freedom.</Text>
-                  <Text style={styles.phaseCardDescription}>You coach them when you... catch them doing somthing good.</Text>
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.phaseCarouselDots}>
-              <View style={[styles.phaseDot, styles.phaseDotActive]} />
-              <View style={styles.phaseDot} />
-              <View style={styles.phaseDot} />
-            </View>
-          </View>
-        </View>
+          );
+        })()}
         {/* Parenting Tips */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Parenting Insight</Text>
-          </View>
-
-          <View style={styles.tipCard}>
-            <MaterialIcon name="lightbulb-on-outline" size={28} color="#45a578" />
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>The Power of "Why?"</Text>
-              <Text style={styles.tipText}>
-                When your child asks "why?", resist the urge to give immediate answers. Instead, ask "What do you think?" This builds critical thinking and shows you value their ideas. The conversation matters more than the correct answer!
-              </Text>
+        {(() => {
+          const fallbackInsight = { insight: 'The Power of "Why?"', tip: 'When your child asks "why?", resist the urge to give immediate answers. Instead, ask "What do you think?" This builds critical thinking and shows you value their ideas.' };
+          const latest = parentingInsights.length > 0 ? parentingInsights[parentingInsights.length - 1] : fallbackInsight;
+          return (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Today's Parenting Insight</Text>
+              </View>
+              <View style={styles.tipCard}>
+                <MaterialIcon name="lightbulb-on-outline" size={28} color="#45a578" />
+                <View style={styles.tipContent}>
+                  <Text style={styles.tipTitle}>{latest.insight}</Text>
+                  {latest.tip ? (
+                    <Text style={styles.tipText}>{latest.tip}</Text>
+                  ) : null}
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
+          );
+        })()}
 
         {/* Coming Up */}
         <View style={styles.section}>

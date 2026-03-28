@@ -2,7 +2,7 @@
  * Settings Screen - Full Functionality
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DatePicker from 'react-native-date-picker';
+import { BASE_URL, fetchAvatars, saveProfile, updateChild, updateParentEmail, uploadAvatar } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -30,15 +31,21 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   // Derive parent email and child from userData
   const child = userData?.children?.[0] || null;
 
+  // Helper: resolve child.avatar to an image source
+  // Handles: local preset IDs (A1-A6), DB _id strings (resolved after API load), URI/base64 strings
+  const resolveChildAvatar = (avatar) => {
+    if (!avatar) return null;
+    const localMap = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
+    if (localMap[avatar]) return localMap[avatar]; // local preset
+    if (avatar.startsWith('data:') || avatar.startsWith('http') || avatar.startsWith('file') || avatar.startsWith('/')) return { uri: avatar };
+    return null; // DB _id — resolved later after API loads
+  };
+
   // User Profile State
   const [userName, setUserName] = useState(child?.name || 'Parent');
   const [userEmail, setUserEmail] = useState(userData?.email || 'parent@example.com');
-  const [userAvatar, setUserAvatar] = useState(() => {
-    if (child?.uploadedPhoto) return { uri: child.uploadedPhoto };
-    const avatarMap = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
-    return child?.avatar ? avatarMap[child.avatar] || null : null;
-  });
-  const [avatarType, setAvatarType] = useState(child?.avatar || child?.uploadedPhoto ? 'image' : 'initial');
+  const [userAvatar, setUserAvatar] = useState(() => resolveChildAvatar(child?.avatar));
+  const [avatarType, setAvatarType] = useState(child?.avatar ? 'image' : 'initial');
   
   // Notification Settings
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -70,19 +77,14 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   // Edit Profile Fields
   const [editName, setEditName] = useState(userName);
   const [editEmail, setEditEmail] = useState(userEmail);
-  const [editAvatar, setEditAvatar] = useState(() => {
-    if (child?.uploadedPhoto) return { uri: child.uploadedPhoto };
-    const avatarMap = { A1: require('../assets/images/A1.jpeg'), A2: require('../assets/images/A2.jpeg'), A3: require('../assets/images/A3.jpeg'), A4: require('../assets/images/A4.jpeg'), A5: require('../assets/images/A5.jpeg'), A6: require('../assets/images/A6.jpeg') };
-    return child?.avatar ? avatarMap[child.avatar] || null : null;
-  });
-  const [editAvatarType, setEditAvatarType] = useState(child?.avatar || child?.uploadedPhoto ? 'image' : 'initial');
+  const [editAvatar, setEditAvatar] = useState(() => resolveChildAvatar(child?.avatar));
+  const [editAvatarType, setEditAvatarType] = useState(child?.avatar ? 'image' : 'initial');
 
   // Child edit fields (from PersonalSetupScreen)
   const [editChildName, setEditChildName] = useState(child?.name || '');
   const [editChildDOB, setEditChildDOB] = useState(child?.dateOfBirth || '');
   const [editChildGrade, setEditChildGrade] = useState(child?.grade || '');
   const [editChildBoard, setEditChildBoard] = useState(child?.educationBoard || '');
-  const [editChildFaith, setEditChildFaith] = useState(child?.faithBackground || '');
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
 
@@ -93,15 +95,38 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
 
-  // Avatar options
-  const avatarImages = [
-    { id: 'A1', image: require('../assets/images/A1.jpeg') },
-    { id: 'A2', image: require('../assets/images/A2.jpeg') },
-    { id: 'A3', image: require('../assets/images/A3.jpeg') },
-    { id: 'A4', image: require('../assets/images/A4.jpeg') },
-    { id: 'A5', image: require('../assets/images/A5.jpeg') },
-    { id: 'A6', image: require('../assets/images/A6.jpeg') },
+  // Avatar options — loaded from admin panel API, fallback to local
+  const fallbackAvatars = [
+    { id: 'A1', image: require('../assets/images/A1.jpeg'), uri: null },
+    { id: 'A2', image: require('../assets/images/A2.jpeg'), uri: null },
+    { id: 'A3', image: require('../assets/images/A3.jpeg'), uri: null },
+    { id: 'A4', image: require('../assets/images/A4.jpeg'), uri: null },
+    { id: 'A5', image: require('../assets/images/A5.jpeg'), uri: null },
+    { id: 'A6', image: require('../assets/images/A6.jpeg'), uri: null },
   ];
+  const [avatarImages, setAvatarImages] = useState(fallbackAvatars);
+
+  useEffect(() => {
+    fetchAvatars()
+      .then(data => {
+        if (data.length > 0) {
+          const mapped = data.map(a => ({ id: a._id, image: null, uri: a.image }));
+          setAvatarImages(mapped);
+          // If child's avatar is a DB _id, resolve it now
+          if (child?.avatar) {
+            const found = mapped.find(a => a.id === child.avatar);
+            if (found?.uri) {
+              const src = { uri: found.uri };
+              setUserAvatar(src);
+              setEditAvatar(src);
+              setAvatarType('image');
+              setEditAvatarType('image');
+            }
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Resolve child's avatar ID to actual image source
   const resolveAvatar = (avatarId) => {
@@ -110,24 +135,79 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
     return found ? found.image : null;
   };
 
-  const handleSaveProfile = () => {
-    setUserName(editName);
+  const handleSaveProfile = async () => {
+    // Resolve updated avatar value
+    let updatedAvatar = child?.avatar;
+    if (editAvatarType === 'image' && editAvatar) {
+      const matchedApiAvatar = avatarImages.find(a => a.uri && editAvatar?.uri === a.uri);
+      if (matchedApiAvatar) {
+        updatedAvatar = matchedApiAvatar.id; // DB _id from admin panel
+      } else if (editAvatar?.uri) {
+        updatedAvatar = editAvatar.uri; // custom uploaded photo
+      }
+    }
+
+    const updatedChild = child ? {
+      ...child,
+      name: editChildName,
+      dateOfBirth: editChildDOB,
+      grade: editChildGrade,
+      educationBoard: editChildBoard,
+      avatar: updatedAvatar,
+    } : null;
+
+    // 1. Update local state immediately
+    setUserName(editChildName);
     setUserEmail(editEmail);
     setUserAvatar(editAvatar);
     setAvatarType(editAvatarType);
-
-    // Save child data back to App via callback
-    if (onUpdateUserData && child) {
-      const updatedChild = {
-        ...child,
-        name: editChildName,
-        dateOfBirth: editChildDOB,
-        grade: editChildGrade,
-        educationBoard: editChildBoard,
-        faithBackground: editChildFaith,
-        uploadedPhoto: editAvatarType === 'image' && editAvatar?.uri ? editAvatar.uri : child.uploadedPhoto,
-      };
+    if (onUpdateUserData && updatedChild) {
       onUpdateUserData({ email: editEmail, children: [updatedChild] });
+    }
+
+    // 2. Sync to backend
+    if (userData?.token) {
+      try {
+        // If custom photo is a local file URI, upload it first to get a server URL
+        let avatarForBackend = updatedAvatar?.startsWith('data:') ? 'custom' : updatedAvatar;
+        if (
+          updatedAvatar &&
+          !updatedAvatar.startsWith('data:') &&
+          !updatedAvatar.startsWith('http') &&
+          (updatedAvatar.startsWith('file://') || updatedAvatar.startsWith('/'))
+        ) {
+          try {
+            const uploaded = await uploadAvatar(userData.token, updatedAvatar);
+            avatarForBackend = uploaded.url; // server URL accessible by admin panel
+            // Also update local display to use server URL
+            const serverSrc = { uri: uploaded.url };
+            setUserAvatar(serverSrc);
+            setEditAvatar(serverSrc);
+            if (onUpdateUserData && updatedChild) {
+              onUpdateUserData({ email: editEmail, children: [{ ...updatedChild, avatar: uploaded.url }] });
+            }
+          } catch (uploadErr) {
+            console.error('[Settings] photo upload failed:', uploadErr.message);
+          }
+        }
+
+        // Update email on parent record
+        if (editEmail !== userData?.email) {
+          await updateParentEmail(userData.token, editEmail);
+        }
+        // Update child record using its _id
+        if (updatedChild?._id) {
+          await updateChild(userData.token, updatedChild._id, {
+            name: updatedChild.name,
+            dateOfBirth: updatedChild.dateOfBirth,
+            grade: updatedChild.grade,
+            educationBoard: updatedChild.educationBoard,
+            avatar: avatarForBackend,
+          });
+        }
+      } catch (err) {
+        console.error('[Settings] sync failed:', err.message);
+      }
     }
 
     setShowEditProfile(false);
@@ -197,10 +277,24 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
     }
   };
 
-  const handleSubmitRating = () => {
+  const handleSubmitRating = async () => {
     if (rating === 0) {
       Alert.alert('Error', 'Please select a rating');
       return;
+    }
+    try {
+      await fetch(`${BASE_URL}/customer-ratings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating,
+          feedback,
+          childName: child?.name || '',
+          phone: userData?.phoneNumber ? `${userData.countryCode || ''}${userData.phoneNumber}` : (userData?.phone ? `${userData.countryCode || ''}${userData.phone}` : ''),
+        }),
+      });
+    } catch (e) {
+      console.error('[Rating] submit failed:', e.message);
     }
     Alert.alert('Thank You!', 'Thank you for your feedback! We appreciate your support.');
     setShowRateUs(false);
@@ -467,7 +561,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                     <Text style={styles.inputLabel}>Grade</Text>
                     <TouchableOpacity
                       style={styles.dropdownButton}
-                      onPress={() => { setShowGradeDropdown(!showGradeDropdown); setShowBoardDropdown(false); setShowFaithDropdown(false); }}
+                      onPress={() => { setShowGradeDropdown(!showGradeDropdown); setShowBoardDropdown(false); }}
                     >
                       <Text style={editChildGrade ? styles.dropdownText : styles.dropdownPlaceholder}>
                         {editChildGrade || 'Select Grade'}
@@ -490,7 +584,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                     <Text style={styles.inputLabel}>Education Board</Text>
                     <TouchableOpacity
                       style={styles.dropdownButton}
-                      onPress={() => { setShowBoardDropdown(!showBoardDropdown); setShowGradeDropdown(false); setShowFaithDropdown(false); }}
+                      onPress={() => { setShowBoardDropdown(!showBoardDropdown); setShowGradeDropdown(false); }}
                     >
                       <Text style={editChildBoard ? styles.dropdownText : styles.dropdownPlaceholder}>
                         {editChildBoard || 'Select Board'}
@@ -507,7 +601,6 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                       </View>
                     )}
                   </View>
-
 
                 </>
               )}
@@ -884,27 +977,24 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
               {/* Avatar Emojis */}
               <Text style={styles.avatarSectionTitle}>Choose Avatar</Text>
               <View style={styles.avatarGrid}>
-                {avatarImages.map((avatarItem) => (
-                  <TouchableOpacity
-                    key={avatarItem.id}
-                    style={[
-                      styles.avatarImageOption,
-                      editAvatarType === 'image' && editAvatar === avatarItem.image && styles.avatarOptionSelected
-                    ]}
-                    onPress={() => handleSelectAvatar(avatarItem.image, 'image')}
-                  >
-                    <Image
-                      source={avatarItem.image}
-                      style={styles.avatarImage}
-                      resizeMode="cover"
-                    />
-                    {editAvatarType === 'image' && editAvatar === avatarItem.image && (
-                      <View style={styles.avatarCheckmark}>
-                        <Icon name="checkmark" size={16} color="#FFFFFF" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                {avatarImages.map((avatarItem) => {
+                  const source = avatarItem.uri ? { uri: avatarItem.uri } : avatarItem.image;
+                  const isSelected = editAvatarType === 'image' && editAvatar === source;
+                  return (
+                    <TouchableOpacity
+                      key={avatarItem.id}
+                      style={[styles.avatarImageOption, isSelected && styles.avatarOptionSelected]}
+                      onPress={() => handleSelectAvatar(source, 'image')}
+                    >
+                      <Image source={source} style={styles.avatarImage} resizeMode="cover" />
+                      {isSelected && (
+                        <View style={styles.avatarCheckmark}>
+                          <Icon name="checkmark" size={16} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
 
@@ -1030,15 +1120,18 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Choose Avatar</Text>
                 <View style={styles.addChildAvatarGrid}>
-                  {avatarImages.map((a) => (
-                    <TouchableOpacity
-                      key={a.id}
-                      onPress={() => setNewChildAvatar(a.id)}
-                      style={[styles.addChildAvatarItem, newChildAvatar === a.id && styles.addChildAvatarSelected]}
-                    >
-                      <Image source={a.image} style={styles.addChildAvatarImage} resizeMode="cover" />
-                    </TouchableOpacity>
-                  ))}
+                  {avatarImages.map((a) => {
+                    const source = a.uri ? { uri: a.uri } : a.image;
+                    return (
+                      <TouchableOpacity
+                        key={a.id}
+                        onPress={() => setNewChildAvatar(a.id)}
+                        style={[styles.addChildAvatarItem, newChildAvatar === a.id && styles.addChildAvatarSelected]}
+                      >
+                        <Image source={source} style={styles.addChildAvatarImage} resizeMode="cover" />
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             </ScrollView>

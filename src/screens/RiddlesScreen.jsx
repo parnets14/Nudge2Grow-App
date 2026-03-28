@@ -17,68 +17,20 @@ import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width } = Dimensions.get('window');
 
-const allRiddles = [
-  {
-    id: 1,
-    question: 'I have cities, but no houses live there. I have mountains, but no trees grow there. I have water, but no fish swim there. What am I?',
-    hint: 'You might find me folded up in a car or hanging on a classroom wall.',
-    answer: 'A map',
-  },
-  {
-    id: 2,
-    question: 'The more you take, the more you leave behind. What am I?',
-    hint: 'Think about what you create when you walk.',
-    answer: 'Footsteps',
-  },
-  {
-    id: 3,
-    question: 'I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?',
-    hint: 'You might hear me in a canyon or between mountains.',
-    answer: 'An echo',
-  },
-  {
-    id: 4,
-    question: 'I have keys but no locks. I have space but no room. You can enter but you can\'t go inside. What am I?',
-    hint: 'You use me to make music or type messages.',
-    answer: 'A keyboard',
-  },
-  {
-    id: 5,
-    question: 'What has hands but can\'t clap?',
-    hint: 'You check it many times a day.',
-    answer: 'A clock',
-  },
-  {
-    id: 6,
-    question: 'I\'m light as a feather, but even the strongest person can\'t hold me for more than a few minutes. What am I?',
-    hint: 'You need me to stay alive.',
-    answer: 'Breath',
-  },
-  {
-    id: 7,
-    question: 'What gets wetter the more it dries?',
-    hint: 'You use it after a bath.',
-    answer: 'A towel',
-  },
-  {
-    id: 8,
-    question: 'I have a head and a tail but no body. What am I?',
-    hint: 'You might flip me to make a decision.',
-    answer: 'A coin',
-  },
-];
-
-const RiddlesScreen = ({ onBack }) => {
+const RiddlesScreen = ({ onBack, riddles: propRiddles }) => {
   const [revealed, setRevealed] = useState({});
   const [hints, setHints] = useState({});
 
-  const toggleReveal = (id) => {
-    setRevealed(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const allRiddles = propRiddles?.length > 0 ? propRiddles : [
+    { _id: 'r1', id: 1, question: 'I have cities, but no houses live there. I have mountains, but no trees grow there. What am I?', hint: 'You might find me folded up in a car.', answer: 'A map' },
+    { _id: 'r2', id: 2, question: 'The more you take, the more you leave behind. What am I?', hint: 'Think about what you create when you walk.', answer: 'Footsteps' },
+    { _id: 'r3', id: 3, question: 'I speak without a mouth and hear without ears. I come alive with wind. What am I?', hint: 'You might hear me in a canyon.', answer: 'An echo' },
+    { _id: 'r4', id: 4, question: "I have keys but no locks. I have space but no room. You can enter but can't go inside. What am I?", hint: 'You use me to type messages.', answer: 'A keyboard' },
+    { _id: 'r5', id: 5, question: "What has hands but can't clap?", hint: 'You check it many times a day.', answer: 'A clock' },
+  ];
 
-  const toggleHint = (id) => {
-    setHints(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const toggleReveal = (id) => setRevealed(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleHint = (id) => setHints(prev => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <View style={styles.container}>
@@ -103,8 +55,10 @@ const RiddlesScreen = ({ onBack }) => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {allRiddles.map((riddle, index) => (
-          <View key={riddle.id} style={styles.riddleCard}>
+        {allRiddles.map((riddle, index) => {
+          const id = riddle._id || riddle.id;
+          return (
+          <View key={id} style={styles.riddleCard}>
             {/* Number */}
             <View style={styles.riddleNumberRow}>
               <View style={styles.riddleNumber}>
@@ -117,15 +71,15 @@ const RiddlesScreen = ({ onBack }) => {
             <Text style={styles.riddleQuestion}>{riddle.question}</Text>
 
             {/* Hint */}
-            {hints[riddle.id] && !revealed[riddle.id] && (
-              <TouchableOpacity onPress={() => toggleHint(riddle.id)}>
+            {hints[id] && !revealed[id] && (
+              <TouchableOpacity onPress={() => toggleHint(id)}>
                 <Text style={styles.hintText}>{riddle.hint}</Text>
               </TouchableOpacity>
             )}
 
             {/* Answer or buttons */}
-            {revealed[riddle.id] ? (
-              <TouchableOpacity onPress={() => toggleReveal(riddle.id)}>
+            {revealed[id] ? (
+              <TouchableOpacity onPress={() => toggleReveal(id)}>
                 <View style={styles.answerLabelRow}>
                   <MaterialIcon name="eye-off" size={18} color="#10B981" />
                   <Text style={styles.answerLabel}>ANSWER</Text>
@@ -134,19 +88,20 @@ const RiddlesScreen = ({ onBack }) => {
               </TouchableOpacity>
             ) : (
               <>
-                {!hints[riddle.id] && (
-                  <TouchableOpacity style={styles.hintButton} onPress={() => toggleHint(riddle.id)}>
+                {riddle.hint && !hints[id] && (
+                  <TouchableOpacity style={styles.hintButton} onPress={() => toggleHint(id)}>
                     <Text style={styles.hintButtonText}>Need a hint?</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={styles.revealButton} onPress={() => toggleReveal(riddle.id)}>
+                <TouchableOpacity style={styles.revealButton} onPress={() => toggleReveal(id)}>
                   <Icon name="eye-outline" size={16} color="#999999" />
                   <Text style={styles.revealText}>Tap to reveal answer</Text>
                 </TouchableOpacity>
               </>
             )}
           </View>
-        ))}
+          );
+        })}
 
         <View style={{ height: 40 }} />
       </ScrollView>

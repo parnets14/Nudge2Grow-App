@@ -2,7 +2,7 @@
  * Intro Screen – Pledge Style Layout with Green Buttons
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,11 @@ import {
   Dimensions,
   Animated,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
+import { fetchIntroSlides } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -23,68 +25,27 @@ const isSmallDevice = width < 375;
 const IntroScreen = ({ onFinish, onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [yesSelected, setYesSelected] = useState(false);
+  const [introData, setIntroData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const scrollX = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const introData = [
-    {
-      image: null,
-      title: 'NUDGE2GROW',
-      subtitle: "Our Motto - Making everyday conversations with your child more meaningful.",
-      highlightText: '',
-      subtitleEnd: '',
-      description: '',
-      showYesNo: false,
-      isFirstPage: true,
-      buttonText: 'Get Started',
-    },
-    {
-      image: null,
-      title: 'CURIOSITY',
-      subtitle: 'Curated prompts across Math, Science, AI, Financial Literarcy, and more — designed to spark meaningful conversations with your child.',
-      highlightText: '',
-      subtitleEnd: '',
-      description: '',
-      showYesNo: false,
-      isSecondPage: true,
-      buttonText: 'Ignite Their Wonder',
-    },
-    {
-      image: null,
-      title: 'CONSISTENCY',
-      subtitle: '5-10 minutes of daily nudges, a lifetime of worldclass growth.',
-      highlightText: '',
-      subtitleEnd: '',
-      description: '',
-      showYesNo: false,
-      isFourthPage: true,
-      buttonText: 'Start a Healthy Habit',
-    },
-    {
-      image: null,
-      title: 'CONFIDENCE',
-      subtitle: 'Daily nudges that prepare your child to think clearly, speak confidently, and grow steadily.',
-      highlightText: '',
-      subtitleEnd: '',
-      description: '',
-      showYesNo: false,
-      isThirdPage: true,
-      buttonText: 'Give Them the Edge',
-    },
-    
-    {
-      image: null,
-      title: 'COMMIT',
-      subtitle: 'I pledge to spend 5-10 minutes each day in meaningful conversations with my child, nurturing both knowledge and essential life skills',
-      highlightText: '',
-      subtitleEnd: '',
-      description: '',
-      showYesNo: false,
-      isFifthPage: true,
-      buttonText: "Let's Grow Together",
-    },
+  // Fallback slides if API is unavailable
+  const fallbackData = [
+    { _id: '1', title: 'NUDGE2GROW',  titleColor: '#45a578', description: "Our Motto - Making everyday conversations with your child more meaningful." },
+    { _id: '2', title: 'CURIOSITY',   titleColor: '#FF8C42', description: 'Curated prompts across Math, Science, AI, Financial Literacy, and more — designed to spark meaningful conversations with your child.' },
+    { _id: '3', title: 'CONSISTENCY', titleColor: '#2B7FD9', description: '5-10 minutes of daily nudges, a lifetime of world-class growth.' },
+    { _id: '4', title: 'CONFIDENCE',  titleColor: '#FF8C42', description: 'Daily nudges that prepare your child to think clearly, speak confidently, and grow steadily.' },
+    { _id: '5', title: 'COMMIT',      titleColor: '#FF69B4', description: 'I pledge to spend 5-10 minutes each day in meaningful conversations with my child, nurturing both knowledge and essential life skills.' },
   ];
+
+  useEffect(() => {
+    fetchIntroSlides()
+      .then(data => setIntroData(data.length > 0 ? data : fallbackData))
+      .catch(() => setIntroData(fallbackData))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleGetStarted = () => {
     // Skip button - go directly to finish
@@ -155,178 +116,86 @@ const IntroScreen = ({ onFinish, onBack }) => {
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#F6F0EE" />
 
-      {/* Back Button - Top Left (only show after first page) */}
-      {currentIndex > 0 && (
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handlePrevious}
-          activeOpacity={0.7}
-        >
-          <Icon name="chevron-back" size={24} color="#333333" />
-        </TouchableOpacity>
-      )}
-
-      {/* Skip Button - Top Right */}
-      <TouchableOpacity 
-        style={styles.skipButton}
-        onPress={handleGetStarted}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
-
-      {/* Slides */}
-      <Animated.ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        scrollEnabled={false}
-        contentOffset={{ x: currentIndex * width, y: 0 }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-      >
-        {introData.map((item, index) => (
-          <View key={index} style={[styles.slide, (item.isFirstPage || item.isSecondPage || item.isThirdPage || item.isFourthPage || item.isFifthPage) && styles.firstPageSlide]}>
-            {/* Title */}
-            <Text style={[
-              styles.title, 
-              (item.isFirstPage || item.isSecondPage || item.isThirdPage || item.isFourthPage || item.isFifthPage) && styles.firstPageTitle, 
-              item.isSecondPage && styles.secondPageTitle,
-              item.isThirdPage && styles.thirdPageTitle,
-              item.isFourthPage && styles.fourthPageTitle,
-              item.isFifthPage && styles.fifthPageTitle
-            ]}>{item.title}</Text>
-
-            {/* Subtitle with highlighted text */}
-            <View style={styles.subtitleContainer}>
-              <Text style={[styles.subtitle, (item.isFirstPage || item.isSecondPage || item.isThirdPage || item.isFourthPage || item.isFifthPage) && styles.firstPageSubtitle]}>
-                {item.subtitle}
-                {item.highlightText ? (
-                  <>
-                    {' '}<Text style={styles.highlightText}>{item.highlightText}</Text>
-                    {' '}{item.subtitleEnd}
-                  </>
-                ) : null}
-              </Text>
-            </View>
-
-            {/* Description (only show if exists) */}
-            {item.description ? (
-              <Text style={styles.description}>{item.description}</Text>
-            ) : null}
-
-            {/* Image */}
-            {item.image && (
-              <View style={styles.imageSection}>
-                <Image source={item.image} style={styles.image} resizeMode="contain" />
-              </View>
-            )}
-          </View>
-        ))}
-      </Animated.ScrollView>
-
-      {/* Bottom Section */}
-      <View style={styles.bottomSection}>
-        {/* Dots Indicator */}
-        <View style={styles.dotsContainer}>
-          {introData.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor: i === currentIndex ? (currentIndex <= 4 ? '#333333' : '#45a578') : (currentIndex <= 4 ? '#CCCCCC' : '#F6F0EE'),
-                  width: i === currentIndex ? 24 : 8,
-                },
-              ]}
-            />
-          ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#45a578" />
         </View>
-
-        {/* Navigation Buttons After Dots */}
-        <View style={styles.bottomNavigationContainer}>
-          {/* Only show back button if not on first 5 slides */}
-          {currentIndex < introData.length - 1 && currentIndex > 4 && (
-            <TouchableOpacity 
-              style={styles.bottomBackButton}
-              onPress={handleBack}
-              activeOpacity={0.8}
-            >
-              <Icon name="chevron-back" size={20} color="#45a578" />
+      ) : (
+        <>
+          {/* Back Button */}
+          {currentIndex > 0 && (
+            <TouchableOpacity style={styles.backButton} onPress={handlePrevious} activeOpacity={0.7}>
+              <Icon name="chevron-back" size={24} color="#333333" />
             </TouchableOpacity>
           )}
 
-          {currentIndex === 0 ? (
-            // Full width Get Started button on first slide
-            <TouchableOpacity 
-              style={[styles.fullGetStartedButton, styles.firstPageGetStartedButton]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.fullGetStartedButtonText}>Get Started</Text>
-            </TouchableOpacity>
-          ) : currentIndex === 1 ? (
-            // Full width button on second slide
-            <TouchableOpacity 
-              style={[styles.fullGetStartedButton, styles.firstPageGetStartedButton]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.fullGetStartedButtonText}>Ignite Their Wonder</Text>
-            </TouchableOpacity>
-          ) : currentIndex === 2 ? (
-            // Full width button on third slide
-            <TouchableOpacity 
-              style={[styles.fullGetStartedButton, styles.firstPageGetStartedButton]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.fullGetStartedButtonText}>Start a Healthy Habit</Text>
-            </TouchableOpacity>
-          ) : currentIndex === 3 ? (
-            // Full width button on fourth slide
-            <TouchableOpacity 
-              style={[styles.fullGetStartedButton, styles.firstPageGetStartedButton]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.fullGetStartedButtonText}>Give Them the Edge</Text>
-            </TouchableOpacity>
-          ) : currentIndex === 4 ? (
-            // Yes/No buttons on fifth slide (COMMIT page)
-            <View style={styles.yesNoContainer}>
-              <TouchableOpacity 
-                style={[styles.yesButton, !yesSelected && styles.yesButtonBlack]}
-                onPress={handleYesClick}
-                activeOpacity={0.8}
-              >
-                {yesSelected ? (
-                  <LinearGradient
-                    colors={['#4CAF50', '#45a578', '#2E7D5E']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.gradientButton}
-                  >
-                    <Text style={styles.yesNoText}>Yes</Text>
-                  </LinearGradient>
-                ) : (
-                  <Text style={styles.yesNoText}>Yes</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.noButton}
-                onPress={handleNoClick}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.yesNoText}>No</Text>
-              </TouchableOpacity>
+          {/* Skip Button */}
+          <TouchableOpacity style={styles.skipButton} onPress={handleGetStarted} activeOpacity={0.7}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+
+          {/* Slides */}
+          <Animated.ScrollView
+            horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16} scrollEnabled={false}
+            contentOffset={{ x: currentIndex * width, y: 0 }}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
+          >
+            {introData.map((item, index) => (
+              <View key={item._id || index} style={[styles.slide, styles.firstPageSlide]}>
+                <Text style={[styles.firstPageTitle, { color: item.titleColor || '#45a578' }]}>
+                  {item.title}
+                </Text>
+                <View style={styles.subtitleContainer}>
+                  <Text style={styles.firstPageSubtitle}>{item.description}</Text>
+                </View>
+                {item.image ? (
+                  <View style={styles.imageSection}>
+                    <Image source={{ uri: item.image }} style={styles.image} resizeMode="contain" />
+                  </View>
+                ) : null}
+              </View>
+            ))}
+          </Animated.ScrollView>
+
+          {/* Bottom Section */}
+          <View style={styles.bottomSection}>
+            <View style={styles.dotsContainer}>
+              {introData.map((_, i) => (
+                <View key={i} style={[styles.dot, {
+                  backgroundColor: i === currentIndex ? '#333333' : '#CCCCCC',
+                  width: i === currentIndex ? 24 : 8,
+                }]} />
+              ))}
             </View>
-          ) : null}
-        </View>
-      </View>
+
+            <View style={styles.bottomNavigationContainer}>
+              {currentIndex === introData.length - 1 ? (
+                // Last slide — Yes/No
+                <View style={styles.yesNoContainer}>
+                  <TouchableOpacity style={[styles.yesButton, !yesSelected && styles.yesButtonBlack]} onPress={handleYesClick} activeOpacity={0.8}>
+                    {yesSelected ? (
+                      <LinearGradient colors={['#4CAF50', '#45a578', '#2E7D5E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientButton}>
+                        <Text style={styles.yesNoText}>Yes</Text>
+                      </LinearGradient>
+                    ) : (
+                      <Text style={styles.yesNoText}>Yes</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.noButton} onPress={handleNoClick} activeOpacity={0.8}>
+                    <Text style={styles.yesNoText}>No</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // All other slides — Next button
+                <TouchableOpacity style={[styles.fullGetStartedButton, styles.firstPageGetStartedButton]} onPress={handleNext} activeOpacity={0.8}>
+                  <Text style={styles.fullGetStartedButtonText}>Next</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </>
+      )}
     </Animated.View>
   );
 };
@@ -338,6 +207,13 @@ export default IntroScreen;
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
+    backgroundColor: '#FFFFFF',
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
 

@@ -2,7 +2,7 @@
  * Help & Support Screen
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { fetchFaqs, BASE_URL } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -24,59 +25,26 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [message, setMessage] = useState('');
   const [showThankYou, setShowThankYou] = useState(false);
+  const [faqs, setFaqs] = useState([
+    { _id: '1', question: 'What is Nudge2grow and how does it work?', answer: 'Nudge2grow is an educational app that provides daily learning activities (nudges) for children aged 3-10.' },
+    { _id: '2', question: 'How do I track my child\'s learning progress?', answer: 'Visit "Learning Summary" from the menu to see detailed insights including weekly/monthly overviews and completed topics.' },
+    { _id: '3', question: 'Can I add multiple children to my account?', answer: 'Yes! During setup, you can add multiple children with their names, dates of birth, grades, and learning preferences.' },
+  ]);
+  const [supportInfo, setSupportInfo] = useState({
+    supportHours: 'Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 4:00 PM',
+    email: 'support@nudge2grow.com',
+    phone: '+91 1800-123-4567 (Toll Free)',
+  });
 
-  const faqs = [
-    {
-      id: 1,
-      question: 'What is Nudge2grow and how does it work?',
-      answer: 'Nudge2grow is an educational app that provides daily learning activities (nudges) for children aged 3-10. Each nudge includes engaging content across subjects like Environmental Studies, Mathematics, Science, Values & Character, and Arts & Creativity. Simply browse topics, select activities, and start learning with your child!',
-    },
-    {
-      id: 2,
-      question: 'How do I track my child\'s learning progress?',
-      answer: 'Visit "Learning Summary" from the menu to see detailed insights including weekly/monthly overviews, completed topics, topics that need practice, skills mastered, time spent learning, and activity streaks. You can toggle between weekly and monthly views to track progress over time.',
-    },
-    {
-      id: 3,
-      question: 'What are Milestones and how do I use them?',
-      answer: 'Milestones help you track your child\'s developmental progress across Academic, Emotional & Social, and Cognitive & Life Skills areas. Each milestone shows completed and pending skills. Click on any category to see recommended activities that support your child\'s development in that area.',
-    },
-    {
-      id: 4,
-      question: 'How do I create a quiz for my child?',
-      answer: 'Go to "Learning Summary" and click "Create Assessment Online". Select the subjects and topics you want to test, choose question types (Multiple Choice, True/False, Fill in the Blanks, Short Answer), set the quiz duration (5, 8, or 17 minutes), and click "Create Quiz". The quiz and answer sheet PDFs will be sent to your registered email.',
-    },
-    {
-      id: 5,
-      question: 'Can I add multiple children to my account?',
-      answer: 'Yes! During setup, you can add multiple children with their names, dates of birth, grades, and learning preferences. Each child gets their own profile with personalized content and progress tracking. The app automatically calculates their age from the date of birth you provide.',
-    },
-    {
-      id: 6,
-      question: 'What subjects and topics are covered?',
-      answer: 'Nudge2grow covers five main subjects: Environmental Studies (water conservation, plants, recycling), Mathematics (addition, patterns, measurement), Science (animals, body, weather), Values & Character (kindness, honesty, empathy), and Arts & Creativity (drawing, music, crafts). Each subject has multiple age-appropriate topics.',
-    },
-    {
-      id: 7,
-      question: 'How are activities organized by age?',
-      answer: 'All activities are tagged with appropriate age ranges (e.g., 3-6 years, 5-8 years). When you browse topics, you\'ll see the recommended age range, duration, and skills developed. Activities include detailed descriptions to help you choose the best fit for your child\'s developmental stage.',
-    },
-    {
-      id: 8,
-      question: 'What\'s included in each learning topic?',
-      answer: 'Each topic includes: a calendar view to track daily activities, multiple learning units with Q&A, creative prompts, and vocabulary building, "Learn in Detail" section with video resources and additional materials, and assessment options to test understanding. Topics are designed for 15-30 minute sessions.',
-    },
-    {
-      id: 9,
-      question: 'How do I navigate between different sections?',
-      answer: 'Use the menu (hamburger icon) to access: Home, Subscription Plan, Learning Summary, Milestones, Learning Subjects, Settings, and Help & Support. From Home, you can quickly access Today\'s Nudges, browse subjects, or use the "Browse All" button to see all available topics.',
-    },
-    {
-      id: 10,
-      question: 'Can I customize my child\'s learning experience?',
-      answer: 'Yes! During setup, select your child\'s interests and learning preferences. The app uses this information along with their age and grade to recommend appropriate content. You can also manually browse all subjects and topics to choose activities that match your child\'s current interests and needs.',
-    },
-  ];
+  useEffect(() => {
+    fetchFaqs()
+      .then(data => { if (data.length > 0) setFaqs(data); })
+      .catch(() => {});
+    fetch(`${BASE_URL}/support-info`)
+      .then(r => r.json())
+      .then(data => { if (data) setSupportInfo(data); })
+      .catch(() => {});
+  }, []);
 
   const quickActions = [
     {
@@ -111,16 +79,20 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (message.trim()) {
-      // Show thank you message
+      try {
+        await fetch(`${BASE_URL}/contact-messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message.trim() }),
+        });
+      } catch (e) {
+        console.error('[Contact] send failed:', e.message);
+      }
       setShowThankYou(true);
       setMessage('');
-      
-      // Hide thank you message after 3 seconds
-      setTimeout(() => {
-        setShowThankYou(false);
-      }, 3000);
+      setTimeout(() => setShowThankYou(false), 3000);
     }
   };
 
@@ -188,26 +160,29 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
           <View style={styles.faqContainer}>
-            {faqs.map((faq) => (
-              <View key={faq.id} style={styles.faqItem}>
+            {faqs.map((faq) => {
+              const id = faq._id || faq.id;
+              return (
+              <View key={id} style={styles.faqItem}>
                 <TouchableOpacity
                   style={styles.faqQuestion}
-                  onPress={() => toggleFaq(faq.id)}
+                  onPress={() => toggleFaq(id)}
                 >
                   <Text style={styles.faqQuestionText}>{faq.question}</Text>
                   <Icon
-                    name={expandedFaq === faq.id ? 'chevron-up' : 'chevron-down'}
+                    name={expandedFaq === id ? 'chevron-up' : 'chevron-down'}
                     size={24}
                     color="#666666"
                   />
                 </TouchableOpacity>
-                {expandedFaq === faq.id && (
+                {expandedFaq === id && (
                   <View style={styles.faqAnswer}>
                     <Text style={styles.faqAnswerText}>{faq.answer}</Text>
                   </View>
                 )}
               </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
@@ -254,8 +229,10 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
             <MaterialIcon name="clock-outline" size={24} color="#45a578" />
             <View style={styles.infoContent}>
               <Text style={styles.infoTitle}>Support Hours</Text>
-              <Text style={styles.infoText}>Monday - Friday: 9:00 AM - 6:00 PM</Text>
-              <Text style={styles.infoText}>Saturday: 10:00 AM - 4:00 PM</Text>
+              {(supportInfo.supportHours || 'Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 4:00 PM')
+                .split('\n').map((line, i) => (
+                  <Text key={i} style={styles.infoText}>{line}</Text>
+                ))}
             </View>
           </View>
 
@@ -263,7 +240,7 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
             <MaterialIcon name="email-outline" size={24} color="#45a578" />
             <View style={styles.infoContent}>
               <Text style={styles.infoTitle}>Email</Text>
-              <Text style={styles.infoText}>support@nudge2grow.com</Text>
+              <Text style={styles.infoText}>{supportInfo.email || 'support@nudge2grow.com'}</Text>
             </View>
           </View>
 
@@ -271,7 +248,7 @@ const HelpSupportScreen = ({ onBack, onNavigate }) => {
             <MaterialIcon name="phone-outline" size={24} color="#45a578" />
             <View style={styles.infoContent}>
               <Text style={styles.infoTitle}>Phone</Text>
-              <Text style={styles.infoText}>+91 1800-123-4567 (Toll Free)</Text>
+              <Text style={styles.infoText}>{supportInfo.phone || '+91 1800-123-4567 (Toll Free)'}</Text>
             </View>
           </View>
         </View>

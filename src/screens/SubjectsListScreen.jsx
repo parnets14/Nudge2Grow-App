@@ -2,7 +2,7 @@
  * Subjects List Screen - Shows all learning subjects with progress
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle } from 'react-native-svg';
 import { getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
+import { fetchSubjects, fetchTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -77,12 +78,47 @@ const CircularProgress = ({ percentage, color, size = 40 }) => {
 
 const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [apiSubjects, setApiSubjects] = useState([]);
+  const [subjectTopicsMap, setSubjectTopicsMap] = useState({});
+  const [topicsLoaded, setTopicsLoaded] = useState(false);
   const child = userData?.children?.[0];
+
+  // Fetch subjects from backend
+  useEffect(() => {
+    fetchSubjects()
+      .then(data => {
+        // Fix any localhost URLs to use the actual server IP for physical device
+        const fixed = data.map(s => ({
+          ...s,
+          imageUrl: s.imageUrl ? s.imageUrl.replace('http://localhost:5000', 'http://192.168.1.29:5000') : s.imageUrl,
+        }));
+        setApiSubjects(fixed);
+        // Pre-fetch topics for all subjects
+        const promises = fixed.map(s =>
+          fetchTopicsBySubject(s._id).then(topics => ({ id: s._id, topics: topics.map(t => ({
+            ...t,
+            imageUrl: t.imageUrl ? t.imageUrl.replace('http://localhost:5000', 'http://192.168.1.29:5000') : t.imageUrl,
+          })) })).catch(() => ({ id: s._id, topics: [] }))
+        );
+        Promise.all(promises).then(results => {
+          const map = {};
+          results.forEach(r => { map[r.id] = r.topics; });
+          setSubjectTopicsMap(map);
+          setTopicsLoaded(true);
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   // Only show subjects that have at least 1 nudge for this child's grade/level
   const filteredNudges = getNudgesByGradeAndLevel(child?.grade, child?.subjectLevels);
   const availableSubjectNames = [...new Set(filteredNudges.map(n => n.subject))];
-  const allSubjects = getAllSubjects().filter(s => availableSubjectNames.includes(s.name));
+  const localSubjects = getAllSubjects().filter(s => availableSubjectNames.includes(s.name));
+
+  // If API returned subjects, show ONLY those. Otherwise fall back to local.
+  const allSubjects = apiSubjects.length > 0
+    ? apiSubjects
+    : localSubjects.map(s => ({ name: s.name, isFromApi: false }));
 
   const subjectConfig = {
     'Math': {
@@ -129,11 +165,13 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
     },
   };
 
-  // Calculate overall progress (7 subjects × 12 activities each = 84 total)
-  const totalNudges = allSubjects.length * 12; // 7 subjects × 12 activities = 84
-  const completedNudges = Math.floor(totalNudges * 0.68); // 68% completion for demo (57 of 84)
-  const overallProgress = 68;
-  const activeSubjects = 5;
+  // Calculate overall progress based on actual topic counts
+  const totalTopics = apiSubjects.length > 0
+    ? apiSubjects.reduce((sum, s) => sum + (subjectTopicsMap[s._id]?.length || 0), 0)
+    : allSubjects.length * 12;
+  const completedNudges = 0;
+  const overallProgress = 0;
+  const activeSubjects = apiSubjects.filter(s => s.type !== 'premium').length || allSubjects.length;
 
   return (
     <View style={styles.container}>
@@ -161,7 +199,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
           <View style={styles.progressRight}>
             <Text style={styles.progressTitle}>Overall Progress</Text>
             <Text style={styles.progressSubtitle}>
-              {completedNudges} of {totalNudges} activities done
+              {completedNudges} of {totalTopics} topics done
             </Text>
             <View style={styles.progressGrowth}>
               <Icon name="trending-up" size={isSmallDevice ? 14 : 16} color="#10B981" />
@@ -213,7 +251,9 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
               </Text>
             </View>
           ) : null}
-          {(selectedFilter === 'all' || selectedFilter === 'progress') && allSubjects.map((subject, index) => {
+          {(selectedFilter === 'all' || selectedFilter === 'progress') && allSubjects
+            .filter(s => s.type !== 'premium')
+            .map((subject, index) => {
             const config = subjectConfig[subject.name] || {
               icon: 'book-outline',
               color: '#6B7280',
@@ -222,23 +262,36 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
             };
             const nudgesCount = filteredNudges.filter(n => n.subject === subject.name).length || getNudgesBySubject(subject.name).length;
             
-            // Set specific progress for certain subjects (based on 12 total activities)
-            let completedCount;
-            if (subject.name === 'English') {
-              completedCount = 8; // 65% of 12 ≈ 8
-            } else if (subject.name === 'Social Studies') {
-              completedCount = 7; // 55% of 12 ≈ 7
-            } else if (subject.name === 'Artificial Intelligence') {
-              completedCount = 5; // 45% of 12 ≈ 5
-            } else if (subject.name === 'Math') {
-              completedCount = 4; // 33% of 12 ≈ 4
-            } else {
-              completedCount = Math.floor(12 * (0.6 + Math.random() * 0.3)); // Random between 7-11
-            }
-            
-            const progress = Math.floor((completedCount / 12) * 100);
-            const streak = index === 0 ? 5 : 0; // First subject has streak
-            const isActive = index === 0; // First subject is most active
+            // Use actual topic count from API — only fall back to 12 if topics haven't loaded yet
+            const allTopicsForSubject = subjectTopicsMap[subject._id] || [];
+            const childGrade = child?.grade;
+            // Map subject name to subjectLevels key used during registration
+            const subjectLevelKeyMap = {
+              'Math': 'mathematics',
+              'Mathematics': 'mathematics',
+              'Science / EVS': 'science',
+              'Science/EVS': 'science',
+              'English': 'english',
+              'Social Studies': 'social-studies',
+              'Artificial Intelligence': 'artificial-intelligence',
+              'Financial Literacy': 'financial',
+              'Sex & Safety': 'safety',
+            };
+            const levelKey = subjectLevelKeyMap[subject.name] || subject.name?.toLowerCase().replace(/ /g, '-');
+            const childLevel = child?.subjectLevels?.[levelKey] || null;
+
+            const gradeFilteredTopics = topicsLoaded
+              ? allTopicsForSubject.filter(t => {
+                  const gradeMatch = !t.grade || !childGrade || t.grade === childGrade;
+                  const levelMatch = !t.level || !childLevel || t.level === childLevel;
+                  return gradeMatch && levelMatch;
+                })
+              : null;
+            const topicCount = topicsLoaded ? (gradeFilteredTopics?.length || 0) : 12;
+            const completedCount = 0;
+            const progress = topicCount > 0 ? Math.floor((completedCount / topicCount) * 100) : 0;
+            const streak = index === 0 ? 5 : 0;
+            const isActive = index === 0;
             const status = progress >= 80 ? 'On Track' : progress >= 50 ? 'In Progress' : 'Started';
 
             return (
@@ -246,28 +299,52 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                 key={subject.name}
                 style={styles.subjectCard}
                 onPress={() => {
-                  const subjectNudges = filteredNudges.filter(n => n.subject === subject.name);
-                  const nudgesToShow = subjectNudges.length > 0 ? subjectNudges : getNudgesBySubject(subject.name);
-                  if (nudgesToShow.length > 0) {
-                    onNavigate && onNavigate('topicDetail', { 
+                  const allApiTopics = subjectTopicsMap[subject._id] || [];
+                  const childGradeNav = child?.grade;
+                  const subjectLevelKeyMapNav = {
+                    'Math': 'mathematics', 'Mathematics': 'mathematics',
+                    'Science / EVS': 'science', 'Science/EVS': 'science',
+                    'English': 'english', 'Social Studies': 'social-studies',
+                    'Artificial Intelligence': 'artificial-intelligence',
+                    'Financial Literacy': 'financial', 'Sex & Safety': 'safety',
+                  };
+                  const levelKeyNav = subjectLevelKeyMapNav[subject.name] || subject.name?.toLowerCase().replace(/ /g, '-');
+                  const childLevelNav = child?.subjectLevels?.[levelKeyNav] || null;
+
+                  let apiTopics = allApiTopics.filter(t => {
+                    const gradeMatch = !t.grade || !childGradeNav || t.grade === childGradeNav;
+                    const levelMatch = !t.level || !childLevelNav || t.level === childLevelNav;
+                    return gradeMatch && levelMatch;
+                  });
+                  // Don't fall back to all topics — only show what matches grade+level
+                  if (apiTopics.length > 0) {
+                    onNavigate && onNavigate('topicDetail', {
                       subjectName: subject.name,
-                      topicData: nudgesToShow[nudgesToShow.length - 1],
-                      allNudges: nudgesToShow
+                      topicData: { subject: subject.name, topic: apiTopics[0].title, apiTopics },
+                      allNudges: apiTopics.map(t => ({ subject: subject.name, topic: t.title, apiTopic: t })),
+                      apiSubject: subject,
                     });
                   }
+                  // No matching topics — don't navigate, don't show static data
                 }}
               >
                 <View style={styles.subjectHeader}>
                   <View style={styles.subjectLeft}>
                     <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
-                      {config.image ? (
+                      {subject.imageUrl ? (
+                        <Image
+                          source={{ uri: subject.imageUrl }}
+                          style={styles.subjectIconImage}
+                          resizeMode="contain"
+                        />
+                      ) : config.image ? (
                         <Image 
                           source={config.image}
                           style={styles.subjectIconImage}
                           resizeMode="contain"
                         />
                       ) : (
-                        <MaterialIcon name={config.icon} size={isSmallDevice ? 22 : 24} color={config.color} />
+                        <MaterialIcon name={config.icon || 'book-outline'} size={isSmallDevice ? 22 : 24} color={config.color || '#6B7280'} />
                       )}
                     </View>
                     <View style={styles.subjectInfo}>
@@ -280,14 +357,15 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                         )}
                       </View>
                       <Text style={styles.subjectDescription}>
-                        {subject.name === 'Math' ? 'Numbers, logic & problem solving' :
+                        {subject.description ||
+                         (subject.name === 'Math' ? 'Numbers, logic & problem solving' :
                          subject.name === 'Science / EVS' ? 'Nature, environment & exploration' :
                          subject.name === 'English' ? 'Reading, writing & communication' :
                          subject.name === 'Social Studies' ? 'History, culture & society' :
                          subject.name === 'Artificial Intelligence' ? 'AI, machine learning & technology' :
                          subject.name === 'Financial Literacy' ? 'Money management & financial skills' :
                          subject.name === 'Sex & Safety' ? 'Health, safety & well-being' :
-                         'Learning & growth'}
+                         'Learning & growth')}
                       </Text>
                     </View>
                   </View>
@@ -300,7 +378,7 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                     <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: '#10B981' }]} />
                   </View>
                   <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressText}>{completedCount}/12</Text>
+                    <Text style={styles.progressText}>{completedCount}/{topicCount}</Text>
                     <TouchableOpacity style={styles.progressArrowButton}>
                       <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
                     </TouchableOpacity>
@@ -312,7 +390,9 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
                   <View style={styles.subjectStats}>
                     <View style={styles.statItem}>
                       <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                      <Text style={styles.statText}>12 topics</Text>
+                      <Text style={styles.statText}>
+                        {topicCount} {topicCount === 1 ? 'topic' : 'topics'}
+                      </Text>
                     </View>
                     {streak > 0 && (
                       <View style={styles.statItem}>
@@ -334,111 +414,60 @@ const SubjectsListScreen = ({ onBack, onNavigate, userData }) => {
           {/* Premium Subjects Section */}
           {(selectedFilter === 'all' || selectedFilter === 'premium') && (
             <>
-              {/* Financial Literacy Subject Card */}
-              <TouchableOpacity style={styles.subjectCard}>
-                <View style={styles.subjectHeader}>
-                  <View style={styles.subjectLeft}>
-                    <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
-                      <Image 
-                        source={require('../assets/images/Fl.png')}
-                        style={styles.subjectIconImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    <View style={styles.subjectInfo}>
-                      <View style={styles.subjectTitleRow}>
-                        <Text style={styles.subjectName}>Financial Literacy</Text>
-                        <View style={styles.premiumBadge}>
-                          <Icon name="lock-closed" size={isSmallDevice ? 10 : 12} color="#F59E0B" />
-                          <Text style={styles.premiumBadgeText}>Premium</Text>
+              {allSubjects.filter(s => s.type === 'premium').map((subject, index) => {
+                const config = subjectConfig[subject.name] || { color: '#F59E0B', bgColor: '#FFFBEB' };
+                return (
+                  <TouchableOpacity key={subject._id || index} style={styles.subjectCard}>
+                    <View style={styles.subjectHeader}>
+                      <View style={styles.subjectLeft}>
+                        <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
+                          {subject.imageUrl ? (
+                            <Image source={{ uri: subject.imageUrl }} style={styles.subjectIconImage} resizeMode="contain" />
+                          ) : config.image ? (
+                            <Image source={config.image} style={styles.subjectIconImage} resizeMode="contain" />
+                          ) : (
+                            <MaterialIcon name="lock" size={isSmallDevice ? 22 : 24} color="#F59E0B" />
+                          )}
+                        </View>
+                        <View style={styles.subjectInfo}>
+                          <View style={styles.subjectTitleRow}>
+                            <Text style={styles.subjectName}>{subject.name}</Text>
+                            <View style={styles.premiumBadge}>
+                              <Icon name="lock-closed" size={isSmallDevice ? 10 : 12} color="#F59E0B" />
+                              <Text style={styles.premiumBadgeText}>Premium</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.subjectDescription}>{subject.description || 'Premium content'}</Text>
                         </View>
                       </View>
-                      <Text style={styles.subjectDescription}>
-                        Money management & financial skills
-                      </Text>
+                      <CircularProgress percentage={0} color="#10B981" size={isSmallDevice ? 32 : 36} />
                     </View>
-                  </View>
-                  <CircularProgress percentage={0} color="#10B981" size={isSmallDevice ? 32 : 36} />
-                </View>
-
-                <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBarBackground}>
-                    <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
-                  </View>
-                  <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressText}>0/12</Text>
-                    <TouchableOpacity style={styles.progressArrowButton}>
-                      <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.subjectFooter}>
-                  <View style={styles.subjectStats}>
-                    <View style={styles.statItem}>
-                      <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                      <Text style={styles.statText}>12 topics</Text>
+                    <View style={styles.progressBarContainer}>
+                      <View style={styles.progressBarBackground}>
+                        <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
+                      </View>
+                      <View style={styles.progressTextContainer}>
+                        <Text style={styles.progressText}>0/0</Text>
+                        <TouchableOpacity style={styles.progressArrowButton}>
+                          <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.lockedBadge}>
-                    <Icon name="lock-closed" size={isSmallDevice ? 12 : 14} color="#F59E0B" />
-                    <Text style={styles.lockedText}>Locked</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              {/* Sex & Safety Subject Card */}
-              <TouchableOpacity style={styles.subjectCard}>
-                <View style={styles.subjectHeader}>
-                  <View style={styles.subjectLeft}>
-                    <View style={[styles.subjectIconContainer, { backgroundColor: 'transparent' }]}>
-                      <Image 
-                        source={require('../assets/images/ss.png')}
-                        style={styles.subjectIconImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    <View style={styles.subjectInfo}>
-                      <View style={styles.subjectTitleRow}>
-                        <Text style={styles.subjectName}>Sex & Safety</Text>
-                        <View style={styles.premiumBadge}>
-                          <Icon name="lock-closed" size={isSmallDevice ? 10 : 12} color="#F59E0B" />
-                          <Text style={styles.premiumBadgeText}>Premium</Text>
+                    <View style={styles.subjectFooter}>
+                      <View style={styles.subjectStats}>
+                        <View style={styles.statItem}>
+                          <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                          <Text style={styles.statText}>Premium topics</Text>
                         </View>
                       </View>
-                      <Text style={styles.subjectDescription}>
-                        Health, safety & well-being
-                      </Text>
+                      <View style={styles.lockedBadge}>
+                        <Icon name="lock-closed" size={isSmallDevice ? 12 : 14} color="#F59E0B" />
+                        <Text style={styles.lockedText}>Locked</Text>
+                      </View>
                     </View>
-                  </View>
-                  <CircularProgress percentage={0} color="#10B981" size={isSmallDevice ? 32 : 36} />
-                </View>
-
-                <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBarBackground}>
-                    <View style={[styles.progressBarFill, { width: '0%', backgroundColor: '#10B981' }]} />
-                  </View>
-                  <View style={styles.progressTextContainer}>
-                    <Text style={styles.progressText}>0/12</Text>
-                    <TouchableOpacity style={styles.progressArrowButton}>
-                      <Icon name="chevron-forward" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.subjectFooter}>
-                  <View style={styles.subjectStats}>
-                    <View style={styles.statItem}>
-                      <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
-                      <Text style={styles.statText}>12 topics</Text>
-                    </View>
-                  </View>
-                  <View style={styles.lockedBadge}>
-                    <Icon name="lock-closed" size={isSmallDevice ? 12 : 14} color="#F59E0B" />
-                    <Text style={styles.lockedText}>Locked</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              })}
             </>
           )}
 

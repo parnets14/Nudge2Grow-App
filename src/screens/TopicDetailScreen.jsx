@@ -3095,7 +3095,7 @@
  * Topic Detail Screen - Shows daily nudge with calendar, units, and flashcards
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -3111,6 +3111,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getFlashcards, getQACards, getPrompts } from '../data/nudgesData';
+import { fetchContentSetByTopic, fetchLearnDetailByTopic } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -3127,6 +3128,28 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   const [learningStatus, setLearningStatus] = useState(null);
   const [topicRelevance, setTopicRelevance] = useState(null);
   const [currentNudgeIndex, setCurrentNudgeIndex] = useState(0);
+
+  // API content set (flashcards, Q&A, prompts from admin panel)
+  const [apiContentSet, setApiContentSet] = useState(null);
+  const [apiLearnDetail, setApiLearnDetail] = useState(null);
+  const [selectedApiTopic, setSelectedApiTopic] = useState(
+    topicData?.apiTopics?.[0] || null
+  );
+
+  // Fetch content set and learn detail when an API topic is selected
+  useEffect(() => {
+    if (selectedApiTopic?._id) {
+      fetchContentSetByTopic(selectedApiTopic._id)
+        .then(set => setApiContentSet(set))
+        .catch(() => setApiContentSet(null));
+      fetchLearnDetailByTopic(selectedApiTopic._id)
+        .then(detail => setApiLearnDetail(detail))
+        .catch(() => setApiLearnDetail(null));
+    }
+  }, [selectedApiTopic?._id]);
+
+  // Fix localhost URLs in content
+  const fixUrl = (url) => url ? url.replace('http://localhost:5000', 'http://192.168.1.29:5000') : url;
 
   // Use allNudges if available, otherwise use topicData
   const nudgesToDisplay = allNudges && allNudges.length > 0 ? allNudges : [topicData];
@@ -3281,6 +3304,10 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
     ];
   };
 
+  // If we have API topics, use them as the topic list instead of hardcoded weekly topics
+  const apiTopics = topicData?.apiTopics || [];
+  const hasApiTopics = apiTopics.length > 0;
+
   const weeklyTopics = getWeeklyTopics();
   const todayIndex = currentDate.getDay();
   const todayTopic = weeklyTopics[todayIndex];
@@ -3297,14 +3324,18 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   const selectedDayIndex = getSelectedDayIndex();
   const selectedDayTopic = weeklyTopics[selectedDayIndex];
 
-  const displayTopic = topicData?.id ? {
+  const displayTopic = hasApiTopics && selectedApiTopic ? {
     ...topicData,
+    topic: selectedApiTopic.title,
+    title: selectedApiTopic.title,
+    subject: subjectName || topicData?.subject,
+    description: selectedApiTopic.description,
+    imageUrl: fixUrl(selectedApiTopic.imageUrl),
   } : {
     ...topicData,
-    topic: selectedDayTopic.topic,
-    title: selectedDayTopic.topic,
-    icon: selectedDayTopic.icon,
-    iconColor: selectedDayTopic.color,
+    topic: topicData?.topic || topicData?.title || subjectName || '',
+    title: topicData?.title || topicData?.topic || subjectName || '',
+    subject: subjectName || topicData?.subject,
   };
 
   const generateFullCalendar = () => {
@@ -3392,13 +3423,10 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   ];
 
   const createPrompts = () => {
-    const nudgeId = displayTopic?.id;
-    const dataPrompts = nudgeId ? getPrompts(nudgeId) : [];
-    if (dataPrompts.length > 0) return dataPrompts;
-
-    return [
-      { id: 1, prompt: 'What interests you most about this topic?', hint: 'Follow your curiosity and ask questions.' },
-    ];
+    if (apiContentSet?.prompts?.length > 0) {
+      return apiContentSet.prompts.map((p, i) => ({ id: p._id || i, prompt: p.prompt, hint: p.hint }));
+    }
+    return []; // No admin data
   };
 
   const prompts = createPrompts();
@@ -3457,71 +3485,43 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   const vocabulary = createVocabulary();
 
   const createArticleContent = () => {
-    const subject = displayTopic?.subject;
-    const topic = displayTopic?.topic;
-    if (subject === 'Environmental Studies') {
+    if (apiLearnDetail) {
       return {
-        title: `Understanding ${topic}`,
-        subtitle: 'Caring for Our Planet',
+        title: selectedApiTopic?.title || displayTopic?.topic || 'Topic',
+        subtitle: selectedApiTopic?.description || '',
         sections: [
-          { heading: 'What is ' + topic + '?', content: `${topic} is an important environmental concept that teaches children about nature, conservation, and our responsibility towards the planet.` },
-          { heading: 'Why Does it Matter?', content: 'Our planet needs care and protection. By learning about environmental topics, children become responsible citizens.' },
-          { heading: 'Practical Actions', content: 'Children can contribute through simple actions like saving water, planting trees, recycling, and reducing waste.' },
-          { heading: 'Teaching Sustainability', content: 'Help children understand that every action matters. Encourage curiosity about nature and eco-friendly practices.' },
-        ],
+          apiLearnDetail.overview             && { heading: 'Overview',               content: apiLearnDetail.overview },
+          apiLearnDetail.keyConcepts          && { heading: 'Key Concepts',           content: apiLearnDetail.keyConcepts },
+          apiLearnDetail.practicalApplication && { heading: 'Practical Application',  content: apiLearnDetail.practicalApplication },
+          apiLearnDetail.supportingLearning   && { heading: 'Supporting Learning',    content: apiLearnDetail.supportingLearning },
+        ].filter(Boolean),
+        videoUrl: apiLearnDetail.videoUrl || null,
       };
     }
-    return {
-      title: `Learning About ${topic || 'This Topic'}`,
-      subtitle: 'Educational Insights',
-      sections: [
-        { heading: 'Overview', content: 'This topic provides valuable learning opportunities for children to explore, discover, and grow.' },
-        { heading: 'Key Concepts', content: 'The main ideas help children develop critical thinking, problem-solving skills, and a deeper understanding of the world.' },
-        { heading: 'Practical Application', content: 'These concepts can be applied in daily life, making learning meaningful and relevant.' },
-        { heading: 'Supporting Learning', content: 'Parents can support by providing resources, encouraging questions, and celebrating progress.' },
-      ],
-    };
+    return null; // No admin data — don't show article
   };
 
   const articleContent = createArticleContent();
 
   const createFlashcards = () => {
-    const nudgeId = displayTopic?.id;
-    const dataCards = nudgeId ? getFlashcards(nudgeId) : [];
-    if (dataCards.length > 0) return dataCards;
-
-    // Fallback: only Day 1
-    const day1 = displayTopic?.dayByDay?.[0];
-    if (day1) {
-      return [{
-        id: 'day1',
-        title: day1.topic,
-        concept: day1.activity,
-        parentOutcome: day1.question,
-      }];
+    if (apiContentSet?.flashcards?.length > 0) {
+      return apiContentSet.flashcards.map((fc, i) => ({
+        id: fc._id || i,
+        title: fc.title, description: fc.description,
+        subtitle: fc.subtitle, subdescription: fc.subdescription,
+        concept: fc.description, parentOutcome: fc.subtitle, section2: fc.subdescription,
+      }));
     }
-    return [{
-      id: 'fc1',
-      title: displayTopic?.topic || 'Topic',
-      concept: displayTopic?.whatYouWillLearn || '',
-      parentOutcome: '',
-    }];
+    return []; // No admin data — show nothing
   };
 
   const flashcards = createFlashcards();
 
   const createQAFlashcards = () => {
-    const nudgeId = displayTopic?.id;
-    const dataQA = nudgeId ? getQACards(nudgeId) : [];
-    if (dataQA.length > 0) return dataQA;
-
-    return [
-      {
-        id: 1,
-        question: `What will you learn in this topic?`,
-        answer: displayTopic?.whatYouWillLearn || 'You will learn key concepts and practical applications for everyday life.',
-      },
-    ];
+    if (apiContentSet?.qaCards?.length > 0) {
+      return apiContentSet.qaCards.map((qa, i) => ({ id: qa._id || i, question: qa.question, answer: qa.answer }));
+    }
+    return []; // No admin data
   };
 
   const qaFlashcards = createQAFlashcards();
@@ -3565,8 +3565,8 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* ── CALENDAR ── */}
-        <View style={styles.calendarSection}>
+        {/* ── CALENDAR — only show for local/static content, hide for API topics ── */}
+        {!hasApiTopics && <View style={styles.calendarSection}>
           <View style={styles.calendarHeader}>
             <View>
               <Text style={styles.calendarMonth}>{currentMonth} {currentYear}</Text>
@@ -3635,102 +3635,17 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
               );
             })}
           </View>
-        </View>
+        </View>}
 
         {/* ── TOPIC CARD ── */}
         <View style={styles.topicCard}>
           
 
           <View style={styles.topicImageContainer}>
-            {displayTopic?.subject === 'Science / EVS' ? (
+            {displayTopic?.imageUrl ? (
               <View style={styles.topicImagePlaceholder}>
                 <Image
-                  source={require('../assets/images/Science.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
-              </View> 
-              
-            ) : displayTopic?.subject === 'Math' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/Maths.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
-              </View>
-            ) : displayTopic?.subject === 'Science / EVS' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/Science.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
-              </View>
-            ) : displayTopic?.subject === 'English' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/English.jpg')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
-              </View>
-            ) : displayTopic?.subject === 'Social Studies' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/social.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
-              </View>
-            ) : displayTopic?.subject === 'Artificial Intelligence' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/AI.jpg')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.imageOverlay}>
-                  <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
-                    <Icon name="time-outline" size={16} color={subjectColor} />
-                    <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
-                  </View>
-                </View>
-              </View>
-            ) : displayTopic?.subject === 'Arts & Creativity' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/art.png')}
+                  source={{ uri: fixUrl(displayTopic.imageUrl) }}
                   style={styles.subjectImage}
                   resizeMode="cover"
                 />
@@ -3749,7 +3664,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
                 end={{ x: 1, y: 1 }}
               >
                 <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                  <MaterialIcon name={displayTopic?.icon || 'book-open-variant'} size={70} color={subjectColor} />
+                  <MaterialIcon name="book-open-variant" size={70} color={subjectColor} />
                 </View>
                 <View style={styles.imageOverlay}>
                   <View style={[styles.durationBadge, { backgroundColor: 'rgba(255, 255, 255, 0.95)' }]}>
@@ -3921,14 +3836,13 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
                   <MaterialIcon name="youtube" size={24} color="#FF0000" />
                   <Text style={styles.modalVideosSectionTitle}>Videos on this topic</Text>
                 </View>
-                <Text style={styles.modalVideosSectionSubtitle}>2 relevant YouTube videos will be added for all topics</Text>
+                
                 <View style={styles.modalVideoCard}>
                   <View style={styles.modalVideoThumbnail}>
                     <MaterialIcon name="play-circle" size={48} color="#FFFFFF" />
-                    <Text style={styles.modalVideoThumbnailText}>VOLTS, AMPS, & WATTS EXPLAINED</Text>
+                   
                   </View>
-                  <Text style={styles.modalVideoTitle}>Volts, Amps, and Watts Explained</Text>
-                  <Text style={styles.modalVideoChannel}>Educational Channel</Text>
+                
                 </View>
               </View>
               <View style={{ height: 40 }} />
