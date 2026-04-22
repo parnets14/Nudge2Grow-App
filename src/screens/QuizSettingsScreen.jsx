@@ -2,7 +2,7 @@
  * Quiz Settings Screen - Step 4: Configure quiz duration
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { fetchQuizSettings } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -21,39 +24,150 @@ const isSmallDevice = width < 375;
 const QuizSettingsScreen = ({ 
   selectedSubjects, 
   selectedTopics, 
-  selectedTypes, 
+  selectedTypes,
+  questionTypes,
+  previouslySelectedDuration, // Add this to receive previous selection
   onBack, 
   onNavigate,
   knownTopics,
   practiceTopics 
 }) => {
-  const [selectedDuration, setSelectedDuration] = useState(null);
+  const [selectedDuration, setSelectedDuration] = useState(previouslySelectedDuration || null);
+  const [selectedOption, setSelectedOption] = useState(null); // Store the full option object
+  const [durationOptions, setDurationOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const durationOptions = [
-    { id: 'short', questions: 10, minutes: 20, label: 'Quick Quiz', description: '10 questions ~20 minutes', icon: 'flash', color: '#F59E0B' },
-    { id: 'medium', questions: 25, minutes: 35, label: 'Standard Quiz', description: '25 questions ~35 minutes', icon: 'clipboard-text', color: '#8B5CF6' },
-    { id: 'long', questions: 50, minutes: 50, label: 'Full Assessment', description: '50 questions ~45 minutes', icon: 'trophy', color: '#F59E0B' },
-  ];
+  useEffect(() => {
+    loadQuizSettings();
+  }, []);
+
+  // Debug: Log when selectedDuration changes
+  useEffect(() => {
+    if (selectedDuration && durationOptions.length > 0) {
+      const selected = durationOptions.find(opt => opt._id === selectedDuration);
+      console.log('[QuizSettings] Selected duration ID:', selectedDuration);
+      console.log('[QuizSettings] Found option:', selected);
+      console.log('[QuizSettings] All options:', durationOptions);
+      setSelectedOption(selected || null);
+    }
+  }, [selectedDuration, durationOptions]);
+
+  const handleSelectOption = (option) => {
+    console.log('[QuizSettings] Selecting option:', option);
+    setSelectedDuration(option._id);
+    setSelectedOption(option);
+  };
+
+  const loadQuizSettings = async () => {
+    try {
+      setLoading(true);
+      const settings = await fetchQuizSettings();
+      // Reverse the array so oldest items (added first) show first
+      const reversedSettings = settings.reverse();
+      console.log('[QuizSettings] Loaded settings:', reversedSettings);
+      setDurationOptions(reversedSettings);
+      setError('');
+    } catch (err) {
+      console.error('Error loading quiz settings:', err);
+      setError('Failed to load quiz settings');
+      
+      // Fallback to default options if API fails
+      const fallbackOptions = [
+        {
+          _id: 'quick',
+          label: 'Quick Quiz',
+          questions: 10,
+          minutes: 20,
+          description: '10 questions ~20 minutes',
+          icon: 'flash',
+          color: '#F59E0B',
+        },
+        {
+          _id: 'standard',
+          label: 'Standard Quiz',
+          questions: 25,
+          minutes: 35,
+          description: '25 questions ~35 minutes',
+          icon: 'timer',
+          color: '#8B5CF6',
+        },
+        {
+          _id: 'full',
+          label: 'Full Assessment',
+          questions: 50,
+          minutes: 50,
+          description: '50 questions ~50 minutes',
+          icon: 'trophy',
+          color: '#3B82F6',
+        },
+      ];
+      setDurationOptions(fallbackOptions);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStartQuiz = () => {
-    if (selectedDuration) {
-      // Navigate directly to quiz complete screen
+    // Make sure we have the selected option - try multiple ways to get it
+    const optionToUse = selectedOption || (selectedDuration ? durationOptions.find(opt => opt._id === selectedDuration) : null);
+    
+    console.log('[QuizSettings] Starting quiz');
+    console.log('[QuizSettings] selectedOption:', selectedOption);
+    console.log('[QuizSettings] selectedDuration:', selectedDuration);
+    console.log('[QuizSettings] optionToUse:', optionToUse);
+    console.log('[QuizSettings] durationOptions:', durationOptions);
+    
+    if (selectedDuration && optionToUse) {
+      // Navigate to quiz complete screen with all data
       if (onNavigate) {
         onNavigate('complete', {
           selectedSubjects,
           selectedTopics,
           selectedTypes,
+          selectedSetting: optionToUse,
+          selectedDuration, // Pass the selected duration ID
+          durationOptions, // Pass all options as backup
+          questionTypes, // Pass question types array
         });
       }
+    } else {
+      console.error('[QuizSettings] Cannot start quiz - missing option data');
     }
   };
+
+  const handleBack = () => {
+    // Pass current selections back when going back
+    if (onBack) {
+      onBack(selectedTypes);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => onBack && onBack()}>
+            <Icon name="chevron-back" size={28} color="#333333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Quiz Settings</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00aa59" />
+          <Text style={styles.loadingText}>Loading quiz settings...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Icon name="chevron-back" size={28} color="#333333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quiz Settings</Text>
@@ -103,16 +217,16 @@ const QuizSettingsScreen = ({
 
         <View style={styles.optionsContainer}>
           {durationOptions.map((option) => {
-            const isSelected = selectedDuration === option.id;
+            const isSelected = selectedDuration === option._id;
 
             return (
               <TouchableOpacity
-                key={option.id}
+                key={option._id}
                 style={[styles.optionCard, isSelected && styles.optionCardSelected]}
-                onPress={() => setSelectedDuration(option.id)}
+                onPress={() => handleSelectOption(option)}
               >
                 <View style={styles.optionContent}>
-                  <Icon 
+                  <MaterialIcon 
                     name={option.icon} 
                     size={28} 
                     color={option.color} 
@@ -155,6 +269,12 @@ const QuizSettingsScreen = ({
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Question Types</Text>
             <Text style={styles.summaryValue}>{selectedTypes.length} selected</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Questions</Text>
+            <Text style={styles.summaryValue}>
+              {selectedOption ? `${selectedOption.questions} questions` : 'Not selected'}
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Output</Text>
@@ -465,6 +585,47 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginLeft: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+    textAlign: 'center',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: '#00aa59',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
   },
 });
 

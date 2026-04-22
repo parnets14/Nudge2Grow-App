@@ -2,7 +2,7 @@
  * Select Question Types Screen - Step 3: Choose question types for the quiz
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,51 +11,51 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { fetchQuestionTypes } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const SelectQuestionTypesScreen = ({ selectedSubjects, selectedTopics, onBack, onNavigate, knownTopics, practiceTopics }) => {
-  const [selectedTypes, setSelectedTypes] = useState([]);
+const SelectQuestionTypesScreen = ({ 
+  selectedSubjects, 
+  selectedTopics, 
+  previouslySelectedTypes,
+  previouslySelectedDuration, // Add this
+  onBack, 
+  onNavigate, 
+  knownTopics, 
+  practiceTopics 
+}) => {
+  const [selectedTypes, setSelectedTypes] = useState(previouslySelectedTypes || []);
+  const [questionTypes, setQuestionTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const questionTypes = [
-    {
-      id: 'multiple_choice',
-      name: 'Multiple Choice',
-      icon: 'clipboard-list',
-      color: '#8B5CF6',
-      description: 'Choose the correct answer from 4 options',
-      tags: ['MCQ', '4 options'],
-    },
-    {
-      id: 'fill_blanks',
-      name: 'Fill in the Blanks',
-      icon: 'pencil',
-      color: '#F59E0B',
-      description: 'Complete the sentence with the missing word',
-      tags: ['Write-in', 'Open'],
-    },
-    {
-      id: 'true_false',
-      name: 'True or False',
-      icon: 'checkbox-marked-circle',
-      color: '#EC4899',
-      description: 'Decide if the statement is correct',
-      tags: ['T/F', 'Quick'],
-    },
-    {
-      id: 'highlight_mistake',
-      name: 'Spot the Mistake',
-      icon: 'magnify',
-      color: '#3B82F6',
-      description: 'Find and correct the error in the sentence',
-      tags: ['Critical', 'Advanced'],
-    },
-  ];
+  useEffect(() => {
+    loadQuestionTypes();
+  }, []);
+
+  const loadQuestionTypes = async () => {
+    try {
+      setLoading(true);
+      const types = await fetchQuestionTypes();
+      // Reverse the array so oldest items (added first) show first
+      setQuestionTypes(types.reverse());
+      setError('');
+    } catch (err) {
+      console.error('Error loading question types:', err);
+      setError('Failed to load question types');
+      // Fallback to empty array
+      setQuestionTypes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleType = (typeId) => {
     if (selectedTypes.includes(typeId)) {
@@ -67,22 +67,77 @@ const SelectQuestionTypesScreen = ({ selectedSubjects, selectedTopics, onBack, o
 
   const handleNext = () => {
     if (selectedTypes.length > 0 && onNavigate) {
+      // Get the full question type objects for selected IDs
+      const selectedQuestionTypes = questionTypes.filter(type => 
+        selectedTypes.includes(type._id)
+      );
+      
       onNavigate('quizSettings', {
         selectedSubjects,
         selectedTopics,
         selectedTypes,
+        questionTypes: selectedQuestionTypes, // Pass full objects
+        previouslySelectedDuration, // Pass through the previous duration selection
         knownTopics,
         practiceTopics,
       });
     }
   };
 
+  const handleBack = () => {
+    // Pass current selections back when going back
+    if (onBack) {
+      onBack(selectedTopics.map(t => t._id));
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => onBack && onBack()}>
+            <Icon name="chevron-back" size={28} color="#333333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Question Types</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00aa59" />
+          <Text style={styles.loadingText}>Loading question types...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => onBack && onBack()}>
+            <Icon name="chevron-back" size={28} color="#333333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Question Types</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadQuestionTypes}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Icon name="chevron-back" size={28} color="#333333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Question Types</Text>
@@ -132,13 +187,13 @@ const SelectQuestionTypesScreen = ({ selectedSubjects, selectedTopics, onBack, o
 
         <View style={styles.typesContainer}>
           {questionTypes.map((type) => {
-            const isSelected = selectedTypes.includes(type.id);
+            const isSelected = selectedTypes.includes(type._id);
 
             return (
               <TouchableOpacity
-                key={type.id}
+                key={type._id}
                 style={[styles.typeCard, isSelected && styles.typeCardSelected]}
-                onPress={() => toggleType(type.id)}
+                onPress={() => toggleType(type._id)}
               >
                 {isSelected && (
                   <View style={styles.checkmark}>
@@ -150,13 +205,15 @@ const SelectQuestionTypesScreen = ({ selectedSubjects, selectedTopics, onBack, o
                 </View>
                 <Text style={styles.typeName}>{type.name}</Text>
                 <Text style={styles.typeDescription}>{type.description}</Text>
-                <View style={styles.tagsContainer}>
-                  {type.tags.map((tag, idx) => (
-                    <View key={idx} style={[styles.tag, { backgroundColor: `${type.color}20` }]}>
-                      <Text style={[styles.tagText, { color: type.color }]}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
+                {type.tags && type.tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    {type.tags.map((tag, idx) => (
+                      <View key={idx} style={[styles.tag, { backgroundColor: `${type.color}20` }]}>
+                        <Text style={[styles.tagText, { color: type.color }]}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}
@@ -405,6 +462,47 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginLeft: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+    textAlign: 'center',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: '#00aa59',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
   },
 });
 

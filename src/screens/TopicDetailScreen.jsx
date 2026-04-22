@@ -42,24 +42,24 @@
 
 //   // Calendar data - generate week around current date
 //   const weekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  
+
 //   // Generate dates for the current week
 //   const generateWeekDates = () => {
 //     const dates = [];
 //     const today = new Date();
 //     const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
-    
+
 //     // Calculate the start of the week (Sunday)
 //     const startOfWeek = new Date(today);
 //     startOfWeek.setDate(today.getDate() - dayOfWeek);
-    
+
 //     // Generate 7 days starting from Sunday
 //     for (let i = 0; i < 7; i++) {
 //       const date = new Date(startOfWeek);
 //       date.setDate(startOfWeek.getDate() + i);
 //       dates.push(date.getDate());
 //     }
-    
+
 //     return dates;
 //   };
 
@@ -71,11 +71,11 @@
 //     const available = [];
 //     const today = new Date();
 //     const dayOfWeek = today.getDay();
-    
+
 //     // Calculate the start of the week (Sunday)
 //     const startOfWeek = new Date(today);
 //     startOfWeek.setDate(today.getDate() - dayOfWeek);
-    
+
 //     // Add all dates from Sunday to today (current week up to today)
 //     for (let i = 0; i <= dayOfWeek; i++) {
 //       const date = new Date(startOfWeek);
@@ -86,7 +86,7 @@
 //         year: date.getFullYear(),
 //       });
 //     }
-    
+
 //     return available;
 //   };
 
@@ -102,7 +102,7 @@
 //   // Weekly topics schedule - different topics from the same subject for each day
 //   const getWeeklyTopics = () => {
 //     const subject = topicData?.subject || subjectName;
-    
+
 //     // Mathematics topics
 //     if (subject === 'Mathematics') {
 //       return [
@@ -115,7 +115,7 @@
 //         { day: 'Saturday', topic: 'Math in Daily Life', icon: 'calculator-variant', color: '#27AE60' },
 //       ];
 //     }
-    
+
 //     // Environmental Studies topics
 //     if (subject === 'Environmental Studies') {
 //       return [
@@ -128,7 +128,7 @@
 //         { day: 'Saturday', topic: 'Recycling', icon: 'recycle', color: '#27AE60' },
 //       ];
 //     }
-    
+
 //     // Science topics
 //     if (subject === 'Science') {
 //       return [
@@ -141,7 +141,7 @@
 //         { day: 'Saturday', topic: 'Weather', icon: 'weather-partly-cloudy', color: '#2196F3' },
 //       ];
 //     }
-    
+
 //     // Language Arts topics
 //     if (subject === 'Language Arts') {
 //       return [
@@ -154,7 +154,7 @@
 //         { day: 'Saturday', topic: 'Creative Writing', icon: 'fountain-pen-tip', color: '#00BCD4' },
 //       ];
 //     }
-    
+
 //     // Values & Character topics
 //     if (subject === 'Values & Character') {
 //       return [
@@ -167,7 +167,7 @@
 //         { day: 'Saturday', topic: 'Helping Others', icon: 'hand-heart-outline', color: '#00BCD4' },
 //       ];
 //     }
-    
+
 //     // Arts & Creativity topics
 //     if (subject === 'Arts & Creativity') {
 //       return [
@@ -180,7 +180,7 @@
 //         { day: 'Saturday', topic: 'Recycled Art', icon: 'recycle', color: '#00BCD4' },
 //       ];
 //     }
-    
+
 //     // Default topics
 //     return [
 //       { day: 'Sunday', topic: 'Learning Fun', icon: 'school', color: '#2196F3' },
@@ -194,7 +194,7 @@
 //   };
 
 //   const weeklyTopics = getWeeklyTopics();
-  
+
 //   // Get today's topic based on current day
 //   const todayIndex = currentDate.getDay();
 //   const todayTopic = weeklyTopics[todayIndex];
@@ -204,7 +204,7 @@
 //     // Find which day of the week the selected date is
 //     const today = new Date();
 //     const selectedDateObj = new Date(today);
-    
+
 //     // Find the selected date in the current week
 //     for (let i = 0; i < dates.length; i++) {
 //       if (dates[i] === selectedDate) {
@@ -232,25 +232,25 @@
 //     const lastDay = new Date(pickerYear, pickerMonth + 1, 0);
 //     const daysInMonth = lastDay.getDate();
 //     const startingDayOfWeek = firstDay.getDay();
-    
+
 //     const calendar = [];
 //     let week = [];
-    
+
 //     // Add empty cells for days before month starts
 //     for (let i = 0; i < startingDayOfWeek; i++) {
 //       week.push(null);
 //     }
-    
+
 //     // Add all days of the month
 //     for (let day = 1; day <= daysInMonth; day++) {
 //       week.push(day);
-      
+
 //       if (week.length === 7) {
 //         calendar.push(week);
 //         week = [];
 //       }
 //     }
-    
+
 //     // Add empty cells for remaining days
 //     if (week.length > 0) {
 //       while (week.length < 7) {
@@ -258,7 +258,7 @@
 //       }
 //       calendar.push(week);
 //     }
-    
+
 //     return calendar;
 //   };
 
@@ -330,7 +330,7 @@
 //   // Create prompts for Unit 3
 //   const createPrompts = () => {
 //     const subject = displayTopic?.subject;
-    
+
 //     // Mathematics Prompts
 //     if (subject === 'Mathematics') {
 //       return [
@@ -348,7 +348,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Environmental Studies Prompts
 //     if (subject === 'Environmental Studies') {
 //       return [
@@ -366,7 +366,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Science Prompts
 //     if (subject === 'Science') {
 //       return [
@@ -384,7 +384,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Language Arts Prompts
 //     if (subject === 'Language Arts') {
 //       return [
@@ -402,7 +402,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Values & Character Prompts
 //     if (subject === 'Values & Character') {
 //       return [
@@ -420,7 +420,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Arts & Creativity Prompts
 //     if (subject === 'Arts & Creativity') {
 //       return [
@@ -438,7 +438,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Default prompts
 //     return [
 //       {
@@ -461,7 +461,7 @@
 //   // Create vocabulary for Unit 4
 //   const createVocabulary = () => {
 //     const subject = displayTopic?.subject;
-    
+
 //     // Mathematics Vocabulary
 //     if (subject === 'Mathematics') {
 //       return [
@@ -491,7 +491,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Environmental Studies Vocabulary
 //     if (subject === 'Environmental Studies') {
 //       return [
@@ -521,7 +521,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Science Vocabulary
 //     if (subject === 'Science') {
 //       return [
@@ -551,7 +551,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Language Arts Vocabulary
 //     if (subject === 'Language Arts') {
 //       return [
@@ -581,7 +581,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Values & Character Vocabulary
 //     if (subject === 'Values & Character') {
 //       return [
@@ -611,7 +611,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Arts & Creativity Vocabulary
 //     if (subject === 'Arts & Creativity') {
 //       return [
@@ -641,7 +641,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Default vocabulary
 //     return [
 //       {
@@ -677,7 +677,7 @@
 //   const createArticleContent = () => {
 //     const subject = displayTopic?.subject;
 //     const topic = displayTopic?.topic;
-    
+
 //     // Mathematics articles
 //     if (subject === 'Mathematics') {
 //       if (topic === 'Counting Money' || topic === 'Simple Addition' || topic === 'Number Games') {
@@ -704,7 +704,7 @@
 //           ],
 //         };
 //       }
-      
+
 //       if (topic === 'Basic Shapes' || topic === 'Patterns' || topic === 'Measurement') {
 //         return {
 //           title: `Exploring ${topic}`,
@@ -730,7 +730,7 @@
 //         };
 //       }
 //     }
-    
+
 //     // Environmental Studies articles
 //     if (subject === 'Environmental Studies') {
 //       return {
@@ -756,7 +756,7 @@
 //         ],
 //       };
 //     }
-    
+
 //     // Science articles
 //     if (subject === 'Science') {
 //       return {
@@ -782,7 +782,7 @@
 //         ],
 //       };
 //     }
-    
+
 //     // Language Arts articles
 //     if (subject === 'Language Arts') {
 //       return {
@@ -808,7 +808,7 @@
 //         ],
 //       };
 //     }
-    
+
 //     // Values & Character articles
 //     if (subject === 'Values & Character') {
 //       return {
@@ -834,7 +834,7 @@
 //         ],
 //       };
 //     }
-    
+
 //     // Arts & Creativity articles
 //     if (subject === 'Arts & Creativity') {
 //       return {
@@ -860,7 +860,7 @@
 //         ],
 //       };
 //     }
-    
+
 //     // Default article
 //     return {
 //       title: `Learning About ${topic || 'This Topic'}`,
@@ -891,53 +891,53 @@
 //   // Flashcards data - educational facts and details about the topic
 //   const createFlashcards = () => {
 //     const cards = [];
-    
+
 //     // For Mathematics topics
 //     if (displayTopic?.subject === 'Mathematics') {
 //       return [
-//         { 
-//           id: 1, 
+//         {
+//           id: 1,
 //           content: 'Understanding Measurement Units\n\nThe ampere (A) is the SI unit of electric current, measuring how much electricity flows through a wire. Think of it like measuring water flowing through a pipe - the ampere tells us the rate of flow.\n\nKey Points:\n• Named after French physicist André-Marie Ampère\n• One ampere equals one coulomb of charge per second\n• Used in everyday devices from phones to refrigerators\n• Essential for electrical safety and circuit design\n\nReal-World Application: When you see "5A" on a charger, it means 5 amperes of current can flow through it safely.'
 //         },
-//         { 
-//           id: 2, 
+//         {
+//           id: 2,
 //           content: 'The Importance of Measurement\n\nMeasurement is the foundation of science, engineering, and daily life. It allows us to compare, quantify, and understand the world around us with precision.\n\nWhy Measurement Matters:\n• Building Construction: Architects need exact measurements to design safe buildings\n• Cooking: Recipes require precise amounts for consistent results\n• Medicine: Doctors measure doses to ensure patient safety\n• Time Management: We measure time to organize our daily activities\n• Sports: Measurements determine winners and track progress\n\nWithout measurement, modern civilization as we know it would not exist. From the smallest microchip to the tallest skyscraper, everything depends on accurate measurement.'
 //         },
-//         { 
-//           id: 3, 
+//         {
+//           id: 3,
 //           content: 'Standard Units: A Universal Language\n\nStandard units like meters, kilograms, and liters form the International System of Units (SI), used worldwide to ensure everyone measures the same way.\n\nThe Seven Base SI Units:\n1. Meter (m) - Length\n2. Kilogram (kg) - Mass\n3. Second (s) - Time\n4. Ampere (A) - Electric current\n5. Kelvin (K) - Temperature\n6. Mole (mol) - Amount of substance\n7. Candela (cd) - Luminous intensity\n\nBenefits of Standard Units:\n• Global Communication: Scientists worldwide can share findings\n• Trade & Commerce: Fair buying and selling across countries\n• Safety: Consistent standards prevent accidents\n• Education: Students learn the same system everywhere\n\nExample: A meter in India equals a meter in America, Japan, or anywhere else!'
 //         },
-//         { 
-//           id: 4, 
+//         {
+//           id: 4,
 //           content: 'Non-Standard Units: Historical Perspective\n\nBefore standard units were established, people used body parts and everyday objects to measure things. These non-standard units varied from person to person.\n\nCommon Non-Standard Units:\n• Cubit: Length from elbow to fingertip (ancient Egypt)\n• Hand Span: Width of a hand with fingers spread\n• Foot: Length of a human foot (still used in some countries)\n• Pace: Length of one step\n• Stone: Weight measurement (still used in UK for body weight)\n\nProblems with Non-Standard Units:\n- Different sizes for different people\n- Difficult to communicate measurements\n- Inaccurate for precise work\n- Hard to reproduce results\n\nActivity: Try measuring your desk using hand spans, then compare with a friend. Notice how you get different numbers? This is why we need standard units!'
 //         },
-//         { 
-//           id: 5, 
+//         {
+//           id: 5,
 //           content: 'Metric Conversions: Understanding Relationships\n\nThe metric system is based on powers of 10, making conversions simple and logical.\n\nLength Conversions:\n• 1 kilometer (km) = 1,000 meters\n• 1 meter (m) = 100 centimeters\n• 1 centimeter (cm) = 10 millimeters\n• 1 millimeter (mm) = 0.001 meters\n\nMemory Tip: "King Henry Died By Drinking Chocolate Milk"\nKilo - Hecto - Deka - Base - Deci - Centi - Milli\n\nPractical Examples:\n• A door is about 2 meters (200 cm) tall\n• A pencil is about 19 centimeters long\n• Your fingernail is about 1 centimeter wide\n• A grain of rice is about 7 millimeters long\n\nWhy This Matters: Understanding conversions helps us measure both massive objects like buildings and tiny things like insects with the same system.'
 //         },
-//         { 
-//           id: 6, 
+//         {
+//           id: 6,
 //           content: 'Measurement Tools: Choosing the Right Instrument\n\nDifferent measurement tasks require different tools. Using the right tool ensures accuracy and efficiency.\n\nCommon Measurement Tools:\n\n1. Rulers & Tape Measures\n   • Purpose: Measuring length and distance\n   • Best for: Straight lines, fabric, room dimensions\n   • Accuracy: Usually to nearest millimeter\n\n2. Scales & Balances\n   • Purpose: Measuring weight and mass\n   • Best for: Cooking, shipping, body weight\n   • Types: Digital, spring, beam balance\n\n3. Measuring Cups & Spoons\n   • Purpose: Measuring volume of liquids and solids\n   • Best for: Cooking and baking\n   • Common sizes: 1 cup, 1/2 cup, tablespoon, teaspoon\n\n4. Thermometers\n   • Purpose: Measuring temperature\n   • Best for: Weather, cooking, health\n   • Types: Digital, mercury, infrared\n\nPro Tip: Always use the most precise tool available for your task. A ruler is better than hand spans, and a digital scale is more accurate than guessing!'
 //         },
-//         { 
-//           id: 7, 
+//         {
+//           id: 7,
 //           content: 'The Art of Estimation\n\nEstimation is the skill of making educated guesses about measurements before measuring exactly. It\'s a valuable life skill that helps us make quick decisions.\n\nWhen to Use Estimation:\n• Shopping: Will this furniture fit in my room?\n• Cooking: About how much salt should I add?\n• Time Management: How long will this task take?\n• Budgeting: Approximately how much will this cost?\n• Packing: Will all my clothes fit in this suitcase?\n\nEstimation Strategies:\n1. Use Reference Points: Compare to something you know\n2. Round Numbers: Use friendly numbers for quick math\n3. Break It Down: Estimate parts, then add them up\n4. Check Reasonableness: Does your estimate make sense?\n\nPractice Activity:\n• Estimate the height of your classroom door\n• Estimate how many steps from your room to the kitchen\n• Estimate the weight of your backpack\n• Then measure to see how close you were!\n\nRemember: Good estimators become better with practice. The more you estimate and check, the more accurate you become!'
 //         },
-//         { 
-//           id: 8, 
+//         {
+//           id: 8,
 //           content: 'Perimeter: Measuring Around Shapes\n\nPerimeter is the total distance around the outside of a two-dimensional shape. Imagine walking along the edge of a shape - the distance you walk is the perimeter.\n\nHow to Calculate Perimeter:\n\nRectangle: P = 2(length + width)\nExample: A room 5m long and 3m wide\nP = 2(5 + 3) = 2(8) = 16 meters\n\nSquare: P = 4 × side\nExample: A square garden with 4m sides\nP = 4 × 4 = 16 meters\n\nTriangle: P = side₁ + side₂ + side₃\nExample: Triangle with sides 3m, 4m, 5m\nP = 3 + 4 + 5 = 12 meters\n\nReal-World Applications:\n• Fencing: How much fence needed for a yard?\n• Framing: How much frame for a picture?\n• Running Track: Distance around a field\n• Border Decoration: How much trim for a room?\n\nFun Fact: The perimeter of a football field is about 346 meters. Running around it once is great exercise!'
 //         },
-//         { 
-//           id: 9, 
+//         {
+//           id: 9,
 //           content: 'Area: Measuring Space Inside Shapes\n\nArea measures the amount of space inside a two-dimensional shape. Think of it as how much carpet you need to cover a floor, or how much paint to fill a drawing.\n\nArea Formulas:\n\nRectangle: A = length × width\nExample: A room 5m × 3m\nA = 5 × 3 = 15 square meters (m²)\n\nSquare: A = side × side\nExample: A square tile 2m × 2m\nA = 2 × 2 = 4 m²\n\nTriangle: A = ½ × base × height\nExample: Triangle with base 6m, height 4m\nA = ½ × 6 × 4 = 12 m²\n\nCircle: A = π × radius²\nExample: Circle with radius 3m\nA = 3.14 × 3² = 28.26 m²\n\nPractical Uses:\n• Flooring: How many tiles needed?\n• Painting: How much paint for walls?\n• Gardening: How much soil for a garden bed?\n• Land: Measuring property size\n\nImportant: Area is always measured in square units (m², cm², km²) because we\'re measuring two dimensions!'
 //         },
-//         { 
-//           id: 10, 
+//         {
+//           id: 10,
 //           content: 'Measurement in Everyday Life\n\nMeasurement is not just a school subject - it\'s an essential life skill we use constantly without even thinking about it.\n\nDaily Measurement Applications:\n\n1. Cooking & Baking\n   • Measuring ingredients for recipes\n   • Setting oven temperature and time\n   • Portion control for healthy eating\n   • Following nutritional guidelines\n\n2. Construction & DIY\n   • Measuring materials before cutting\n   • Ensuring furniture fits in spaces\n   • Hanging pictures at the right height\n   • Mixing paint or concrete in correct ratios\n\n3. Shopping & Commerce\n   • Comparing prices per unit ($/kg, $/liter)\n   • Measuring fabric or carpet needed\n   • Checking product weights and volumes\n   • Calculating discounts and savings\n\n4. Health & Fitness\n   • Tracking body measurements\n   • Measuring exercise distances and times\n   • Monitoring heart rate and calories\n   • Following medication dosages\n\n5. Travel & Navigation\n   • Calculating distances and travel time\n   • Measuring fuel consumption\n   • Converting currencies\n   • Understanding time zones\n\nConclusion: Mastering measurement skills empowers you to make informed decisions, solve problems efficiently, and understand the world with precision. It\'s truly a superpower for life!'
 //         },
 //       ];
 //     }
-    
+
 //     // For Environmental Studies topics
 //     if (displayTopic?.subject === 'Environmental Studies') {
 //       return [
@@ -953,7 +953,7 @@
 //         { id: 10, content: 'Every drop of water saved makes a difference. Simple actions like turning off taps, fixing leaks, and reusing water can save thousands of liters every year!', icon: '💙' },
 //       ];
 //     }
-    
+
 //     // For Science topics
 //     if (displayTopic?.subject === 'Science') {
 //       return [
@@ -969,7 +969,7 @@
 //         { id: 10, content: 'Exercise keeps our body strong and healthy. It makes our heart stronger, bones denser, and helps us sleep better. Just 30 minutes of play or exercise daily makes a big difference!', icon: '🏃' },
 //       ];
 //     }
-    
+
 //     // For Language Arts topics
 //     if (displayTopic?.subject === 'Language Arts') {
 //       return [
@@ -985,7 +985,7 @@
 //         { id: 10, content: 'Good readers ask questions and make predictions. Before reading, ask "What will happen?" While reading, ask "Why did that happen?" After reading, ask "What did I learn?"', icon: '❓' },
 //       ];
 //     }
-    
+
 //     // For Values & Character topics
 //     if (displayTopic?.subject === 'Values & Character') {
 //       return [
@@ -1001,7 +1001,7 @@
 //         { id: 10, content: 'Small acts of kindness can make a big difference. Holding a door, complimenting someone, or helping pick up dropped items might seem small, but they create ripples of positivity!', icon: '💫' },
 //       ];
 //     }
-    
+
 //     // For Arts & Creativity topics
 //     if (displayTopic?.subject === 'Arts & Creativity') {
 //       return [
@@ -1017,7 +1017,7 @@
 //         { id: 10, content: 'Art allows us to see the world in different ways. Artists notice colors, shapes, and patterns others might miss. Creating art trains our eyes to appreciate beauty everywhere!', icon: '👁️' },
 //       ];
 //     }
-    
+
 //     // Default fallback - use topic data
 //     if (topicData?.dayByDay && topicData.dayByDay.length > 0) {
 //       topicData.dayByDay.forEach((day, index) => {
@@ -1030,9 +1030,9 @@
 //         }
 //       });
 //     }
-    
+
 //     if (cards.length > 0) return cards;
-    
+
 //     // Final fallback
 //     return [
 //       { id: 1, content: topicData?.whatYouWillLearn || 'Learn key concepts through interactive activities.', icon: '📚' },
@@ -1048,7 +1048,7 @@
 //   // Q&A flashcards for Unit 2 - Create based on subject
 //   const createQAFlashcards = () => {
 //     const subject = displayTopic?.subject;
-    
+
 //     // Mathematics Q&A
 //     if (subject === 'Mathematics') {
 //       return [
@@ -1069,7 +1069,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Environmental Studies Q&A
 //     if (subject === 'Environmental Studies') {
 //       return [
@@ -1090,7 +1090,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Science Q&A
 //     if (subject === 'Science') {
 //       return [
@@ -1111,7 +1111,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Language Arts Q&A
 //     if (subject === 'Language Arts') {
 //       return [
@@ -1132,7 +1132,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Values & Character Q&A
 //     if (subject === 'Values & Character') {
 //       return [
@@ -1153,7 +1153,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Arts & Creativity Q&A
 //     if (subject === 'Arts & Creativity') {
 //       return [
@@ -1174,7 +1174,7 @@
 //         },
 //       ];
 //     }
-    
+
 //     // Default fallback
 //     return [
 //       {
@@ -1239,7 +1239,7 @@
 //                 <Text style={styles.calendarSubtext}>Select a date to view content</Text>
 //               </View>
 //               <View style={styles.calendarActions}>
-//                 <TouchableOpacity 
+//                 <TouchableOpacity
 //                   style={[styles.todayButton, { borderColor: subjectColor, backgroundColor: `${subjectColor}10` }]}
 //                   onPress={() => setSelectedDate(currentDay)}
 //                 >
@@ -1248,7 +1248,7 @@
 //                 </TouchableOpacity>
 //               </View>
 //             </View>
-            
+
 //             <View style={styles.calendarGrid}>
 //               {weekDays.map((day, index) => {
 //                 const dateValue = dates[index];
@@ -1257,7 +1257,7 @@
 //                 const isDisabled = isFutureDate || !hasData;
 //                 const isSelected = selectedDate === dateValue;
 //                 const isToday = dateValue === currentDay;
-                
+
 //                 return (
 //                   <View key={index} style={styles.calendarDayColumn}>
 //                     <TouchableOpacity
@@ -1315,12 +1315,12 @@
 //                 <Text style={[styles.durationText, { color: subjectColor }]}>{topicData?.duration || '20 min'}</Text>
 //               </View>
 //             </View>
-            
+
 //             {/* Topic Image with Icon or Image */}
 //             <View style={styles.topicImageContainer}>
 //               {displayTopic?.subject === 'Environmental Studies' ? (
 //                 <View style={styles.topicImagePlaceholder}>
-//                   <Image 
+//                   <Image
 //                     source={require('../assets/images/Environmental.png')}
 //                     style={styles.subjectImage}
 //                     resizeMode="cover"
@@ -1328,7 +1328,7 @@
 //                 </View>
 //               ) : displayTopic?.subject === 'Mathematics' ? (
 //                 <View style={styles.topicImagePlaceholder}>
-//                   <Image 
+//                   <Image
 //                     source={require('../assets/images/Maths.png')}
 //                     style={styles.subjectImage}
 //                     resizeMode="cover"
@@ -1336,7 +1336,7 @@
 //                 </View>
 //               ) : displayTopic?.subject === 'Science' ? (
 //                 <View style={styles.topicImagePlaceholder}>
-//                   <Image 
+//                   <Image
 //                     source={require('../assets/images/Science.png')}
 //                     style={styles.subjectImage}
 //                     resizeMode="cover"
@@ -1344,7 +1344,7 @@
 //                 </View>
 //               ) : displayTopic?.subject === 'Values & Character' ? (
 //                 <View style={styles.topicImagePlaceholder}>
-//                   <Image 
+//                   <Image
 //                     source={require('../assets/images/values.png')}
 //                     style={styles.subjectImage}
 //                     resizeMode="cover"
@@ -1352,7 +1352,7 @@
 //                 </View>
 //               ) : displayTopic?.subject === 'Arts & Creativity' ? (
 //                 <View style={styles.topicImagePlaceholder}>
-//                   <Image 
+//                   <Image
 //                     source={require('../assets/images/art.png')}
 //                     style={styles.subjectImage}
 //                     resizeMode="cover"
@@ -1375,7 +1375,7 @@
 //             <Text style={styles.topicTitle}>
 //               {displayTopic?.topic || displayTopic?.title || 'Learning Topic'}
 //             </Text>
-            
+
 //             {topicData?.shortDescription && (
 //               <Text style={styles.topicDescription}>
 //                 {topicData.shortDescription}
@@ -1402,7 +1402,7 @@
 //                   color="#666666"
 //                 />
 //               </TouchableOpacity>
-              
+
 //               {expandedUnit === unit.id && (
 //                 <View style={styles.unitContent}>
 //                   {unit.id === 1 ? (
@@ -1411,18 +1411,18 @@
 //                         <Text style={styles.conceptLabel}>Concept :</Text>
 //                         <Text style={styles.conceptText}>{unit.concept}</Text>
 //                       </View>
-                      
+
 //                       <View style={styles.conceptSection}>
 //                         <Text style={styles.conceptLabel}>Parent Outcome :</Text>
 //                         <Text style={styles.conceptText}>{unit.parentOutcome}</Text>
 //                       </View>
-                      
+
 //                       {/* Show flashcards in Unit 1 */}
-//                       <TouchableOpacity 
+//                       <TouchableOpacity
 //                         style={styles.openFlashcardsButton}
 //                         onPress={() => {
 //                           if (onNavigate) {
-//                             onNavigate('flashcards', { 
+//                             onNavigate('flashcards', {
 //                               flashcards: flashcards,
 //                               topic: displayTopic?.topic,
 //                               subject: displayTopic?.subject
@@ -1437,13 +1437,13 @@
 //                   ) : unit.id === 2 ? (
 //                     <>
 //                       <Text style={styles.unitDescription}>{unit.description}</Text>
-                      
+
 //                       {/* Open Q&A Button */}
-//                       <TouchableOpacity 
+//                       <TouchableOpacity
 //                         style={styles.openFlashcardsButton}
 //                         onPress={() => {
 //                           if (onNavigate) {
-//                             onNavigate('qaCards', { 
+//                             onNavigate('qaCards', {
 //                               qaCards: qaFlashcards,
 //                               topic: displayTopic?.topic,
 //                               subject: displayTopic?.subject
@@ -1458,13 +1458,13 @@
 //                   ) : unit.id === 3 ? (
 //                     <>
 //                       <Text style={styles.unitDescription}>{unit.description}</Text>
-                      
+
 //                       {/* Open Prompts Button */}
-//                       <TouchableOpacity 
+//                       <TouchableOpacity
 //                         style={styles.openFlashcardsButton}
 //                         onPress={() => {
 //                           if (onNavigate) {
-//                             onNavigate('promptCards', { 
+//                             onNavigate('promptCards', {
 //                               prompts: prompts,
 //                               topic: displayTopic?.topic,
 //                               subject: displayTopic?.subject
@@ -1475,7 +1475,7 @@
 //                         <Text style={styles.openFlashcardsButtonText}>Open Prompts</Text>
 //                         <Icon name="arrow-forward" size={20} color="#FFFFFF" />
 //                       </TouchableOpacity>
-                      
+
 //                       <View style={styles.promptTips}>
 //                         <Text style={styles.promptTipBullet}>• Don't expect "right" answers immediately.</Text>
 //                         <Text style={styles.promptTipBullet}>• Celebrate their thinking process: "That's an interesting idea!"</Text>
@@ -1485,13 +1485,13 @@
 //                   ) : unit.id === 4 ? (
 //                     <>
 //                       <Text style={styles.unitDescription}>{unit.description}</Text>
-                      
+
 //                       {/* Open Vocabulary Button */}
-//                       <TouchableOpacity 
+//                       <TouchableOpacity
 //                         style={styles.openFlashcardsButton}
 //                         onPress={() => {
 //                           if (onNavigate) {
-//                             onNavigate('vocabCards', { 
+//                             onNavigate('vocabCards', {
 //                               vocabulary: vocabulary,
 //                               topic: displayTopic?.topic,
 //                               subject: displayTopic?.subject
@@ -1514,7 +1514,7 @@
 
 //         {/* Topic Relevance Question */}
 //         <View style={styles.relevanceSection}>
-//           <TouchableOpacity 
+//           <TouchableOpacity
 //             style={styles.learnInDetailButton}
 //             onPress={() => setShowArticleModal(true)}
 //           >
@@ -1524,7 +1524,7 @@
 
 //           <Text style={styles.relevanceQuestion}>Is the topic relevant?</Text>
 //           <View style={styles.relevanceButtons}>
-//             <TouchableOpacity 
+//             <TouchableOpacity
 //               style={[
 //                 styles.noButton,
 //                 topicRelevance === 'no' && styles.noButtonActive
@@ -1546,7 +1546,7 @@
 //               )}
 //               <Text style={styles.noButtonText}>No</Text>
 //             </TouchableOpacity>
-//             <TouchableOpacity 
+//             <TouchableOpacity
 //               style={[
 //                 styles.yesButton,
 //                 topicRelevance === 'yes' && styles.yesButtonActive
@@ -1579,7 +1579,7 @@
 //         <View style={styles.modalOverlay}>
 //           <View style={styles.modalContainer}>
 //             <View style={styles.modalHeader}>
-//               <TouchableOpacity 
+//               <TouchableOpacity
 //                 style={styles.modalCloseButton}
 //                 onPress={() => setShowArticleModal(false)}
 //               >
@@ -1590,7 +1590,7 @@
 //             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
 //               <Text style={styles.modalTitle}>{articleContent.title}</Text>
 //               <Text style={styles.modalSubtitle}>{articleContent.subtitle}</Text>
-              
+
 //               {articleContent.sections.map((section, index) => (
 //                 <View key={index}>
 //                   <Text style={styles.modalHeading}>{section.heading}</Text>
@@ -1639,7 +1639,7 @@
 //           <View style={styles.datePickerModal}>
 //             {/* Close button - separate row */}
 //             <View style={styles.datePickerTopBar}>
-//               <TouchableOpacity 
+//               <TouchableOpacity
 //                 style={styles.datePickerCloseButton}
 //                 onPress={() => setShowDatePicker(false)}
 //               >
@@ -1649,14 +1649,14 @@
 
 //             {/* Navigation header */}
 //             <View style={styles.datePickerHeader}>
-//               <TouchableOpacity 
+//               <TouchableOpacity
 //                 style={styles.datePickerNavButton}
 //                 onPress={goToPreviousMonth}
 //               >
 //                 <Icon name="chevron-back" size={24} color="#333333" />
 //               </TouchableOpacity>
 //               <Text style={styles.datePickerTitle}>{monthNames[pickerMonth]} {pickerYear}</Text>
-//               <TouchableOpacity 
+//               <TouchableOpacity
 //                 style={styles.datePickerNavButton}
 //                 onPress={goToNextMonth}
 //               >
@@ -1678,12 +1678,12 @@
 //                   {week.map((day, dayIndex) => {
 //                     const isToday = day === currentDay && pickerMonth === currentDate.getMonth() && pickerYear === currentYear;
 //                     const isSelected = day === selectedDate && pickerMonth === currentDate.getMonth() && pickerYear === currentYear;
-//                     const isFuture = pickerYear > currentYear || 
+//                     const isFuture = pickerYear > currentYear ||
 //                                     (pickerYear === currentYear && pickerMonth > currentDate.getMonth()) ||
 //                                     (pickerYear === currentYear && pickerMonth === currentDate.getMonth() && day > currentDay);
 //                     const hasData = day ? hasDataForDate(day, pickerMonth, pickerYear) : false;
 //                     const isDisabled = !day || isFuture || !hasData;
-                    
+
 //                     return (
 //                       <TouchableOpacity
 //                         key={dayIndex}
@@ -1716,7 +1716,7 @@
 //                 </View>
 //               ))}
 
-//               <TouchableOpacity 
+//               <TouchableOpacity
 //                 style={styles.todayButton}
 //                 onPress={() => {
 //                   setPickerMonth(currentDate.getMonth());
@@ -1805,7 +1805,7 @@
 //   },
 
 //   content: {
-    
+
 //   },
 
 //   heroSection: {flex: 1,
@@ -3088,9 +3088,8 @@
 //   bottomPadding: {
 //     height: 40,
 //   },
-// });  
- 
- 
+// });
+
 /**
  * Topic Detail Screen - Shows daily nudge with calendar, units, and flashcards
  */
@@ -3116,7 +3115,14 @@ import { fetchContentSetByTopic, fetchLearnDetailByTopic } from '../api';
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 
-const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack, onNavigate }) => {
+const TopicDetailScreen = ({
+  topicData,
+  subjectName,
+  allNudges,
+  userData,
+  onBack,
+  onNavigate,
+}) => {
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [expandedUnit, setExpandedUnit] = useState(null);
   const [currentFlashcard, setCurrentFlashcard] = useState(0);
@@ -3133,7 +3139,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   const [apiContentSet, setApiContentSet] = useState(null);
   const [apiLearnDetail, setApiLearnDetail] = useState(null);
   const [selectedApiTopic, setSelectedApiTopic] = useState(
-    topicData?.apiTopics?.[0] || null
+    topicData?.apiTopics?.[0] || null,
   );
 
   // Fetch content set and learn detail when an API topic is selected
@@ -3149,16 +3155,25 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   }, [selectedApiTopic?._id]);
 
   // Fix localhost URLs in content
-  const fixUrl = (url) => url ? url.replace('http://localhost:5000', 'http://192.168.1.29:5000') : url;
+  const fixUrl = url =>
+    url
+      ? url.replace(
+          'https://nudgebackend.onrender.com',
+          'https://nudgebackend.onrender.com',
+        )
+      : url;
 
   // Use allNudges if available, otherwise use topicData
-  const nudgesToDisplay = allNudges && allNudges.length > 0 ? allNudges : [topicData];
+  const nudgesToDisplay =
+    allNudges && allNudges.length > 0 ? allNudges : [topicData];
   const currentNudge = nudgesToDisplay[currentNudgeIndex] || topicData;
 
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString('en-US', { month: 'long' });
   const currentYear = currentDate.getFullYear();
-  const currentDayName = currentDate.toLocaleString('en-US', { weekday: 'long' });
+  const currentDayName = currentDate.toLocaleString('en-US', {
+    weekday: 'long',
+  });
   const currentDay = currentDate.getDate();
 
   const weekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -3201,7 +3216,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
 
   const hasDataForDate = (day, month, year) => {
     return availableDates.some(
-      d => d.date === day && d.month === month && d.year === year
+      d => d.date === day && d.month === month && d.year === year,
     );
   };
 
@@ -3210,97 +3225,372 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
 
     if (subject === 'Math') {
       return [
-        { day: 'Sunday', topic: 'Counting Money', icon: 'cash-multiple', color: '#3B82F6' },
-        { day: 'Monday', topic: 'Simple Addition', icon: 'plus-circle', color: '#3B82F6' },
-        { day: 'Tuesday', topic: 'Basic Shapes', icon: 'shape', color: '#3B82F6' },
-        { day: 'Wednesday', topic: 'Patterns', icon: 'dots-horizontal', color: '#3B82F6' },
-        { day: 'Thursday', topic: 'Measurement', icon: 'ruler', color: '#3B82F6' },
-        { day: 'Friday', topic: 'Number Games', icon: 'numeric', color: '#3B82F6' },
-        { day: 'Saturday', topic: 'Spatial Shapes', icon: 'cube-outline', color: '#3B82F6' },
+        {
+          day: 'Sunday',
+          topic: 'Counting Money',
+          icon: 'cash-multiple',
+          color: '#3B82F6',
+        },
+        {
+          day: 'Monday',
+          topic: 'Simple Addition',
+          icon: 'plus-circle',
+          color: '#3B82F6',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'Basic Shapes',
+          icon: 'shape',
+          color: '#3B82F6',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'Patterns',
+          icon: 'dots-horizontal',
+          color: '#3B82F6',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Measurement',
+          icon: 'ruler',
+          color: '#3B82F6',
+        },
+        {
+          day: 'Friday',
+          topic: 'Number Games',
+          icon: 'numeric',
+          color: '#3B82F6',
+        },
+        {
+          day: 'Saturday',
+          topic: 'Spatial Shapes',
+          icon: 'cube-outline',
+          color: '#3B82F6',
+        },
       ];
     }
 
     if (subject === 'Science / EVS') {
       return [
-        { day: 'Sunday', topic: 'Water Conservation', icon: 'water', color: '#10B981' },
-        { day: 'Monday', topic: 'Water Cycle', icon: 'water-outline', color: '#10B981' },
-        { day: 'Tuesday', topic: 'Saving Water', icon: 'water-pump', color: '#10B981' },
-        { day: 'Wednesday', topic: 'Parts of a Plant', icon: 'flower', color: '#10B981' },
-        { day: 'Thursday', topic: 'Growing Plants', icon: 'sprout', color: '#10B981' },
-        { day: 'Friday', topic: 'Trees & Nature', icon: 'leaf', color: '#10B981' },
-        { day: 'Saturday', topic: 'Recycling', icon: 'recycle', color: '#10B981' },
+        {
+          day: 'Sunday',
+          topic: 'Water Conservation',
+          icon: 'water',
+          color: '#10B981',
+        },
+        {
+          day: 'Monday',
+          topic: 'Water Cycle',
+          icon: 'water-outline',
+          color: '#10B981',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'Saving Water',
+          icon: 'water-pump',
+          color: '#10B981',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'Parts of a Plant',
+          icon: 'flower',
+          color: '#10B981',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Growing Plants',
+          icon: 'sprout',
+          color: '#10B981',
+        },
+        {
+          day: 'Friday',
+          topic: 'Trees & Nature',
+          icon: 'leaf',
+          color: '#10B981',
+        },
+        {
+          day: 'Saturday',
+          topic: 'Recycling',
+          icon: 'recycle',
+          color: '#10B981',
+        },
       ];
     }
 
     if (subject === 'English') {
       return [
-        { day: 'Sunday', topic: 'Story Time', icon: 'book-open-variant', color: '#F59E0B' },
-        { day: 'Monday', topic: 'Reading Skills', icon: 'book-alphabet', color: '#F59E0B' },
-        { day: 'Tuesday', topic: 'Writing Letters', icon: 'pencil', color: '#F59E0B' },
-        { day: 'Wednesday', topic: 'Rhyming Words', icon: 'music-note', color: '#F59E0B' },
-        { day: 'Thursday', topic: 'Story Elements', icon: 'book-open-page-variant', color: '#F59E0B' },
-        { day: 'Friday', topic: 'Vocabulary', icon: 'alphabetical', color: '#F59E0B' },
-        { day: 'Saturday', topic: 'Creative Writing', icon: 'fountain-pen-tip', color: '#F59E0B' },
+        {
+          day: 'Sunday',
+          topic: 'Story Time',
+          icon: 'book-open-variant',
+          color: '#F59E0B',
+        },
+        {
+          day: 'Monday',
+          topic: 'Reading Skills',
+          icon: 'book-alphabet',
+          color: '#F59E0B',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'Writing Letters',
+          icon: 'pencil',
+          color: '#F59E0B',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'Rhyming Words',
+          icon: 'music-note',
+          color: '#F59E0B',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Story Elements',
+          icon: 'book-open-page-variant',
+          color: '#F59E0B',
+        },
+        {
+          day: 'Friday',
+          topic: 'Vocabulary',
+          icon: 'alphabetical',
+          color: '#F59E0B',
+        },
+        {
+          day: 'Saturday',
+          topic: 'Creative Writing',
+          icon: 'fountain-pen-tip',
+          color: '#F59E0B',
+        },
       ];
     }
 
     if (subject === 'Social Studies') {
       return [
-        { day: 'Sunday', topic: 'Acts of Kindness', icon: 'heart-multiple', color: '#EC4899' },
-        { day: 'Monday', topic: 'Sharing & Caring', icon: 'hand-heart', color: '#EC4899' },
-        { day: 'Tuesday', topic: 'Honesty', icon: 'shield-check', color: '#EC4899' },
-        { day: 'Wednesday', topic: 'Respect', icon: 'account-group', color: '#EC4899' },
-        { day: 'Thursday', topic: 'Empathy', icon: 'emoticon-happy', color: '#EC4899' },
+        {
+          day: 'Sunday',
+          topic: 'Acts of Kindness',
+          icon: 'heart-multiple',
+          color: '#EC4899',
+        },
+        {
+          day: 'Monday',
+          topic: 'Sharing & Caring',
+          icon: 'hand-heart',
+          color: '#EC4899',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'Honesty',
+          icon: 'shield-check',
+          color: '#EC4899',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'Respect',
+          icon: 'account-group',
+          color: '#EC4899',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Empathy',
+          icon: 'emoticon-happy',
+          color: '#EC4899',
+        },
         { day: 'Friday', topic: 'Gratitude', icon: 'gift', color: '#EC4899' },
-        { day: 'Saturday', topic: 'Helping Others', icon: 'hand-heart-outline', color: '#EC4899' },
+        {
+          day: 'Saturday',
+          topic: 'Helping Others',
+          icon: 'hand-heart-outline',
+          color: '#EC4899',
+        },
       ];
     }
 
     if (subject === 'Artificial Intelligence') {
       return [
-        { day: 'Sunday', topic: 'What is AI?', icon: 'brain', color: '#8B5CF6' },
-        { day: 'Monday', topic: 'AI in Your Phone', icon: 'smartphone', color: '#8B5CF6' },
-        { day: 'Tuesday', topic: 'AI in Games', icon: 'gamepad-variant', color: '#8B5CF6' },
-        { day: 'Wednesday', topic: 'AI Helps Us', icon: 'robot', color: '#8B5CF6' },
-        { day: 'Thursday', topic: 'Machine Learning', icon: 'brain-outline', color: '#8B5CF6' },
-        { day: 'Friday', topic: 'AI in Future', icon: 'rocket', color: '#8B5CF6' },
-        { day: 'Saturday', topic: 'AI Ethics', icon: 'scale-balance', color: '#8B5CF6' },
+        {
+          day: 'Sunday',
+          topic: 'What is AI?',
+          icon: 'brain',
+          color: '#8B5CF6',
+        },
+        {
+          day: 'Monday',
+          topic: 'AI in Your Phone',
+          icon: 'smartphone',
+          color: '#8B5CF6',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'AI in Games',
+          icon: 'gamepad-variant',
+          color: '#8B5CF6',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'AI Helps Us',
+          icon: 'robot',
+          color: '#8B5CF6',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Machine Learning',
+          icon: 'brain-outline',
+          color: '#8B5CF6',
+        },
+        {
+          day: 'Friday',
+          topic: 'AI in Future',
+          icon: 'rocket',
+          color: '#8B5CF6',
+        },
+        {
+          day: 'Saturday',
+          topic: 'AI Ethics',
+          icon: 'scale-balance',
+          color: '#8B5CF6',
+        },
       ];
     }
 
     if (subject === 'Financial Literacy') {
       return [
-        { day: 'Sunday', topic: 'Where Money Comes From', icon: 'cash-multiple', color: '#10B981' },
-        { day: 'Monday', topic: 'Saving Money', icon: 'piggy-bank', color: '#10B981' },
-        { day: 'Tuesday', topic: 'Spending Wisely', icon: 'shopping-cart', color: '#10B981' },
-        { day: 'Wednesday', topic: 'Earning Money', icon: 'briefcase', color: '#10B981' },
-        { day: 'Thursday', topic: 'Money Goals', icon: 'target', color: '#10B981' },
-        { day: 'Friday', topic: 'Banking Basics', icon: 'bank', color: '#10B981' },
-        { day: 'Saturday', topic: 'Financial Planning', icon: 'chart-line', color: '#10B981' },
+        {
+          day: 'Sunday',
+          topic: 'Where Money Comes From',
+          icon: 'cash-multiple',
+          color: '#10B981',
+        },
+        {
+          day: 'Monday',
+          topic: 'Saving Money',
+          icon: 'piggy-bank',
+          color: '#10B981',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'Spending Wisely',
+          icon: 'shopping-cart',
+          color: '#10B981',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'Earning Money',
+          icon: 'briefcase',
+          color: '#10B981',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Money Goals',
+          icon: 'target',
+          color: '#10B981',
+        },
+        {
+          day: 'Friday',
+          topic: 'Banking Basics',
+          icon: 'bank',
+          color: '#10B981',
+        },
+        {
+          day: 'Saturday',
+          topic: 'Financial Planning',
+          icon: 'chart-line',
+          color: '#10B981',
+        },
       ];
     }
 
     if (subject === 'Sex & Safety') {
       return [
-        { day: 'Sunday', topic: 'My Body, My Rules', icon: 'heart-check', color: '#EF4444' },
-        { day: 'Monday', topic: 'Safe & Unsafe Touches', icon: 'shield-alert', color: '#EF4444' },
-        { day: 'Tuesday', topic: 'Private Parts', icon: 'information', color: '#EF4444' },
-        { day: 'Wednesday', topic: 'Saying No', icon: 'hand-raised', color: '#EF4444' },
-        { day: 'Thursday', topic: 'Asking for Help', icon: 'phone', color: '#EF4444' },
-        { day: 'Friday', topic: 'Trusted Adults', icon: 'account-multiple', color: '#EF4444' },
-        { day: 'Saturday', topic: 'Safety Tips', icon: 'shield-check', color: '#EF4444' },
+        {
+          day: 'Sunday',
+          topic: 'My Body, My Rules',
+          icon: 'heart-check',
+          color: '#EF4444',
+        },
+        {
+          day: 'Monday',
+          topic: 'Safe & Unsafe Touches',
+          icon: 'shield-alert',
+          color: '#EF4444',
+        },
+        {
+          day: 'Tuesday',
+          topic: 'Private Parts',
+          icon: 'information',
+          color: '#EF4444',
+        },
+        {
+          day: 'Wednesday',
+          topic: 'Saying No',
+          icon: 'hand-raised',
+          color: '#EF4444',
+        },
+        {
+          day: 'Thursday',
+          topic: 'Asking for Help',
+          icon: 'phone',
+          color: '#EF4444',
+        },
+        {
+          day: 'Friday',
+          topic: 'Trusted Adults',
+          icon: 'account-multiple',
+          color: '#EF4444',
+        },
+        {
+          day: 'Saturday',
+          topic: 'Safety Tips',
+          icon: 'shield-check',
+          color: '#EF4444',
+        },
       ];
     }
 
     // Default topics
     return [
-      { day: 'Sunday', topic: 'Learning Fun', icon: 'school', color: '#2196F3' },
-      { day: 'Monday', topic: 'Discovery Time', icon: 'magnify', color: '#FF9800' },
-      { day: 'Tuesday', topic: 'Exploration', icon: 'compass', color: '#4CAF50' },
-      { day: 'Wednesday', topic: 'Creative Play', icon: 'puzzle', color: '#9C27B0' },
-      { day: 'Thursday', topic: 'Learning Journey', icon: 'map', color: '#27AE60' },
-      { day: 'Friday', topic: 'Fun Activities', icon: 'star', color: '#FFB84D' },
-      { day: 'Saturday', topic: 'Weekend Learning', icon: 'calendar-star', color: '#00BCD4' },
+      {
+        day: 'Sunday',
+        topic: 'Learning Fun',
+        icon: 'school',
+        color: '#2196F3',
+      },
+      {
+        day: 'Monday',
+        topic: 'Discovery Time',
+        icon: 'magnify',
+        color: '#FF9800',
+      },
+      {
+        day: 'Tuesday',
+        topic: 'Exploration',
+        icon: 'compass',
+        color: '#4CAF50',
+      },
+      {
+        day: 'Wednesday',
+        topic: 'Creative Play',
+        icon: 'puzzle',
+        color: '#9C27B0',
+      },
+      {
+        day: 'Thursday',
+        topic: 'Learning Journey',
+        icon: 'map',
+        color: '#27AE60',
+      },
+      {
+        day: 'Friday',
+        topic: 'Fun Activities',
+        icon: 'star',
+        color: '#FFB84D',
+      },
+      {
+        day: 'Saturday',
+        topic: 'Weekend Learning',
+        icon: 'calendar-star',
+        color: '#00BCD4',
+      },
     ];
   };
 
@@ -3324,22 +3614,27 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   const selectedDayIndex = getSelectedDayIndex();
   const selectedDayTopic = weeklyTopics[selectedDayIndex];
 
-  const displayTopic = hasApiTopics && selectedApiTopic ? {
-    ...topicData,
-    topic: selectedApiTopic.title,
-    title: selectedApiTopic.title,
-    subject: subjectName || topicData?.subject,
-    description: selectedApiTopic.description,
-    imageUrl: fixUrl(selectedApiTopic.imageUrl),
-  } : topicData?.id ? {
-    ...topicData,
-  } : {
-    ...topicData,
-    topic: selectedDayTopic.topic,
-    title: selectedDayTopic.topic,
-    icon: selectedDayTopic.icon,
-    iconColor: selectedDayTopic.color,
-  };
+  const displayTopic =
+    hasApiTopics && selectedApiTopic
+      ? {
+          ...topicData,
+          topic: selectedApiTopic.title,
+          title: selectedApiTopic.title,
+          subject: subjectName || topicData?.subject,
+          description: selectedApiTopic.description,
+          imageUrl: fixUrl(selectedApiTopic.imageUrl),
+        }
+      : topicData?.id
+      ? {
+          ...topicData,
+        }
+      : {
+          ...topicData,
+          topic: selectedDayTopic.topic,
+          title: selectedDayTopic.topic,
+          icon: selectedDayTopic.icon,
+          iconColor: selectedDayTopic.color,
+        };
 
   const generateFullCalendar = () => {
     const firstDay = new Date(pickerYear, pickerMonth, 1);
@@ -3368,7 +3663,20 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
   };
 
   const calendarGrid = generateFullCalendar();
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
   const goToPreviousMonth = () => {
     if (pickerMonth === 0) {
@@ -3388,7 +3696,7 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
     }
   };
 
-  const handleDateSelect = (day) => {
+  const handleDateSelect = day => {
     if (day) {
       setSelectedDate(day);
       setShowDatePicker(false);
@@ -3397,37 +3705,48 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
 
   const subjectColors = {
     'Environmental Studies': '#27AE60',
-    'Mathematics': '#27AE60',
-    'Science': '#27AE60',
+    Mathematics: '#27AE60',
+    Science: '#27AE60',
     'Language Arts': '#27AE60',
     'Values & Character': '#27AE60',
     'Arts & Creativity': '#27AE60',
   };
 
-  const subjectColor = subjectColors[subjectName || topicData?.subject] || '#45a578';
+  const subjectColor =
+    subjectColors[subjectName || topicData?.subject] || '#45a578';
 
   const units = [
     {
       id: 1,
       name: `Unit 1 — All About the Topic`,
-      concept: displayTopic?.whatYouWillLearn || topicData?.whatYouWillLearn || 'Key concepts and learning objectives for this topic.',
-      parentOutcome: 'Practical applications in daily life and real-world connections.',
+      concept:
+        displayTopic?.whatYouWillLearn ||
+        topicData?.whatYouWillLearn ||
+        'Key concepts and learning objectives for this topic.',
+      parentOutcome:
+        'Practical applications in daily life and real-world connections.',
     },
     {
       id: 2,
       name: 'Unit 2 — Questions & Answers',
-      description: 'Interactive Q&A session to test your understanding, spark, curiosity and clarify doubts.',
+      description:
+        'Interactive Q&A session to test your understanding, spark, curiosity and clarify doubts.',
     },
     {
       id: 3,
       name: 'Unit 3 — Conversation Prompts',
-      description: 'Thought-provoking prompts to encourage deeper thinking and meaningful parent-child conversation.',
+      description:
+        'Thought-provoking prompts to encourage deeper thinking and meaningful parent-child conversation.',
     },
   ];
 
   const createPrompts = () => {
     if (apiContentSet?.prompts?.length > 0) {
-      return apiContentSet.prompts.map((p, i) => ({ id: p._id || i, prompt: p.prompt, hint: p.hint }));
+      return apiContentSet.prompts.map((p, i) => ({
+        id: p._id || i,
+        prompt: p.prompt,
+        hint: p.hint,
+      }));
     }
     return []; // No admin data
   };
@@ -3438,50 +3757,236 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
     const subject = displayTopic?.subject;
     if (subject === 'Mathematics') {
       return [
-        { id: 1, word: 'Dormant', type: 'Adjective', definition: 'Word-Stressed Definition: A seed in a resting stage, not growing until conditions are right.', example: '"The seed is like it\'s sleeping — it waits for the right water and warmth to \'wake up\' and grow."', synonym: 'Inactive, asleep' },
-        { id: 2, word: 'Germination', type: 'Noun', definition: 'Word-Stressed Definition: The first time a baby root (the radicle) pokes out of a seed — like the seed is "waking up."', example: '"When you see that tiny white root coming out of the seed, that\'s germination!"', synonym: 'Sprouting' },
-        { id: 3, word: 'Radicle', type: 'Noun', definition: 'Word-Stressed Definition: The first tiny root that comes out of a seed during germination.', example: '"The radicle is like the baby root — it\'s the first part to grow out of the seed."', synonym: 'Baby root, first root' },
+        {
+          id: 1,
+          word: 'Dormant',
+          type: 'Adjective',
+          definition:
+            'Word-Stressed Definition: A seed in a resting stage, not growing until conditions are right.',
+          example:
+            "\"The seed is like it's sleeping — it waits for the right water and warmth to 'wake up' and grow.\"",
+          synonym: 'Inactive, asleep',
+        },
+        {
+          id: 2,
+          word: 'Germination',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: The first time a baby root (the radicle) pokes out of a seed — like the seed is "waking up."',
+          example:
+            '"When you see that tiny white root coming out of the seed, that\'s germination!"',
+          synonym: 'Sprouting',
+        },
+        {
+          id: 3,
+          word: 'Radicle',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: The first tiny root that comes out of a seed during germination.',
+          example:
+            '"The radicle is like the baby root — it\'s the first part to grow out of the seed."',
+          synonym: 'Baby root, first root',
+        },
       ];
     }
     if (subject === 'Environmental Studies') {
       return [
-        { id: 1, word: 'Conservation', type: 'Noun', definition: 'Word-Stressed Definition: Protecting and saving natural resources like water, plants, and animals.', example: '"Water conservation means using water wisely so we don\'t waste it."', synonym: 'Protection, preservation' },
-        { id: 2, word: 'Photosynthesis', type: 'Noun', definition: 'Word-Stressed Definition: The process plants use to make food from sunlight, water, and air.', example: '"Plants use photosynthesis to turn sunlight into energy, just like we eat food for energy."', synonym: 'Plant food-making' },
-        { id: 3, word: 'Ecosystem', type: 'Noun', definition: 'Word-Stressed Definition: A community of living things (plants, animals) and their environment working together.', example: '"A pond ecosystem includes fish, plants, water, and all the tiny creatures living together."', synonym: 'Habitat, environment' },
+        {
+          id: 1,
+          word: 'Conservation',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Protecting and saving natural resources like water, plants, and animals.',
+          example:
+            '"Water conservation means using water wisely so we don\'t waste it."',
+          synonym: 'Protection, preservation',
+        },
+        {
+          id: 2,
+          word: 'Photosynthesis',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: The process plants use to make food from sunlight, water, and air.',
+          example:
+            '"Plants use photosynthesis to turn sunlight into energy, just like we eat food for energy."',
+          synonym: 'Plant food-making',
+        },
+        {
+          id: 3,
+          word: 'Ecosystem',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: A community of living things (plants, animals) and their environment working together.',
+          example:
+            '"A pond ecosystem includes fish, plants, water, and all the tiny creatures living together."',
+          synonym: 'Habitat, environment',
+        },
       ];
     }
     if (subject === 'Science') {
       return [
-        { id: 1, word: 'Adaptation', type: 'Noun', definition: 'Word-Stressed Definition: Special features that help animals survive in their environment.', example: '"A polar bear\'s thick fur is an adaptation that keeps it warm in the cold Arctic."', synonym: 'Adjustment, special feature' },
-        { id: 2, word: 'Habitat', type: 'Noun', definition: 'Word-Stressed Definition: The natural home where an animal or plant lives.', example: '"A fish\'s habitat is water, while a bird\'s habitat might be a tree or nest."', synonym: 'Home, environment' },
-        { id: 3, word: 'Nutrients', type: 'Noun', definition: 'Word-Stressed Definition: Substances in food that help our body grow, stay healthy, and have energy.', example: '"Fruits and vegetables have lots of nutrients that make us strong and healthy."', synonym: 'Vitamins, goodness' },
+        {
+          id: 1,
+          word: 'Adaptation',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Special features that help animals survive in their environment.',
+          example:
+            '"A polar bear\'s thick fur is an adaptation that keeps it warm in the cold Arctic."',
+          synonym: 'Adjustment, special feature',
+        },
+        {
+          id: 2,
+          word: 'Habitat',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: The natural home where an animal or plant lives.',
+          example:
+            '"A fish\'s habitat is water, while a bird\'s habitat might be a tree or nest."',
+          synonym: 'Home, environment',
+        },
+        {
+          id: 3,
+          word: 'Nutrients',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Substances in food that help our body grow, stay healthy, and have energy.',
+          example:
+            '"Fruits and vegetables have lots of nutrients that make us strong and healthy."',
+          synonym: 'Vitamins, goodness',
+        },
       ];
     }
     if (subject === 'Language Arts') {
       return [
-        { id: 1, word: 'Character', type: 'Noun', definition: 'Word-Stressed Definition: A person, animal, or creature in a story.', example: '"Harry Potter is the main character in his story — the story is mostly about him."', synonym: 'Person in story' },
-        { id: 2, word: 'Setting', type: 'Noun', definition: 'Word-Stressed Definition: Where and when a story takes place.', example: '"The setting of Cinderella is a kingdom long ago, with a castle and village."', synonym: 'Place, location' },
-        { id: 3, word: 'Plot', type: 'Noun', definition: 'Word-Stressed Definition: The sequence of events that happen in a story.', example: '"The plot is what happens in the story — the beginning, middle, and end."', synonym: 'Story events, what happens' },
+        {
+          id: 1,
+          word: 'Character',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: A person, animal, or creature in a story.',
+          example:
+            '"Harry Potter is the main character in his story — the story is mostly about him."',
+          synonym: 'Person in story',
+        },
+        {
+          id: 2,
+          word: 'Setting',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Where and when a story takes place.',
+          example:
+            '"The setting of Cinderella is a kingdom long ago, with a castle and village."',
+          synonym: 'Place, location',
+        },
+        {
+          id: 3,
+          word: 'Plot',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: The sequence of events that happen in a story.',
+          example:
+            '"The plot is what happens in the story — the beginning, middle, and end."',
+          synonym: 'Story events, what happens',
+        },
       ];
     }
     if (subject === 'Values & Character') {
       return [
-        { id: 1, word: 'Empathy', type: 'Noun', definition: 'Word-Stressed Definition: Understanding and sharing the feelings of another person.', example: '"When your friend is sad and you feel sad too, that\'s empathy — you understand their feelings."', synonym: 'Understanding, compassion' },
-        { id: 2, word: 'Kindness', type: 'Noun', definition: 'Word-Stressed Definition: Being friendly, caring, and helpful to others.', example: '"Sharing your toys or helping someone who fell shows kindness."', synonym: 'Caring, niceness' },
-        { id: 3, word: 'Respect', type: 'Noun', definition: 'Word-Stressed Definition: Treating others the way you want to be treated, with care and politeness.', example: '"Listening when someone talks and saying \'please\' and \'thank you\' shows respect."', synonym: 'Politeness, consideration' },
+        {
+          id: 1,
+          word: 'Empathy',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Understanding and sharing the feelings of another person.',
+          example:
+            '"When your friend is sad and you feel sad too, that\'s empathy — you understand their feelings."',
+          synonym: 'Understanding, compassion',
+        },
+        {
+          id: 2,
+          word: 'Kindness',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Being friendly, caring, and helpful to others.',
+          example:
+            '"Sharing your toys or helping someone who fell shows kindness."',
+          synonym: 'Caring, niceness',
+        },
+        {
+          id: 3,
+          word: 'Respect',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Treating others the way you want to be treated, with care and politeness.',
+          example:
+            "\"Listening when someone talks and saying 'please' and 'thank you' shows respect.\"",
+          synonym: 'Politeness, consideration',
+        },
       ];
     }
     if (subject === 'Arts & Creativity') {
       return [
-        { id: 1, word: 'Primary Colors', type: 'Noun', definition: 'Word-Stressed Definition: The three basic colors (red, blue, yellow) that can\'t be made by mixing other colors.', example: '"Red, blue, and yellow are primary colors — all other colors come from mixing these!"', synonym: 'Basic colors' },
-        { id: 2, word: 'Texture', type: 'Noun', definition: 'Word-Stressed Definition: How something feels when you touch it — smooth, rough, soft, or bumpy.', example: '"Sandpaper has a rough texture, while silk has a smooth texture."', synonym: 'Feel, surface' },
-        { id: 3, word: 'Creativity', type: 'Noun', definition: 'Word-Stressed Definition: Using imagination to make something new and original.', example: '"When you draw a picture from your imagination, you\'re using creativity!"', synonym: 'Imagination, originality' },
+        {
+          id: 1,
+          word: 'Primary Colors',
+          type: 'Noun',
+          definition:
+            "Word-Stressed Definition: The three basic colors (red, blue, yellow) that can't be made by mixing other colors.",
+          example:
+            '"Red, blue, and yellow are primary colors — all other colors come from mixing these!"',
+          synonym: 'Basic colors',
+        },
+        {
+          id: 2,
+          word: 'Texture',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: How something feels when you touch it — smooth, rough, soft, or bumpy.',
+          example:
+            '"Sandpaper has a rough texture, while silk has a smooth texture."',
+          synonym: 'Feel, surface',
+        },
+        {
+          id: 3,
+          word: 'Creativity',
+          type: 'Noun',
+          definition:
+            'Word-Stressed Definition: Using imagination to make something new and original.',
+          example:
+            '"When you draw a picture from your imagination, you\'re using creativity!"',
+          synonym: 'Imagination, originality',
+        },
       ];
     }
     return [
-      { id: 1, word: 'Learning', type: 'Noun', definition: 'Word-Stressed Definition: Gaining knowledge or skills through study and experience.', example: '"Every day we do learning when we discover new things!"', synonym: 'Education, discovery' },
-      { id: 2, word: 'Explore', type: 'Verb', definition: 'Word-Stressed Definition: To investigate and discover new things.', example: '"Let\'s explore the garden and see what we can find!"', synonym: 'Discover, investigate' },
-      { id: 3, word: 'Curious', type: 'Adjective', definition: 'Word-Stressed Definition: Wanting to learn and know more about things.', example: '"Being curious means asking questions and wanting to learn!"', synonym: 'Interested, inquisitive' },
+      {
+        id: 1,
+        word: 'Learning',
+        type: 'Noun',
+        definition:
+          'Word-Stressed Definition: Gaining knowledge or skills through study and experience.',
+        example: '"Every day we do learning when we discover new things!"',
+        synonym: 'Education, discovery',
+      },
+      {
+        id: 2,
+        word: 'Explore',
+        type: 'Verb',
+        definition:
+          'Word-Stressed Definition: To investigate and discover new things.',
+        example: '"Let\'s explore the garden and see what we can find!"',
+        synonym: 'Discover, investigate',
+      },
+      {
+        id: 3,
+        word: 'Curious',
+        type: 'Adjective',
+        definition:
+          'Word-Stressed Definition: Wanting to learn and know more about things.',
+        example: '"Being curious means asking questions and wanting to learn!"',
+        synonym: 'Interested, inquisitive',
+      },
     ];
   };
 
@@ -3493,10 +3998,22 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
         title: selectedApiTopic?.title || displayTopic?.topic || 'Topic',
         subtitle: selectedApiTopic?.description || '',
         sections: [
-          apiLearnDetail.overview             && { heading: 'Overview',               content: apiLearnDetail.overview },
-          apiLearnDetail.keyConcepts          && { heading: 'Key Concepts',           content: apiLearnDetail.keyConcepts },
-          apiLearnDetail.practicalApplication && { heading: 'Practical Application',  content: apiLearnDetail.practicalApplication },
-          apiLearnDetail.supportingLearning   && { heading: 'Supporting Learning',    content: apiLearnDetail.supportingLearning },
+          apiLearnDetail.overview && {
+            heading: 'Overview',
+            content: apiLearnDetail.overview,
+          },
+          apiLearnDetail.keyConcepts && {
+            heading: 'Key Concepts',
+            content: apiLearnDetail.keyConcepts,
+          },
+          apiLearnDetail.practicalApplication && {
+            heading: 'Practical Application',
+            content: apiLearnDetail.practicalApplication,
+          },
+          apiLearnDetail.supportingLearning && {
+            heading: 'Supporting Learning',
+            content: apiLearnDetail.supportingLearning,
+          },
         ].filter(Boolean),
         videoUrl: apiLearnDetail.videoUrl || null,
       };
@@ -3510,9 +4027,13 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
     if (apiContentSet?.flashcards?.length > 0) {
       return apiContentSet.flashcards.map((fc, i) => ({
         id: fc._id || i,
-        title: fc.title, description: fc.description,
-        subtitle: fc.subtitle, subdescription: fc.subdescription,
-        concept: fc.description, parentOutcome: fc.subtitle, section2: fc.subdescription,
+        title: fc.title,
+        description: fc.description,
+        subtitle: fc.subtitle,
+        subdescription: fc.subdescription,
+        concept: fc.description,
+        parentOutcome: fc.subtitle,
+        section2: fc.subdescription,
       }));
     }
     return []; // No admin data — show nothing
@@ -3522,14 +4043,18 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
 
   const createQAFlashcards = () => {
     if (apiContentSet?.qaCards?.length > 0) {
-      return apiContentSet.qaCards.map((qa, i) => ({ id: qa._id || i, question: qa.question, answer: qa.answer }));
+      return apiContentSet.qaCards.map((qa, i) => ({
+        id: qa._id || i,
+        question: qa.question,
+        answer: qa.answer,
+      }));
     }
     return []; // No admin data
   };
 
   const qaFlashcards = createQAFlashcards();
 
-  const toggleUnit = (unitId) => {
+  const toggleUnit = unitId => {
     setExpandedUnit(expandedUnit === unitId ? null : unitId);
   };
 
@@ -3555,316 +4080,514 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
       </View>
 
       {gradeMismatch ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32,
+          }}
+        >
           <Icon name="book-outline" size={48} color="#9CA3AF" />
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151', marginTop: 16, textAlign: 'center' }}>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '700',
+              color: '#374151',
+              marginTop: 16,
+              textAlign: 'center',
+            }}
+          >
             Content coming soon
           </Text>
-          <Text style={{ fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          <Text
+            style={{
+              fontSize: 14,
+              color: '#9CA3AF',
+              marginTop: 8,
+              textAlign: 'center',
+              lineHeight: 22,
+            }}
+          >
             We're preparing topics for {childGrade}.{'\n'}Check back soon!
           </Text>
         </View>
       ) : (
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-
-        {/* ── CALENDAR ── */}
-        <View style={styles.calendarSection}>
-          <View style={styles.calendarHeader}>
-            <View>
-              <Text style={styles.calendarMonth}>{currentMonth} {currentYear}</Text>
-              <Text style={styles.calendarSubtext}>Select a date to view content</Text>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* ── CALENDAR ── */}
+          <View style={styles.calendarSection}>
+            <View style={styles.calendarHeader}>
+              <View>
+                <Text style={styles.calendarMonth}>
+                  {currentMonth} {currentYear}
+                </Text>
+                <Text style={styles.calendarSubtext}>
+                  Select a date to view content
+                </Text>
+              </View>
+              <View style={styles.calendarActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.calendarIconButton,
+                    {
+                      borderColor: subjectColor,
+                      backgroundColor: `${subjectColor}10`,
+                    },
+                  ]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Icon
+                    name="calendar-outline"
+                    size={18}
+                    color={subjectColor}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.todayButton,
+                    {
+                      borderColor: subjectColor,
+                      backgroundColor: `${subjectColor}10`,
+                    },
+                  ]}
+                  onPress={() => setSelectedDate(currentDay)}
+                >
+                  <Icon
+                    name="time-outline"
+                    size={16}
+                    color={subjectColor}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[styles.todayButtonText, { color: subjectColor }]}
+                  >
+                    TODAY
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.calendarActions}>
-              <TouchableOpacity
-                style={[styles.calendarIconButton, { borderColor: subjectColor, backgroundColor: `${subjectColor}10` }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Icon name="calendar-outline" size={18} color={subjectColor} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.todayButton, { borderColor: subjectColor, backgroundColor: `${subjectColor}10` }]}
-                onPress={() => setSelectedDate(currentDay)}
-              >
-                <Icon name="time-outline" size={16} color={subjectColor} style={{ marginRight: 6 }} />
-                <Text style={[styles.todayButtonText, { color: subjectColor }]}>TODAY</Text>
-              </TouchableOpacity>
+
+            <View style={styles.calendarGrid}>
+              {weekDays.map((day, index) => {
+                const dateValue = dates[index];
+                const isFutureDate = dateValue > currentDay;
+                const hasData = hasDataForDate(
+                  dateValue,
+                  currentDate.getMonth(),
+                  currentYear,
+                );
+                const isDisabled = isFutureDate || !hasData;
+                const isSelected = selectedDate === dateValue;
+                const isToday = dateValue === currentDay;
+
+                return (
+                  <View key={index} style={styles.calendarDayColumn}>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarDate,
+                        isSelected && [
+                          styles.calendarDateSelected,
+                          { backgroundColor: subjectColor },
+                        ],
+                        !isSelected &&
+                          isToday && [
+                            styles.calendarDateToday,
+                            {
+                              borderColor: subjectColor,
+                              backgroundColor: `${subjectColor}10`,
+                            },
+                          ],
+                        isDisabled &&
+                          !isSelected &&
+                          styles.calendarDateDisabled,
+                      ]}
+                      onPress={() => {
+                        if (!isDisabled) setSelectedDate(dateValue);
+                      }}
+                      disabled={isDisabled}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarDayLabel,
+                          isSelected && styles.calendarLabelSelected,
+                          !isSelected && isToday && { color: subjectColor },
+                          isDisabled &&
+                            !isSelected &&
+                            styles.calendarLabelDisabled,
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.calendarDateText,
+                          isSelected && styles.calendarDateTextSelected,
+                          !isSelected &&
+                            isToday && {
+                              color: subjectColor,
+                              fontWeight: '700',
+                            },
+                          isDisabled &&
+                            !isSelected &&
+                            styles.calendarDateTextDisabled,
+                        ]}
+                      >
+                        {dateValue}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           </View>
 
-          <View style={styles.calendarGrid}>
-            {weekDays.map((day, index) => {
-              const dateValue = dates[index];
-              const isFutureDate = dateValue > currentDay;
-              const hasData = hasDataForDate(dateValue, currentDate.getMonth(), currentYear);
-              const isDisabled = isFutureDate || !hasData;
-              const isSelected = selectedDate === dateValue;
-              const isToday = dateValue === currentDay;
-
-              return (
-                <View key={index} style={styles.calendarDayColumn}>
-                  <TouchableOpacity
+          {/* ── TOPIC CARD ── */}
+          <View style={styles.topicCard}>
+            <View style={styles.topicImageContainer}>
+              {displayTopic?.subject === 'Science / EVS' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/Science.png')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'Math' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/Maths.png')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'Science / EVS' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/Science.png')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'English' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/English.jpg')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'Social Studies' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/social.png')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'Artificial Intelligence' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/AI.jpg')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'Arts & Creativity' ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={require('../assets/images/art.png')}
+                    style={styles.subjectImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={[`${subjectColor}40`, `${subjectColor}20`]}
+                  style={styles.topicImagePlaceholder}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View
                     style={[
-                      styles.calendarDate,
-                      isSelected && [styles.calendarDateSelected, { backgroundColor: subjectColor }],
-                      !isSelected && isToday && [styles.calendarDateToday, { borderColor: subjectColor, backgroundColor: `${subjectColor}10` }],
-                      isDisabled && !isSelected && styles.calendarDateDisabled,
+                      styles.iconCircle,
+                      { backgroundColor: 'rgba(255,255,255,0.9)' },
                     ]}
-                    onPress={() => { if (!isDisabled) setSelectedDate(dateValue); }}
-                    disabled={isDisabled}
                   >
-                    <Text
-                      style={[
-                        styles.calendarDayLabel,
-                        isSelected && styles.calendarLabelSelected,
-                        !isSelected && isToday && { color: subjectColor },
-                        isDisabled && !isSelected && styles.calendarLabelDisabled,
-                      ]}
-                    >
-                      {day}
+                    <MaterialIcon
+                      name={displayTopic?.icon || 'book-open-variant'}
+                      size={70}
+                      color={subjectColor}
+                    />
+                  </View>
+                </LinearGradient>
+              )}
+            </View>
+
+            {/* Topic Info Section - Subject, Title, Description */}
+            <View style={styles.topicInfoSection}>
+              <View style={styles.subjectBadgeContainer}>
+                <Text style={styles.subjectLabel}>
+                  {displayTopic?.subject || 'Learning'}
+                </Text>
+              </View>
+
+              <Text style={styles.topicTitle}>
+                {displayTopic?.topic || displayTopic?.title || 'Learning Topic'}
+              </Text>
+
+              {topicData?.shortDescription && (
+                <Text style={styles.topicDescription}>
+                  {topicData.shortDescription}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* ── UNITS ── */}
+          <View style={styles.unitsSection}>
+            {units.map(unit => {
+              const getUnitIcon = unitId => {
+                switch (unitId) {
+                  case 1:
+                    return 'book-open-page-variant';
+                  case 2:
+                    return 'help-circle-outline';
+                  case 3:
+                    return 'message-text-outline';
+                  default:
+                    return 'book-outline';
+                }
+              };
+              const getCardCount = unitId => {
+                switch (unitId) {
+                  case 1:
+                    return flashcards.length;
+                  case 2:
+                    return qaFlashcards.length;
+                  case 3:
+                    return prompts.length;
+                  default:
+                    return 0;
+                }
+              };
+              const getUnitDescription = unitId => {
+                switch (unitId) {
+                  case 1:
+                    return 'Build your own understanding first - Quick, clear explanations with real-life connections so you can guide your child with confidence.';
+                  case 2:
+                    return 'Check understanding through conversation - Thoughtfully designed questions that go beyond right or wrong answers to build thinking skills.';
+                  case 3:
+                    return 'Bring learning into everyday life - Simple prompts that turn daily moments into meaningful learning and bonding experiences. the app should have this content ';
+                  default:
+                    return '';
+                }
+              };
+              return (
+                <View key={unit.id} style={styles.unitCard}>
+                  <View style={styles.unitIconContainer}>
+                    <MaterialIcon
+                      name={getUnitIcon(unit.id)}
+                      size={22}
+                      color="#6B7280"
+                    />
+                  </View>
+                  <View style={styles.unitTextContainer}>
+                    <Text style={styles.unitName}>
+                      {unit.name.split(' — ')[1] || unit.name}
                     </Text>
-                    <Text
-                      style={[
-                        styles.calendarDateText,
-                        isSelected && styles.calendarDateTextSelected,
-                        !isSelected && isToday && { color: subjectColor, fontWeight: '700' },
-                        isDisabled && !isSelected && styles.calendarDateTextDisabled,
-                      ]}
-                    >
-                      {dateValue}
+                    <Text style={styles.unitBodyText}>
+                      {getUnitDescription(unit.id)}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
+                  <Text style={styles.cardCountText}>
+                    {getCardCount(unit.id)} cards
+                  </Text>
                 </View>
               );
             })}
           </View>
-        </View>
 
-        {/* ── TOPIC CARD ── */}
-        <View style={styles.topicCard}>
-          
-
-          <View style={styles.topicImageContainer}>
-            {displayTopic?.subject === 'Science / EVS' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/Science.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View> 
-              
-            ) : displayTopic?.subject === 'Math' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/Maths.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : displayTopic?.subject === 'Science / EVS' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/Science.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : displayTopic?.subject === 'English' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/English.jpg')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : displayTopic?.subject === 'Social Studies' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/social.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : displayTopic?.subject === 'Artificial Intelligence' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/AI.jpg')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : displayTopic?.subject === 'Arts & Creativity' ? (
-              <View style={styles.topicImagePlaceholder}>
-                <Image
-                  source={require('../assets/images/art.png')}
-                  style={styles.subjectImage}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : (
-              <LinearGradient
-                colors={[`${subjectColor}40`, `${subjectColor}20`]}
-                style={styles.topicImagePlaceholder}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                  <MaterialIcon name={displayTopic?.icon || 'book-open-variant'} size={70} color={subjectColor} />
-                </View>
-              </LinearGradient>
-            )}
-          </View>
-          
-          {/* Topic Info Section - Subject, Title, Description */}
-          <View style={styles.topicInfoSection}>
-            <View style={styles.subjectBadgeContainer}>
-              <Text style={styles.subjectLabel}>
-                {displayTopic?.subject || 'Learning'}
-              </Text>
-            </View>
-            
-            <Text style={styles.topicTitle}>
-              {displayTopic?.topic || displayTopic?.title || 'Learning Topic'}
+          {/* ── START FLASHCARDS BUTTON ── */}
+          <View style={styles.startFlashcardsSection}>
+            <TouchableOpacity
+              style={styles.startFlashcardsButton}
+              onPress={() => {
+                const allCards = [
+                  ...flashcards.map(c => ({ ...c, type: 'about' })),
+                  ...qaFlashcards.map(c => ({ ...c, type: 'qa' })),
+                  ...prompts.map(p => ({
+                    id: `p-${p.id}`,
+                    type: 'prompt',
+                    question: p.prompt,
+                    answer: p.hint,
+                  })),
+                ];
+                onNavigate &&
+                  onNavigate('flashcards', {
+                    flashcards: allCards,
+                    topic: displayTopic?.topic,
+                    subject: displayTopic?.subject,
+                  });
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.startFlashcardsText}>Start Flashcards</Text>
+              <Icon name="chevron-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.startFlashcardsHint}>
+              Swipe through cards at your own pace
             </Text>
-
-            {topicData?.shortDescription && (
-              <Text style={styles.topicDescription}>{topicData.shortDescription}</Text>
-            )}
+            <Text style={styles.startFlashcardsCount}>
+              {flashcards.length + qaFlashcards.length + prompts.length} cards
+              total{' '}
+            </Text>
           </View>
-        </View>
 
-        {/* ── UNITS ── */}
-        <View style={styles.unitsSection}>
-          {units.map((unit) => {
-            const getUnitIcon = (unitId) => {
-              switch(unitId) {
-                case 1: return 'book-open-page-variant';
-                case 2: return 'help-circle-outline';
-                case 3: return 'message-text-outline';
-                default: return 'book-outline';
-              }
-            };
-            const getCardCount = (unitId) => {
-              switch(unitId) {
-                case 1: return flashcards.length;
-                case 2: return qaFlashcards.length;
-                case 3: return prompts.length;
-                default: return 0;
-              }
-            };
-            const getUnitDescription = (unitId) => {
-              switch(unitId) {
-                case 1: return 'Build your own understanding first - Quick, clear explanations with real-life connections so you can guide your child with confidence.';
-                case 2: return 'Check understanding through conversation - Thoughtfully designed questions that go beyond right or wrong answers to build thinking skills.';
-                case 3: return 'Bring learning into everyday life - Simple prompts that turn daily moments into meaningful learning and bonding experiences. the app should have this content ';
-                default: return '';
-              }
-            };
-            return (
-              <View key={unit.id} style={styles.unitCard}>
-                <View style={styles.unitIconContainer}>
-                  <MaterialIcon name={getUnitIcon(unit.id)} size={22} color="#6B7280" />
-                </View>
-                <View style={styles.unitTextContainer}>
-                  <Text style={styles.unitName}>{unit.name.split(' — ')[1] || unit.name}</Text>
-                  <Text style={styles.unitBodyText}>{getUnitDescription(unit.id)}</Text>
-                </View>
-                <Text style={styles.cardCountText}>{getCardCount(unit.id)} cards</Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* ── START FLASHCARDS BUTTON ── */}
-        <View style={styles.startFlashcardsSection}>
-          <TouchableOpacity
-            style={styles.startFlashcardsButton}
-            onPress={() => {
-              const allCards = [
-                ...flashcards.map(c => ({ ...c, type: 'about' })),
-                ...qaFlashcards.map(c => ({ ...c, type: 'qa' })),
-                ...prompts.map(p => ({ id: `p-${p.id}`, type: 'prompt', question: p.prompt, answer: p.hint })),
-              ];
-              onNavigate && onNavigate('flashcards', { flashcards: allCards, topic: displayTopic?.topic, subject: displayTopic?.subject });
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.startFlashcardsText}>Start Flashcards</Text>
-            <Icon name="chevron-forward" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.startFlashcardsHint}>Swipe through cards at your own pace</Text>
-          <Text style={styles.startFlashcardsCount}>{flashcards.length + qaFlashcards.length + prompts.length} cards total </Text>
-        </View>
-
-        {/* ── LEARNING STATUS ── */}
-        <View style={styles.learningStatusSection}>
-          <View style={styles.learningStatusContainer}>
-            <TouchableOpacity
-              style={[styles.needsPracticeButton, learningStatus === 'needs_practice' && styles.needsPracticeButtonActive]}
-              onPress={() => setLearningStatus(learningStatus === 'needs_practice' ? null : 'needs_practice')}
-            >
-              <Text style={[styles.needsPracticeText, learningStatus === 'needs_practice' && styles.needsPracticeTextActive]}>Needs Practice</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.knewItButton, learningStatus === 'knew_it' && styles.knewItButtonActive]}
-              onPress={() => setLearningStatus(learningStatus === 'knew_it' ? null : 'knew_it')}
-            >
-              <Text style={[styles.knewItText, learningStatus === 'knew_it' && styles.knewItTextActive]}>Knew It ✓</Text>
-            </TouchableOpacity>
+          {/* ── LEARNING STATUS ── */}
+          <View style={styles.learningStatusSection}>
+            <View style={styles.learningStatusContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.needsPracticeButton,
+                  learningStatus === 'needs_practice' &&
+                    styles.needsPracticeButtonActive,
+                ]}
+                onPress={() =>
+                  setLearningStatus(
+                    learningStatus === 'needs_practice'
+                      ? null
+                      : 'needs_practice',
+                  )
+                }
+              >
+                <Text
+                  style={[
+                    styles.needsPracticeText,
+                    learningStatus === 'needs_practice' &&
+                      styles.needsPracticeTextActive,
+                  ]}
+                >
+                  Needs Practice
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.knewItButton,
+                  learningStatus === 'knew_it' && styles.knewItButtonActive,
+                ]}
+                onPress={() =>
+                  setLearningStatus(
+                    learningStatus === 'knew_it' ? null : 'knew_it',
+                  )
+                }
+              >
+                <Text
+                  style={[
+                    styles.knewItText,
+                    learningStatus === 'knew_it' && styles.knewItTextActive,
+                  ]}
+                >
+                  Knew It ✓
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        {/* ── RELEVANCE ── */}
-        <View style={styles.relevanceSection}>
-          <TouchableOpacity style={styles.learnInDetailButton} onPress={() => setShowArticleModal(true)}>
-            <MaterialIcon name="book-open-page-variant" size={20} color="#666666" />
-            <Text style={styles.learnInDetailText}>Learn in Detail</Text>
-          </TouchableOpacity>
+          {/* ── RELEVANCE ── */}
+          <View style={styles.relevanceSection}>
+            <TouchableOpacity
+              style={styles.learnInDetailButton}
+              onPress={() => setShowArticleModal(true)}
+            >
+              <MaterialIcon
+                name="book-open-page-variant"
+                size={20}
+                color="#666666"
+              />
+              <Text style={styles.learnInDetailText}>Learn in Detail</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.relevanceQuestion}>Is the topic relevant?</Text>
-          <View style={styles.relevanceButtons}>
-            <TouchableOpacity
-              style={[styles.noButton, topicRelevance === 'no' && styles.noButtonActive]}
-              onPress={() => {
-                const v = topicRelevance === 'no' ? null : 'no';
-                setTopicRelevance(v);
-                if (v === 'no') Alert.alert('Feedback Received', 'Thank you! We\'ll work on more relevant topics.', [{ text: 'OK' }]);
-              }}
-            >
-              {topicRelevance === 'no' && <Icon name="checkmark-circle" size={16} color="#FF6B6B" style={{ marginRight: 6 }} />}
-              <Text style={styles.noButtonText}>No</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.yesButton, topicRelevance === 'yes' && styles.yesButtonActive]}
-              onPress={() => {
-                const v = topicRelevance === 'yes' ? null : 'yes';
-                setTopicRelevance(v);
-                if (v === 'yes') Alert.alert('Great!', 'We\'re glad this topic is relevant to you. Keep learning!', [{ text: 'OK' }]);
-              }}
-            >
-              {topicRelevance === 'yes' && <Icon name="checkmark-circle" size={16} color="#45a578" style={{ marginRight: 6 }} />}
-              <Text style={styles.yesButtonText}>Yes</Text>
-            </TouchableOpacity>
+            <Text style={styles.relevanceQuestion}>Is the topic relevant?</Text>
+            <View style={styles.relevanceButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.noButton,
+                  topicRelevance === 'no' && styles.noButtonActive,
+                ]}
+                onPress={() => {
+                  const v = topicRelevance === 'no' ? null : 'no';
+                  setTopicRelevance(v);
+                  if (v === 'no')
+                    Alert.alert(
+                      'Feedback Received',
+                      "Thank you! We'll work on more relevant topics.",
+                      [{ text: 'OK' }],
+                    );
+                }}
+              >
+                {topicRelevance === 'no' && (
+                  <Icon
+                    name="checkmark-circle"
+                    size={16}
+                    color="#FF6B6B"
+                    style={{ marginRight: 6 }}
+                  />
+                )}
+                <Text style={styles.noButtonText}>No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.yesButton,
+                  topicRelevance === 'yes' && styles.yesButtonActive,
+                ]}
+                onPress={() => {
+                  const v = topicRelevance === 'yes' ? null : 'yes';
+                  setTopicRelevance(v);
+                  if (v === 'yes')
+                    Alert.alert(
+                      'Great!',
+                      "We're glad this topic is relevant to you. Keep learning!",
+                      [{ text: 'OK' }],
+                    );
+                }}
+              >
+                {topicRelevance === 'yes' && (
+                  <Icon
+                    name="checkmark-circle"
+                    size={16}
+                    color="#45a578"
+                    style={{ marginRight: 6 }}
+                  />
+                )}
+                <Text style={styles.yesButtonText}>Yes</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
       )}
 
       {/* ── ARTICLE MODAL ── */}
-      {showArticleModal && (
+      {showArticleModal && articleContent && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowArticleModal(false)}>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowArticleModal(false)}
+              >
                 <Icon name="close" size={28} color="#333333" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.modalTitle}>{articleContent.title}</Text>
-              <Text style={styles.modalSubtitle}>{articleContent.subtitle}</Text>
+              <Text style={styles.modalSubtitle}>
+                {articleContent.subtitle}
+              </Text>
               {articleContent.sections.map((section, index) => (
                 <View key={index}>
                   <Text style={styles.modalHeading}>{section.heading}</Text>
@@ -3874,15 +4597,19 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
               <View style={styles.modalVideosSection}>
                 <View style={styles.modalVideosSectionHeader}>
                   <MaterialIcon name="youtube" size={24} color="#FF0000" />
-                  <Text style={styles.modalVideosSectionTitle}>Videos on this topic</Text>
+                  <Text style={styles.modalVideosSectionTitle}>
+                    Videos on this topic
+                  </Text>
                 </View>
-                
+
                 <View style={styles.modalVideoCard}>
                   <View style={styles.modalVideoThumbnail}>
-                    <MaterialIcon name="play-circle" size={48} color="#FFFFFF" />
-                   
+                    <MaterialIcon
+                      name="play-circle"
+                      size={48}
+                      color="#FFFFFF"
+                    />
                   </View>
-                
                 </View>
               </View>
               <View style={{ height: 40 }} />
@@ -3896,32 +4623,59 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
         <View style={styles.modalOverlay}>
           <View style={styles.datePickerModal}>
             <View style={styles.datePickerTopBar}>
-              <TouchableOpacity style={styles.datePickerCloseButton} onPress={() => setShowDatePicker(false)}>
+              <TouchableOpacity
+                style={styles.datePickerCloseButton}
+                onPress={() => setShowDatePicker(false)}
+              >
                 <Icon name="close" size={24} color="#333333" />
               </TouchableOpacity>
             </View>
             <View style={styles.datePickerHeader}>
-              <TouchableOpacity style={styles.datePickerNavButton} onPress={goToPreviousMonth}>
+              <TouchableOpacity
+                style={styles.datePickerNavButton}
+                onPress={goToPreviousMonth}
+              >
                 <Icon name="chevron-back" size={24} color="#333333" />
               </TouchableOpacity>
-              <Text style={styles.datePickerTitle}>{monthNames[pickerMonth]} {pickerYear}</Text>
-              <TouchableOpacity style={styles.datePickerNavButton} onPress={goToNextMonth}>
+              <Text style={styles.datePickerTitle}>
+                {monthNames[pickerMonth]} {pickerYear}
+              </Text>
+              <TouchableOpacity
+                style={styles.datePickerNavButton}
+                onPress={goToNextMonth}
+              >
                 <Icon name="chevron-forward" size={24} color="#333333" />
               </TouchableOpacity>
             </View>
             <View style={styles.fullCalendarContent}>
               <View style={styles.calendarDayLabelsRow}>
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                  <Text key={i} style={styles.calendarDayLabelSmall}>{d}</Text>
+                  <Text key={i} style={styles.calendarDayLabelSmall}>
+                    {d}
+                  </Text>
                 ))}
               </View>
               {calendarGrid.map((week, wi) => (
                 <View key={wi} style={styles.calendarWeekRow}>
                   {week.map((day, di) => {
-                    const isToday = day === currentDay && pickerMonth === currentDate.getMonth() && pickerYear === currentYear;
-                    const isSelected = day === selectedDate && pickerMonth === currentDate.getMonth() && pickerYear === currentYear;
-                    const isFuture = pickerYear > currentYear || (pickerYear === currentYear && pickerMonth > currentDate.getMonth()) || (pickerYear === currentYear && pickerMonth === currentDate.getMonth() && day > currentDay);
-                    const hasData = day ? hasDataForDate(day, pickerMonth, pickerYear) : false;
+                    const isToday =
+                      day === currentDay &&
+                      pickerMonth === currentDate.getMonth() &&
+                      pickerYear === currentYear;
+                    const isSelected =
+                      day === selectedDate &&
+                      pickerMonth === currentDate.getMonth() &&
+                      pickerYear === currentYear;
+                    const isFuture =
+                      pickerYear > currentYear ||
+                      (pickerYear === currentYear &&
+                        pickerMonth > currentDate.getMonth()) ||
+                      (pickerYear === currentYear &&
+                        pickerMonth === currentDate.getMonth() &&
+                        day > currentDay);
+                    const hasData = day
+                      ? hasDataForDate(day, pickerMonth, pickerYear)
+                      : false;
                     const isDisabled = !day || isFuture || !hasData;
                     return (
                       <TouchableOpacity
@@ -3930,19 +4684,26 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
                           styles.fullCalendarDay,
                           !day && styles.fullCalendarDayEmpty,
                           isToday && styles.fullCalendarDayToday,
-                          isSelected && [styles.fullCalendarDaySelected, { backgroundColor: subjectColor }],
-                          isDisabled && !isSelected && styles.fullCalendarDayDisabled,
+                          isSelected && [
+                            styles.fullCalendarDaySelected,
+                            { backgroundColor: subjectColor },
+                          ],
+                          isDisabled &&
+                            !isSelected &&
+                            styles.fullCalendarDayDisabled,
                         ]}
                         onPress={() => !isDisabled && handleDateSelect(day)}
                         disabled={isDisabled}
                       >
                         {day && (
-                          <Text style={[
-                            styles.fullCalendarDayText,
-                            isToday && styles.fullCalendarDayTextToday,
-                            isSelected && styles.fullCalendarDayTextSelected,
-                            isDisabled && styles.fullCalendarDayTextDisabled,
-                          ]}>
+                          <Text
+                            style={[
+                              styles.fullCalendarDayText,
+                              isToday && styles.fullCalendarDayTextToday,
+                              isSelected && styles.fullCalendarDayTextSelected,
+                              isDisabled && styles.fullCalendarDayTextDisabled,
+                            ]}
+                          >
                             {day}
                           </Text>
                         )}
@@ -3953,9 +4714,16 @@ const TopicDetailScreen = ({ topicData, subjectName, allNudges, userData, onBack
               ))}
               <TouchableOpacity
                 style={styles.goTodayButton}
-                onPress={() => { setPickerMonth(currentDate.getMonth()); setPickerYear(currentYear); setSelectedDate(currentDay); setShowDatePicker(false); }}
+                onPress={() => {
+                  setPickerMonth(currentDate.getMonth());
+                  setPickerYear(currentYear);
+                  setSelectedDate(currentDay);
+                  setShowDatePicker(false);
+                }}
               >
-                <Text style={[styles.goTodayText, { color: subjectColor }]}>Go to Today</Text>
+                <Text style={[styles.goTodayText, { color: subjectColor }]}>
+                  Go to Today
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -4597,7 +5365,10 @@ const styles = StyleSheet.create({
   // ─── MODALS ───────────────────────────────────────────────────────────────
   modalOverlay: {
     position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -4694,7 +5465,9 @@ const styles = StyleSheet.create({
   },
   modalVideoThumbnailText: {
     position: 'absolute',
-    bottom: 8, left: 8, right: 8,
+    bottom: 8,
+    left: 8,
+    right: 8,
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -4820,4 +5593,3 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
   },
 });
-

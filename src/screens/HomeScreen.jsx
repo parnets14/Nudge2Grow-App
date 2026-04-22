@@ -353,10 +353,6 @@ const HomeScreen = ({ userData, onNavigate }) => {
               </Text>
               <View style={styles.featuredMeta}>
                 <View style={styles.metaChip}>
-                  <Icon name="time-outline" size={14} color="#666666" />
-                  <Text style={styles.metaChipText}>12 min</Text>
-                </View>
-                <View style={styles.metaChip}>
                   <Icon name="people-outline" size={14} color="#666666" />
                   <Text style={styles.metaChipText}>Grade {child?.grade || '3'}</Text>
                 </View>
@@ -410,10 +406,6 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <View style={styles.cardLeftSection}>
                 <View style={styles.cardIcon}>
                   <MaterialIcon name={nudge.icon} size={24} color={nudge.iconColor} />
-                </View>
-                <View style={styles.cardTimeContainer}>
-                  <Icon name="time-outline" size={14} color="#999999" />
-                  <Text style={styles.cardTimeLeft}>{nudge.duration}</Text>
                 </View>
               </View>
               <View style={styles.cardContent}>
@@ -907,7 +899,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
             <Text style={styles.menuItemText}>Home</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => {
               toggleMenu();
@@ -916,7 +908,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
           >
             <MaterialIcon name="calendar-check" size={24} color="#45a578" />
             <Text style={styles.menuItemText}>Subscription Plan</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity 
             style={styles.menuItem}

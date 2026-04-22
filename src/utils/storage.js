@@ -1,33 +1,57 @@
 /**
- * Simple persistent storage using React Native's built-in NativeModules.
- * Falls back to an in-memory store if native storage is unavailable.
- * Uses the MMKVStorage-compatible approach via global.__storage__.
+ * Persistent storage using AsyncStorage for React Native
  */
 
-// In-memory fallback store (survives screen navigation, lost on full app kill)
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// In-memory cache for synchronous access
 const memStore = {};
 
 export const Storage = {
-  setItem: (key, value) => {
+  setItem: async (key, value) => {
     try {
       memStore[key] = value;
-      // Try to use global persistent store if available (e.g. Hermes global)
-      if (global.__persistentStore__) {
-        global.__persistentStore__[key] = value;
-      } else {
-        global.__persistentStore__ = { ...memStore };
-      }
-    } catch (_) {}
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('[Storage] setItem error:', error);
+    }
   },
 
-  getItem: (key) => {
+  getItem: async (key) => {
     try {
-      if (global.__persistentStore__?.[key] !== undefined) {
-        return global.__persistentStore__[key];
+      // Try memory first
+      if (memStore[key] !== undefined) {
+        return memStore[key];
       }
-      return memStore[key] ?? null;
-    } catch (_) {
+      // Then AsyncStorage
+      const value = await AsyncStorage.getItem(key);
+      if (value !== null) {
+        const parsed = JSON.parse(value);
+        memStore[key] = parsed;
+        return parsed;
+      }
       return null;
+    } catch (error) {
+      console.error('[Storage] getItem error:', error);
+      return null;
+    }
+  },
+
+  removeItem: async (key) => {
+    try {
+      delete memStore[key];
+      await AsyncStorage.removeItem(key);
+    } catch (error) {
+      console.error('[Storage] removeItem error:', error);
+    }
+  },
+
+  clear: async () => {
+    try {
+      Object.keys(memStore).forEach(key => delete memStore[key]);
+      await AsyncStorage.clear();
+    } catch (error) {
+      console.error('[Storage] clear error:', error);
     }
   },
 };

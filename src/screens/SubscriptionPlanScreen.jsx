@@ -2,7 +2,7 @@
  * Subscription Plan Screen - Enhanced with Full Functionality
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { fetchTestimonials, fetchSubscriptionFaqs } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -55,7 +56,45 @@ const SubscriptionPlanScreen = ({ onBack }) => {
   const [showWalletOTP, setShowWalletOTP] = useState(false);
   const [walletOTP, setWalletOTP] = useState('');
   
+  const [testimonials, setTestimonials] = useState([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(true);
+  const [faqs, setFaqs] = useState([]);
+  const [loadingFaqs, setLoadingFaqs] = useState(true);
+  
   const testimonialFlatListRef = useRef(null);
+
+  // Load testimonials from backend
+  useEffect(() => {
+    const loadTestimonials = async () => {
+      try {
+        const data = await fetchTestimonials();
+        setTestimonials(data);
+      } catch (error) {
+        console.error('[SubscriptionPlan] Failed to load testimonials:', error);
+        setTestimonials([]);
+      } finally {
+        setLoadingTestimonials(false);
+      }
+    };
+    loadTestimonials();
+  }, []);
+
+  // Load FAQs from backend
+  useEffect(() => {
+    const loadFaqs = async () => {
+      try {
+        const data = await fetchSubscriptionFaqs();
+        setFaqs(data);
+      } catch (error) {
+        console.error('[SubscriptionPlan] Failed to load FAQs:', error);
+        // Fallback to hardcoded FAQs if fetch fails
+        setFaqs(fallbackFaqs);
+      } finally {
+        setLoadingFaqs(false);
+      }
+    };
+    loadFaqs();
+  }, []);
 
   const banks = [
     'State Bank of India',
@@ -79,26 +118,26 @@ const SubscriptionPlanScreen = ({ onBack }) => {
 
   const currentPlan = {
     id: 'free',
-    name: 'Free Plan',
+    name: 'Free Explorer',
     nudgesUsed: 3,
-    nudgesTotal: 5,
-    daysRemaining: 4,
-    renewDate: 'Feb 14, 2026',
+    nudgesTotal: 'Unlimited subjects',
+    nudgesPerSubject: 2,
+    daysRemaining: null,
+    renewDate: null,
   };
 
   const plans = [
     {
       id: 'free',
-      name: 'Free Starter',
+      name: 'Free Explorer',
       monthlyPrice: 0,
       yearlyPrice: 0,
-      tagline: 'Perfect for trying out',
+      tagline: 'Try before you commit',
       features: [
-        { text: '5 Nudges per week', included: true },
-        { text: 'Basic topics (Science, Math)', included: true },
-        { text: 'Simple progress tracking', included: true },
-        { text: 'Community support', included: true },
-        
+        { text: '2 nudges per subject', included: true },
+        { text: 'Access to all subjects', included: true },
+        { text: 'Up to 3 children profiles', included: true },
+        { text: 'Progress tracking & reports', included: true },
       ],
       color: '#999999',
       icon: 'gift',
@@ -108,15 +147,13 @@ const SubscriptionPlanScreen = ({ onBack }) => {
       name: 'Basic',
       monthlyPrice: 199,
       yearlyPrice: 1999,
-      tagline: 'Great for getting started',
+      tagline: 'Core subjects unlimited',
       popular: false,
       features: [
-        { text: '20 Nudges per week', included: true },
-        { text: 'All basic topics', included: true },
+        { text: 'Unlimited nudges in core subjects', included: true },
+        { text: 'Math, Science, English, Social Studies', included: true },
+        { text: 'Up to 3 children profiles', included: true },
         { text: 'Progress tracking & reports', included: true },
-        { text: 'Email support', included: true },
-        { text: 'Save favorite nudges', included: true },
-      
       ],
       color: '#4A90E2',
       icon: 'rocket',
@@ -126,17 +163,14 @@ const SubscriptionPlanScreen = ({ onBack }) => {
       name: 'Premium',
       monthlyPrice: 299,
       yearlyPrice: 2999,
-      tagline: 'Most popular choice',
+      tagline: 'All subjects unlimited',
       popular: true,
       features: [
-        { text: 'Unlimited daily nudges', included: true },
-        { text: 'All topics & subjects', included: true },
-        { text: 'Detailed progress analytics', included: true },
-        { text: 'Priority email support', included: true },
-        { text: 'Personalized recommendations', included: true },
-        { text: 'Offline access to nudges', included: true },
-        { text: 'Custom nudge creation', included: true },
-        { text: 'Family sharing (2 children)', included: true },
+        { text: 'Unlimited nudges in ALL subjects', included: true },
+        { text: 'Core: Math, Science, English, Social Studies', included: true },
+        { text: 'Premium: AI, Finance, Life Skills & more', included: true },
+        { text: 'Up to 3 children profiles', included: true },
+        { text: 'Progress tracking & reports', included: true },
       ],
       color: '#9B59B6',
       icon: 'star',
@@ -146,17 +180,15 @@ const SubscriptionPlanScreen = ({ onBack }) => {
       name: 'Family Plus',
       monthlyPrice: 499,
       yearlyPrice: 4999,
-      tagline: 'Best value for families',
+      tagline: 'All subjects + priority support',
       recommended: true,
       features: [
-        { text: 'Everything in Premium', included: true },
-        { text: 'Family sharing (up to 5 children)', included: true },
-        { text: 'Dedicated family dashboard', included: true },
-        { text: '24/7 Priority support', included: true },
-        { text: 'Early access to new features', included: true },
-        { text: 'Exclusive family content', included: true },
-        { text: 'Monthly expert webinars', included: true },
-        { text: 'Personalized coaching sessions', included: true },
+        { text: 'Unlimited nudges in ALL subjects', included: true },
+        { text: 'Core: Math, Science, English, Social Studies', included: true },
+        { text: 'Premium: AI, Finance, Life Skills & more', included: true },
+        { text: 'Up to 3 children profiles', included: true },
+        { text: 'Progress tracking & reports', included: true },
+        { text: 'Priority 24/7 support', included: true },
       ],
       color: '#27AE60',
       icon: 'people',
@@ -167,102 +199,91 @@ const SubscriptionPlanScreen = ({ onBack }) => {
     {
       icon: 'brain',
       color: '#4A90E2',
-      title: 'Personalized Learning Paths',
-      description: 'AI-powered recommendations tailored to your child\'s interests, age, and learning style.',
+      title: 'Expert-Curated Learning Nudges',
+      description: 'Every nudge is carefully designed by child development experts and educators to spark meaningful conversations.',
     },
     {
       icon: 'chart-line',
       color: '#9B59B6',
-      title: 'Comprehensive Progress Tracking',
-      description: 'Detailed insights and analytics to monitor your child\'s growth across all learning areas.',
+      title: 'Track Your Child\'s Progress',
+      description: 'Monitor which subjects your child explores and see their learning journey unfold with detailed progress reports.',
     },
     {
       icon: 'account-group',
       color: '#27AE60',
-      title: 'Family Sharing & Collaboration',
-      description: 'Support multiple children with one subscription. Track progress for the whole family.',
+      title: 'Support Up to 3 Children',
+      description: 'All paid plans support up to 3 children. Each child gets their own profile with personalized tracking.',
     },
     {
       icon: 'lightbulb-on',
       color: '#FFB84D',
-      title: 'Expert-Curated Content',
-      description: 'All nudges are designed by child development experts and educators.',
+      title: 'Core & Premium Subjects',
+      description: 'From Math and Science to AI, Financial Literacy, and Life Skills - comprehensive learning across all areas.',
     },
     {
       icon: 'shield-check',
       color: '#27AE60',
       title: 'Safe & Ad-Free Experience',
-      description: 'No ads, no distractions. Just quality learning moments with your child.',
+      description: 'No ads, no distractions. Just quality learning moments with your child in a safe environment.',
     },
     {
-      icon: 'update',
+      icon: 'clock-outline',
       color: '#00CED1',
-      title: 'Regular Content Updates',
-      description: 'New nudges added weekly. Always fresh, engaging activities to explore.',
+      title: 'Just 5-10 Minutes Daily',
+      description: 'Short, engaging nudges that fit into your busy schedule. Quality conversations don\'t need hours.',
     },
   ];
 
-  const faqs = [
+  const fallbackFaqs = [
     {
       id: 1,
-      question: 'Can I cancel my subscription anytime?',
-      answer: 'Yes! You can cancel your subscription at any time from the Settings page. Your access will continue until the end of your current billing period. No questions asked, no cancellation fees.',
+      question: 'What do I get with the free plan?',
+      answer: 'With the free plan, you get 2 nudges per subject to explore and experience the quality of our content. This allows you to try different subjects and see how meaningful conversations can transform your child\'s learning journey.',
     },
     {
       id: 2,
-      question: 'Can I switch plans later?',
-      answer: 'Yes! You can upgrade or downgrade your plan at any time from the Settings page.',
+      question: 'What happens after I use my 2 free nudges per subject?',
+      answer: 'After using your 2 free nudges in any subject, you\'ll need to upgrade to a paid plan to access more nudges in that subject. Paid plans give you unlimited access to nudges based on your chosen plan.',
     },
     {
       id: 3,
-      question: 'What payment methods do you accept?',
-      answer: 'We accept all major credit/debit cards (Visa, Mastercard, American Express), UPI payments, net banking, and popular digital wallets. All transactions are secure and encrypted.',
+      question: 'What\'s the difference between Basic and Premium plans?',
+      answer: 'Basic plan includes unlimited nudges in core subjects (Math, Science, English, Social Studies). Premium plan includes unlimited nudges in ALL subjects - both core subjects and premium subjects like AI & Technology, Financial Literacy, Life Skills, and Environmental Awareness.',
     },
     {
       id: 4,
-      question: 'Can I switch plans later?',
-      answer: 'Yes! You can upgrade or downgrade your plan at any time. When upgrading, you\'ll get immediate access to new features. When downgrading, changes take effect at the end of your current billing cycle.',
+      question: 'How many children can I add to my account?',
+      answer: 'All plans support up to 3 children. Each child gets their own profile with personalized nudges and individual progress tracking.',
     },
     {
       id: 5,
-      question: 'How does family sharing work?',
-      answer: 'Family sharing allows you to add multiple children to your account. Each child gets their own profile with personalized nudges and progress tracking. Premium supports 2 children, Family Plus supports up to 5.',
+      question: 'What payment methods do you accept?',
+      answer: 'We accept all major credit/debit cards (Visa, Mastercard, American Express), UPI payments, net banking, and popular digital wallets like Paytm, PhonePe, and Google Pay. All transactions are secure and encrypted.',
     },
     {
       id: 6,
-      question: 'What happens to my data if I cancel?',
-      answer: 'Your data remains safe for 90 days after cancellation. You can reactivate anytime within this period and pick up where you left off. After 90 days, data is permanently deleted per our privacy policy.',
+      question: 'How long does my subscription last?',
+      answer: 'Your subscription is valid for the duration you choose - either monthly or yearly. Once purchased, you have full access to all features for that entire period. The yearly plan offers better value with 17% savings.',
     },
     {
       id: 7,
-      question: 'Do you offer refunds?',
-      answer: 'Yes! We offer a 30-day money-back guarantee on all paid plans. If you\'re not satisfied for any reason, contact support within 30 days of purchase for a full refund.',
+      question: 'What are core subjects?',
+      answer: 'Core subjects include Math, Science, English, and Social Studies. These are the fundamental academic subjects that form the foundation of your child\'s learning journey.',
     },
     {
       id: 8,
-      question: 'Is the yearly plan really worth it?',
-      answer: 'Definitely! The yearly plan saves you 2 months of subscription cost. Plus, you get uninterrupted access without worrying about monthly renewals. It\'s our most popular billing option.',
-    },
-  ];
-
-  const testimonials = [
-    {
-      name: 'Priya Sharma',
-      role: 'Mother of Child',
-      rating: 5,
-      text: 'Nudge2Grow has transformed our family time! The nudges are so engaging and my kids actually look forward to learning.',
+      question: 'What are premium subjects?',
+      answer: 'Premium subjects include AI & Technology, Financial Literacy, Life Skills, and Environmental Awareness. These subjects are available only in Premium and Family Plus plans, helping your child develop future-ready skills beyond traditional academics.',
     },
     {
-      name: 'Rajesh Kumar',
-      role: 'Father of Child',
-      rating: 5,
-      text: 'Best investment in my child\'s education. The progress tracking helps me see real growth. Highly recommended!',
+      id: 9,
+      question: 'Is the yearly plan worth it?',
+      answer: 'Absolutely! The yearly plan saves you 17% compared to paying monthly. Plus, you get uninterrupted access for the entire year without worrying about monthly renewals. It\'s our most popular billing option among families.',
     },
     {
-      name: 'Anita Desai',
-      role: 'Mother of Child',
-      rating: 5,
-      text: 'Family Plus plan is perfect for us! Managing all three kids\' learning in one place is so convenient.',
+      id: 10,
+      question: 'What\'s the difference between Premium and Family Plus?',
+      answer: 'Both plans include unlimited nudges in all subjects (core + premium) and support up to 3 children. The main difference is that Family Plus includes Priority 24/7 support, ensuring you get immediate assistance whenever you need it.',
     },
   ];
 
@@ -519,7 +540,7 @@ const SubscriptionPlanScreen = ({ onBack }) => {
         <View style={styles.currentPlanCard}>
           <View style={styles.currentPlanHeader}>
             <View style={styles.currentPlanLeft}>
-              <MaterialIcon name="crown" size={28} color="#FFB84D" />
+              <MaterialIcon name="gift" size={28} color="#45a578" />
               <View style={styles.currentPlanInfo}>
                 <Text style={styles.currentPlanLabel}>Your Current Plan</Text>
                 <Text style={styles.currentPlanName}>{currentPlan.name}</Text>
@@ -529,28 +550,20 @@ const SubscriptionPlanScreen = ({ onBack }) => {
 
           <View style={styles.usageContainer}>
             <View style={styles.usageHeader}>
-              <Text style={styles.usageLabel}>Weekly Usage</Text>
+              <Text style={styles.usageLabel}>Free Plan Benefits</Text>
               <Text style={styles.usageCount}>
-                {currentPlan.nudgesUsed} / {currentPlan.nudgesTotal} nudges
+                2 nudges per subject
               </Text>
             </View>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${(currentPlan.nudgesUsed / currentPlan.nudgesTotal) * 100}%` }
-                ]} 
-              />
-            </View>
             <Text style={styles.renewText}>
-              Resets in {currentPlan.daysRemaining} days • {currentPlan.renewDate}
+              Try 2 nudges in each subject to experience quality learning conversations
             </Text>
           </View>
 
           <TouchableOpacity style={styles.upgradePrompt}>
             <MaterialIcon name="arrow-up-circle" size={20} color="#45a578" />
             <Text style={styles.upgradePromptText}>
-              Upgrade for unlimited nudges and premium features
+              Upgrade for unlimited nudges across all subjects
             </Text>
           </TouchableOpacity>
         </View>
@@ -706,12 +719,12 @@ const SubscriptionPlanScreen = ({ onBack }) => {
           );
         })}
 
-        {/* Money-Back Guarantee */}
+        {/* Secure Payment Info */}
         <View style={styles.guaranteeCard}>
           <MaterialIcon name="shield-check" size={48} color="#45a578" />
-          <Text style={styles.guaranteeTitle}>30-Day Money-Back Guarantee</Text>
+          <Text style={styles.guaranteeTitle}>Secure & Easy Payment</Text>
           <Text style={styles.guaranteeText}>
-            Try any paid plan risk-free. If you're not completely satisfied, we'll refund your money within 30 days. No questions asked.
+            All transactions are encrypted and secure. We accept UPI, cards, net banking, and digital wallets. Your subscription starts immediately after successful payment.
           </Text>
         </View>
 
@@ -733,37 +746,39 @@ const SubscriptionPlanScreen = ({ onBack }) => {
         </View>
 
         {/* Testimonials */}
-        <View style={styles.testimonialsSection}>
-          <Text style={styles.testimonialsTitle}>What Parents Are Saying</Text>
+        {testimonials.length > 0 && (
+          <View style={styles.testimonialsSection}>
+            <Text style={styles.testimonialsTitle}>What Parents Are Saying</Text>
 
-          <FlatList
-            ref={testimonialFlatListRef}
-            data={testimonials}
-            renderItem={renderTestimonial}
-            keyExtractor={(item, index) => `testimonial-${index}`}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onViewableItemsChanged={onTestimonialViewableItemsChanged}
-            viewabilityConfig={testimonialViewabilityConfig}
-            snapToInterval={Dimensions.get('window').width - 40}
-            decelerationRate="fast"
-            contentContainerStyle={styles.testimonialsList}
-          />
+            <FlatList
+              ref={testimonialFlatListRef}
+              data={testimonials}
+              renderItem={renderTestimonial}
+              keyExtractor={(item, index) => `testimonial-${index}`}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onViewableItemsChanged={onTestimonialViewableItemsChanged}
+              viewabilityConfig={testimonialViewabilityConfig}
+              snapToInterval={Dimensions.get('window').width - 40}
+              decelerationRate="fast"
+              contentContainerStyle={styles.testimonialsList}
+            />
 
-          {/* Pagination Dots */}
-          <View style={styles.paginationDots}>
-            {testimonials.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  currentTestimonialIndex === index && styles.dotActive,
-                ]}
-              />
-            ))}
+            {/* Pagination Dots */}
+            <View style={styles.paginationDots}>
+              {testimonials.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.dot,
+                    currentTestimonialIndex === index && styles.dotActive,
+                  ]}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* FAQ */}
         <View style={styles.faqSection}>

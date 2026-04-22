@@ -21,7 +21,7 @@ import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { fetchGrades, fetchBoards, fetchAvatars, fetchBeyondSchool, saveProfile, checkEmail as apiCheckEmail } from '../api';
+import { fetchGrades, fetchBoards, fetchAvatars, fetchBeyondSchool, fetchSubjects, saveProfile } from '../api';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -37,10 +37,6 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const [showTopicPreferences, setShowTopicPreferences] = useState(false);
   const [showLifeSkills, setShowLifeSkills] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
-  const [checkingEmail, setCheckingEmail] = useState(false);
-  const [emailMessage, setEmailMessage] = useState('');
-  const [emailStatus, setEmailStatus] = useState(''); // 'registered' or 'new'
-  const [addChildClicked, setAddChildClicked] = useState(false);
   
   // Child form fields
   const [childName, setChildName] = useState('');
@@ -55,6 +51,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   
   // Refs
   const scrollViewRef = useRef(null);
+  const childrenRef = useRef([]);
   
   // Dropdown states
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
@@ -100,12 +97,30 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
       .catch(() => setAvatars(fallbackAvatars));
   }, []);
 
-  const coreAreas = [
+  // Core subjects loaded from admin panel (Learning Subjects)
+  const [coreAreas, setCoreAreas] = useState([
     { id: 'mathematics', name: 'Mathematics', icon: 'calculator', recommended: true },
     { id: 'science', name: 'Science', icon: 'flask', recommended: true },
     { id: 'english', name: 'English', icon: 'book-open-page-variant', recommended: true },
     { id: 'social-studies', name: 'Social Studies', icon: 'earth', recommended: true },
-  ];
+  ]);
+  useEffect(() => {
+    fetchSubjects()
+      .then(data => {
+        if (data.length > 0) {
+          // Filter to show only non-premium (core) subjects
+          const coreSubjects = data.filter(s => s.type !== 'premium' && !s.isPremium);
+          setCoreAreas(coreSubjects.map(s => ({
+            id: s._id || s.id,
+            name: s.name || s.title,
+            icon: s.rnIcon || 'book',
+            imageUrl: s.imageUrl || null,
+            recommended: true
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Beyond School subjects loaded from admin panel
   const [exploratoryAreas, setExploratoryAreas] = useState([
@@ -127,56 +142,12 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const handleEmailChange = (text) => {
     setEmail(text);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const valid = emailRegex.test(text);
-    setIsValid(valid);
-    
-    // Reset states when email changes
-    if (emailMessage || emailStatus) {
-      setEmailMessage('');
-      setEmailStatus('');
-      setAddChildClicked(false);
-    }
-  };
-
-  const handleEmailBlur = async () => {
-    if (isValid && !emailStatus) {
-      setCheckingEmail(true);
-      setEmailMessage('');
-      setEmailStatus('');
-      try {
-        const result = await apiCheckEmail(token, email);
-        if (result.registered) {
-          setEmailStatus('registered');
-          setEmailMessage('Welcome back! Your account has been found. Redirecting to home...');
-          setCheckingEmail(false);
-          setTimeout(() => {
-            if (onFinish) onFinish({ email, children: [], isReturningUser: true });
-          }, 1500);
-        } else {
-          setEmailStatus('new');
-          setEmailMessage('Email not registered. Please continue to add your child details.');
-          setCheckingEmail(false);
-        }
-      } catch {
-        // If check fails, allow user to continue
-        setEmailStatus('new');
-        setEmailMessage('');
-        setCheckingEmail(false);
-      }
-    }
+    setIsValid(emailRegex.test(text));
   };
 
   const handleNext = () => {
-    // Open child form when Next is clicked
     if (isValid) {
-      // First check if email is registered
-      if (!emailStatus) {
-        handleEmailBlur();
-      } else if (emailStatus === 'new') {
-        setShowChildForm(true);
-        setEmailMessage('');
-        setEmailStatus('');
-      }
+      setShowChildForm(true);
     }
   };
 
@@ -219,10 +190,11 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     }
   };
 
-  const childrenRef = useRef([]);
-
   const handleTopicsComplete = () => {
     if (selectedTopics.length > 0) {
+      // Ensure all selected subjects are saved with their levels
+      const finalSubjectLevels = { ...subjectLevels };
+      
       const newChild = {
         name: childName,
         dateOfBirth,
@@ -231,7 +203,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
         email: childEmail,
         avatar: selectedAvatar === 'custom' ? customPhoto : selectedAvatar,
         topics: selectedTopics,
-        subjectLevels,
+        subjectLevels: finalSubjectLevels,
       };
       const updatedChildren = [...children, newChild];
       childrenRef.current = updatedChildren;
@@ -246,6 +218,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
       setSelectedAvatar('');
       setCustomPhoto(null);
       setSelectedTopics([]);
+      setSubjectLevels({});
       setShowTopicPreferences(false);
       setShowLifeSkills(false);
       setShowSuccessScreen(true);
@@ -254,6 +227,11 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
 
   const handleStartNudge = async () => {
     const childrenData = childrenRef.current;
+    console.log('[Setup] handleStartNudge called');
+    console.log('[Setup] Token:', token ? 'Present' : 'Missing');
+    console.log('[Setup] Email:', email);
+    console.log('[Setup] Children count:', childrenData.length);
+    
     // Save to backend if we have a token
     if (token) {
       try {
@@ -263,24 +241,29 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
           ...c,
           avatar: c.avatar && c.avatar.startsWith('data:') ? 'custom' : c.avatar,
         }));
+        console.log('[Setup] Calling saveProfile API...');
         const result = await saveProfile(token, email, childrenForBackend);
-        console.log('[Setup] Profile saved to backend');
+        console.log('[Setup] Profile saved to backend successfully:', result);
         // Merge back the original avatar (with base64) for local display
         const savedChildren = (result?.parent?.children || childrenForBackend).map((sc, i) => ({
           ...sc,
           avatar: childrenData[i]?.avatar || sc.avatar,
         }));
         if (onFinish) {
-          onFinish({ email, children: savedChildren });
+          onFinish({ email, children: savedChildren, token });
         }
         return;
       } catch (err) {
-        console.error('[Setup] Save failed:', err.message);
+        console.error('[Setup] Save failed:', err);
+        console.error('[Setup] Error message:', err.message);
+        console.error('[Setup] Error response:', err.response?.data);
         // Continue to home even if save fails
       }
+    } else {
+      console.log('[Setup] No token, skipping backend save');
     }
     if (onFinish) {
-      onFinish({ email, children: childrenData });
+      onFinish({ email, children: childrenData, token });
     }
   };
 
@@ -346,37 +329,15 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
                 placeholderTextColor="#CCCCCC"
                 value={email}
                 onChangeText={handleEmailChange}
-                onBlur={handleEmailBlur}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                editable={!checkingEmail}
               />
               <View style={styles.emailUnderline} />
               <Text style={styles.emailHint}>
                 For adoption level progress, olympiad test papers and weekly newsletters. No Spamming!
               </Text>
               
-              {/* Email Status Messages */}
-              {checkingEmail && (
-                <View style={styles.messageContainer}>
-                  <MaterialIcon name="loading" size={20} color="#45a578" />
-                  <Text style={styles.checkingText}>Checking email...</Text>
-                </View>
-              )}
-              
-              {emailMessage && emailStatus === 'registered' && (
-                <View style={[styles.messageContainer, styles.successMessage]}>
-                  <Icon name="checkmark-circle" size={20} color="#45a578" />
-                  <Text style={styles.successText}>{emailMessage}</Text>
-                </View>
-              )}
-              
-              {emailMessage && emailStatus === 'new' && (
-                <View style={[styles.messageContainer, styles.warningMessage]}>
-                  <Icon name="alert-circle" size={20} color="#FF9800" />
-                  <Text style={styles.warningText}>{emailMessage}</Text>
-                </View>
-              )}
+
             </View>
 
             {/* Add Child Button - REMOVED */}
@@ -553,7 +514,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
             {/* Foundation Skills Section */}
             <View style={styles.topicSection}>
               <Text style={styles.topicSectionTitle}>Foundation Skills · {grade || 'Grade'}</Text>
-              <Text style={styles.topicSectionHint}>Tap a subject to choose its level</Text>
+              <Text style={styles.topicSectionHint}>Tap each subject to choose its level (all required)</Text>
 
               <View style={styles.subjectGrid}>
                 {coreAreas.map((area) => {
@@ -570,7 +531,15 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
                       }}
                       activeOpacity={0.7}
                     >
-                      <MaterialIcon name={area.icon} size={32} color={isSelected ? '#4A90E2' : '#555'} />
+                      {area.imageUrl ? (
+                        <Image 
+                          source={{ uri: area.imageUrl }} 
+                          style={styles.subjectCardImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <MaterialIcon name={area.icon} size={32} color={isSelected ? '#4A90E2' : '#555'} />
+                      )}
                       <Text style={[styles.subjectCardName, isSelected && styles.subjectCardNameSelected]}>
                         {area.name}
                       </Text>
@@ -594,9 +563,9 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
                 setShowLifeSkills(true);
               }}
               activeOpacity={0.8}
-              disabled={selectedTopics.length < coreAreas.length}
+              disabled={Object.keys(subjectLevels).length < coreAreas.length}
             >
-              {selectedTopics.length >= coreAreas.length ? (
+              {Object.keys(subjectLevels).length >= coreAreas.length ? (
                 <LinearGradient
                   colors={['#00CED1', '#45a578', '#90EE90']}
                   start={{ x: 0, y: 0 }}
@@ -1485,6 +1454,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     gap: 8,
+  },
+  subjectCardImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
   },
   subjectCardSelected: {
     borderColor: '#4A90E2',

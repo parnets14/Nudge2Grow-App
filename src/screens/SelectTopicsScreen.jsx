@@ -2,7 +2,7 @@
  * Select Topics Screen - Step 2: Select Topics from chosen subjects
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,48 +11,151 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getNudgesBySubject } from '../data/nudgesData';
+import { fetchTopicsBySubject, fetchSubjects } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const SelectTopicsScreen = ({ selectedSubjects, onBack, onNavigate, knownTopics, practiceTopics }) => {
-  const [selectedTopics, setSelectedTopics] = useState([]);
+const SelectTopicsScreen = ({ 
+  selectedSubjects, 
+  onBack, 
+  onNavigate, 
+  knownTopics, 
+  practiceTopics, 
+  childSubjects, 
+  previouslySelectedTopics,
+  previouslySelectedTypes,
+  previouslySelectedDuration,
+}) => {
+  const [selectedTopics, setSelectedTopics] = useState(previouslySelectedTopics || []);
+  const [topics, setTopics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [subjectDetails, setSubjectDetails] = useState({});
 
-  // Get all topics from selected subjects
-  const allTopics = [];
-  selectedSubjects.forEach(subjectName => {
-    const nudges = getNudgesBySubject(subjectName);
-    nudges.forEach(nudge => {
-      if (!allTopics.find(t => t.topic === nudge.topic)) {
-        allTopics.push({
-          topic: nudge.topic,
-          subject: nudge.subject,
-          chapter: nudge.chapter,
+  useEffect(() => {
+    loadTopics();
+  }, [selectedSubjects]);
+
+  // Update selected topics if previouslySelectedTopics changes
+  useEffect(() => {
+    if (previouslySelectedTopics && previouslySelectedTopics.length > 0) {
+      setSelectedTopics(previouslySelectedTopics);
+    }
+  }, [previouslySelectedTopics]);
+
+  const loadTopics = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all subjects to get subject details
+      const allSubjects = await fetchSubjects();
+      
+      // Find the selected subject
+      const selectedSubject = allSubjects.find(s => 
+        selectedSubjects.includes(s.name || s.title)
+      );
+      
+      if (selectedSubject) {
+        // Get the student's level for this subject
+        const studentLevel = childSubjects ? childSubjects[selectedSubject._id] : null;
+        
+        console.log('[SelectTopics] Selected subject:', selectedSubject.name);
+        console.log('[SelectTopics] Student level:', studentLevel);
+        
+        // Store subject details for display
+        setSubjectDetails({
+          name: selectedSubject.name || selectedSubject.title,
+          grade: selectedSubject.grade || 'N/A',
+          level: studentLevel || 'Intermediate',
+          imageUrl: selectedSubject.imageUrl,
         });
+        
+        // Fetch topics for this subject
+        const fetchedTopics = await fetchTopicsBySubject(selectedSubject._id);
+        
+        console.log('[SelectTopics] Fetched topics:', fetchedTopics.length);
+        
+        // Filter topics by the student's exact level
+        let filteredTopics = fetchedTopics;
+        
+        if (studentLevel) {
+          const studentLevelLower = studentLevel.toLowerCase();
+          
+          console.log('[SelectTopics] Filtering for exact level:', studentLevel);
+          
+          // Filter topics that match ONLY the student's exact level
+          filteredTopics = fetchedTopics.filter(topic => {
+            // Check if topic has a level field
+            if (topic.level) {
+              const topicLevel = topic.level.toLowerCase();
+              const isMatch = topicLevel === studentLevelLower;
+              
+              console.log('[SelectTopics] Topic:', topic.title || topic.name, '| Level:', topicLevel, '| Match:', isMatch);
+              
+              return isMatch;
+            }
+            // If topic doesn't have a level, exclude it for strict matching
+            console.log('[SelectTopics] Topic:', topic.title || topic.name, '| No level - excluding');
+            return false;
+          });
+        }
+        
+        console.log('[SelectTopics] Filtered topics:', filteredTopics.length);
+        setTopics(filteredTopics);
+      } else {
+        console.log('[SelectTopics] No subject found matching:', selectedSubjects);
+        setTopics([]);
       }
-    });
-  });
+    } catch (err) {
+      console.error('[SelectTopics] Failed to load topics:', err);
+      setTopics([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const toggleTopic = (topicName) => {
-    if (selectedTopics.includes(topicName)) {
-      setSelectedTopics(selectedTopics.filter(t => t !== topicName));
+  const toggleTopic = (topicId) => {
+    if (selectedTopics.includes(topicId)) {
+      setSelectedTopics(selectedTopics.filter(t => t !== topicId));
     } else {
-      setSelectedTopics([...selectedTopics, topicName]);
+      setSelectedTopics([...selectedTopics, topicId]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTopics.length === topics.length) {
+      setSelectedTopics([]);
+    } else {
+      setSelectedTopics(topics.map(t => t._id));
     }
   };
 
   const handleNext = () => {
     if (selectedTopics.length > 0 && onNavigate) {
+      // Get the actual topic objects for the selected IDs
+      const selectedTopicObjects = topics.filter(t => selectedTopics.includes(t._id));
+      
       onNavigate('selectQuestionTypes', { 
         selectedSubjects, 
-        selectedTopics,
+        selectedTopics: selectedTopicObjects,
+        selectedTopicIds: selectedTopics,
+        previouslySelectedTypes,
+        previouslySelectedDuration,
         knownTopics,
-        practiceTopics 
+        practiceTopics,
+        childSubjects
       });
+    }
+  };
+
+  const handleBack = () => {
+    // Pass current selections back when going back
+    if (onBack) {
+      onBack(selectedTopics);
     }
   };
 
@@ -61,7 +164,7 @@ const SelectTopicsScreen = ({ selectedSubjects, onBack, onNavigate, knownTopics,
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Icon name="chevron-back" size={28} color="#333333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Select Topics</Text>
@@ -102,6 +205,7 @@ const SelectTopicsScreen = ({ selectedSubjects, onBack, onNavigate, knownTopics,
             <Text style={styles.stepBadge}>● STEP 2 OF 4</Text>
           </View>
         </View>
+
         <View style={styles.instructionSection}>
           <Text style={styles.instructionTitle}>Pick Topics</Text>
           <Text style={styles.instructionText}>
@@ -109,8 +213,10 @@ const SelectTopicsScreen = ({ selectedSubjects, onBack, onNavigate, knownTopics,
           </Text>
           <View style={styles.selectedCountContainer}>
             <Text style={styles.selectedCount}>{selectedTopics.length} selected</Text>
-            <TouchableOpacity onPress={() => setSelectedTopics(allTopics.map(t => t.topic))}>
-              <Text style={styles.selectAllText}>Select All</Text>
+            <TouchableOpacity onPress={handleSelectAll}>
+              <Text style={styles.selectAllText}>
+                {selectedTopics.length === topics.length ? 'Deselect All' : 'Select All'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -120,33 +226,45 @@ const SelectTopicsScreen = ({ selectedSubjects, onBack, onNavigate, knownTopics,
         </View>
 
         <View style={styles.topicsContainer}>
-          {allTopics.map((item, index) => {
-            const isSelected = selectedTopics.includes(item.topic);
-            const questionCount = Math.floor(Math.random() * 12) + 3; // Random 3-15 questions
+          {loading ? (
+            <Text style={styles.loadingText}>Loading topics...</Text>
+          ) : topics.length === 0 ? (
+            <Text style={styles.emptyText}>No topics available for this subject</Text>
+          ) : (
+            topics.map((topic) => {
+              const isSelected = selectedTopics.includes(topic._id);
+              const topicName = topic.title || topic.name;
 
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[styles.topicCard, isSelected && styles.topicCardSelected]}
-                onPress={() => toggleTopic(item.topic)}
-              >
-                <View style={styles.topicCardLeft}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                    {isSelected && (
-                      <Icon name="checkmark" size={14} color="#FFFFFF" />
-                    )}
+              return (
+                <TouchableOpacity
+                  key={topic._id}
+                  style={[styles.topicCard, isSelected && styles.topicCardSelected]}
+                  onPress={() => toggleTopic(topic._id)}
+                >
+                  <View style={styles.topicCardLeft}>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected && (
+                        <Icon name="checkmark" size={14} color="#FFFFFF" />
+                      )}
+                    </View>
+                    <View style={styles.topicInfo}>
+                      <Text style={styles.topicName}>{topicName}</Text>
+                      <Text style={styles.topicMeta}>
+                        {subjectDetails.name} · {topic.level || subjectDetails.level}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.topicInfo}>
-                    <Text style={styles.topicName}>{item.topic}</Text>
-                    <Text style={styles.topicMeta}>{item.subject} · {item.chapter}</Text>
-                  </View>
-                </View>
-                <View style={styles.questionBadge}>
-                  <Text style={styles.questionCount}>{questionCount} Q's</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                  {topic.imageUrl && (
+                    <Image 
+                      source={{ uri: topic.imageUrl }}
+                      style={styles.topicImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -328,6 +446,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
   },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+    padding: 20,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+    padding: 20,
+    textAlign: 'center',
+  },
   topicCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -383,18 +515,11 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontFamily: 'Montserrat-Regular',
   },
-  questionBadge: {
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  topicImage: {
+    width: 40,
+    height: 40,
     borderRadius: 8,
     flexShrink: 0,
-  },
-  questionCount: {
-    fontSize: isTablet ? 12 : 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    fontFamily: 'Montserrat-Bold',
   },
   bottomSpacing: {
     height: 100,

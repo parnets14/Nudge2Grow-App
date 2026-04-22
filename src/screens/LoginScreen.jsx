@@ -2,7 +2,7 @@
  * Login Screen - Phone Number with Send OTP
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { sendOTP as apiSendOTP, verifyOTP as apiVerifyOTP } from '../api';
+import { sendOTP as apiSendOTP, verifyOTP as apiVerifyOTP, checkPhone as apiCheckPhone } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -36,7 +36,15 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [devOtp, setDevOtp] = useState(''); // shows OTP on screen (dev only)
+  const [statusMsg, setStatusMsg] = useState(''); // 'registered' | 'new' | ''
+  const [isVerifying, setIsVerifying] = useState(false); // Prevent duplicate OTP verification
+
+  // Reset verification flag on component mount
+  useEffect(() => {
+    setIsVerifying(false);
+  }, []);
 
   const countryCodes = [
     { code: '+93', country: 'Afghanistan', flag: '🇦🇫' },
@@ -203,13 +211,72 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
     if (phoneNumber.length < 7) return;
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
     setDevOtp('');
+    setIsVerifying(false); // Reset verification flag when sending new OTP
+    
     try {
+      // First check if phone is registered
+      const checkResult = await apiCheckPhone(phoneNumber, countryCode);
+      
+      if (!checkResult.isRegistered) {
+        // Phone not registered - create account and go to setup
+        setLoading(false);
+        
+        Alert.alert(
+          'Not Registered',
+          'This phone number is not registered. Let\'s create your account!',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Create Account',
+              onPress: async () => {
+                setLoading(true);
+                try {
+                  // Send OTP to create parent record and get token
+                  const otpResult = await apiSendOTP(phoneNumber, countryCode);
+                  // Auto-verify to get token
+                  const verifyResult = await apiVerifyOTP(phoneNumber, otpResult.otp);
+                  
+                  setLoading(false);
+                  // Navigate to setup with token and phone
+                  if (onSendOTP) {
+                    onSendOTP({ 
+                      phoneNumber, 
+                      countryCode, 
+                      token: verifyResult.token, 
+                      isNewUser: true, 
+                      parent: verifyResult.parent 
+                    });
+                  }
+                } catch (err) {
+                  setLoading(false);
+                  setErrorMsg(err.message || 'Failed to create account');
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+      
+      // Phone is registered - show success message
+      setSuccessMsg('✓ Phone number verified! Sending OTP...');
+      
+      // Wait a moment to show the message
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Proceed to send OTP
       const res = await apiSendOTP(phoneNumber, countryCode);
+      setSuccessMsg('');
       setShowOTP(true);
       // Show OTP on screen in dev mode (backend returns it)
       if (res.otp) setDevOtp(res.otp);
     } catch (err) {
+      setSuccessMsg('');
       setErrorMsg(err.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
@@ -218,14 +285,39 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
 
   const handleVerifyOTP = async () => {
     if (otp.length !== 6) return;
+    
+    // Prevent duplicate calls
+    if (isVerifying) {
+      console.log('[LoginScreen] Already verifying OTP, ignoring duplicate call');
+      return;
+    }
+    
+    setIsVerifying(true);
     setLoading(true);
     setErrorMsg('');
+    setStatusMsg('');
+    
     try {
+      console.log('[LoginScreen] Verifying OTP:', { phone: phoneNumber, otp, otpLength: otp.length });
       const data = await apiVerifyOTP(phoneNumber, otp);
+      console.log('[LoginScreen] OTP verified successfully:', data);
       // data = { token, isNewUser, parent }
-      if (onSendOTP) onSendOTP({ phoneNumber, countryCode, token: data.token, isNewUser: data.isNewUser, parent: data.parent });
+      const isRegistered = !data.isNewUser && data.parent?.childrenCount > 0;
+      if (isRegistered) {
+        setStatusMsg('registered');
+        setTimeout(() => {
+          if (onSendOTP) onSendOTP({ phoneNumber, countryCode, token: data.token, isNewUser: data.isNewUser, parent: data.parent });
+        }, 1500);
+      } else {
+        setStatusMsg('new');
+        setTimeout(() => {
+          if (onSendOTP) onSendOTP({ phoneNumber, countryCode, token: data.token, isNewUser: data.isNewUser, parent: data.parent });
+        }, 1500);
+      }
     } catch (err) {
+      console.error('[LoginScreen] OTP verification failed:', err);
       setErrorMsg(err.message || 'Invalid OTP');
+      setIsVerifying(false); // Reset on error so user can retry
     } finally {
       setLoading(false);
     }
@@ -421,7 +513,7 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
               <TextInput
                 style={styles.otpInput}
                 value={otp}
-                onChangeText={setOtp}
+                onChangeText={(text) => setOtp(text.trim())}
                 keyboardType="numeric"
                 maxLength={6}
               />
@@ -437,6 +529,14 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
           </View>
         )}
 
+        {/* Success message */}
+        {successMsg ? (
+          <View style={styles.statusBox}>
+            <Icon name="checkmark-circle" size={20} color="#45a578" />
+            <Text style={styles.statusTextSuccess}>{successMsg}</Text>
+          </View>
+        ) : null}
+
         {/* Error message */}
         {errorMsg ? (
           <Text style={{ color: '#e53e3e', fontSize: 13, textAlign: 'center', marginBottom: 8, paddingHorizontal: 20 }}>
@@ -444,11 +544,25 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
           </Text>
         ) : null}
 
+        {/* Status messages after OTP verify */}
+        {statusMsg === 'registered' && (
+          <View style={styles.statusBox}>
+            <Icon name="checkmark-circle" size={20} color="#45a578" />
+            <Text style={styles.statusTextSuccess}>Your account is registered. Taking you home...</Text>
+          </View>
+        )}
+        {statusMsg === 'new' && (
+          <View style={[styles.statusBox, styles.statusBoxWarning]}>
+            <Icon name="alert-circle" size={20} color="#FF9800" />
+            <Text style={styles.statusTextWarning}>Phone not registered. Let's set up your profile.</Text>
+          </View>
+        )}
+
         {/* Button */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={showOTP ? handleVerifyOTP : handleSendOTP}
-          disabled={loading || (showOTP ? !isOTPValid : !isPhoneValid)}
+          disabled={loading || isVerifying || (showOTP ? !isOTPValid : !isPhoneValid)}
         >
           {renderButton()}
         </TouchableOpacity>
@@ -731,5 +845,39 @@ const styles = StyleSheet.create({
     color: '#333333',
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+
+  statusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F0FFF4',
+    borderWidth: 1,
+    borderColor: '#45a578',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+
+  statusBoxWarning: {
+    backgroundColor: '#FFF8F0',
+    borderColor: '#FF9800',
+  },
+
+  statusTextSuccess: {
+    flex: 1,
+    fontSize: 13,
+    color: '#45a578',
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: '600',
+  },
+
+  statusTextWarning: {
+    flex: 1,
+    fontSize: 13,
+    color: '#FF9800',
+    fontFamily: 'Montserrat-Medium',
+    fontWeight: '600',
   },
 });

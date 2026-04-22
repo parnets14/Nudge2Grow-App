@@ -1,22 +1,17 @@
 ﻿/**
- * API Configuration
- *
- * - Android Emulator  â†’ 10.0.2.2  (maps to your PC's localhost)
- * - Physical Device   â†’ use your PC's WiFi IP (run `ipconfig` to find it)
- *
- * Your current PC IP: 192.168.1.29
- * Change BASE_URL below to match where you're running the app.
+ * API Configuration - Local Development
+ * Mobile app connects to PC's local IP
  */
 
-// âœ… Use this for Android Emulator:
-// export const BASE_URL = 'http://10.0.2.2:5000/api';
+// For local testing, replace with your PC's local IP
+// export const BASE_URL = 'http://192.168.1.22:5000/api';
 
-// âœ… Physical Device â€” your PC's WiFi IP:
-export const BASE_URL = 'http://192.168.1.29:5000/api';
+// For production
+export const BASE_URL = 'https://nudgebackend.onrender.com/api';
 
 export const fetchIntroSlides = async () => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000); // 8s timeout
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
   try {
     const res = await fetch(`${BASE_URL}/intro-slides`, {
@@ -29,7 +24,8 @@ export const fetchIntroSlides = async () => {
     return Array.isArray(data) ? data : [];
   } catch (err) {
     clearTimeout(timeout);
-    console.error('[IntroSlides] fetch error:', err.message);
+    // Silently fail - IntroScreen has fallback data
+    // console.error('[IntroSlides] fetch error:', err.message);
     throw err;
   }
 };
@@ -57,7 +53,9 @@ export const fetchBoards = async () => {
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const res = await fetch(`${BASE_URL}/educational-board`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/educational-board`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -75,7 +73,9 @@ export const fetchAvatars = async () => {
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const res = await fetch(`${BASE_URL}/avatars`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/avatars`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -93,7 +93,9 @@ export const fetchBeyondSchool = async () => {
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const res = await fetch(`${BASE_URL}/customize-learning`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/customize-learning`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -107,7 +109,18 @@ export const fetchBeyondSchool = async () => {
   }
 };
 
-// â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Auth ────────────────────────────────────────────────────────────────────────
+export const checkPhone = async (phone, countryCode) => {
+  const res = await fetch(`${BASE_URL}/user/check-phone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, countryCode }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to check phone');
+  return data; // { isRegistered, message }
+};
+
 export const sendOTP = async (phone, countryCode) => {
   const res = await fetch(`${BASE_URL}/user/send-otp`, {
     method: 'POST',
@@ -131,9 +144,12 @@ export const verifyOTP = async (phone, otp) => {
 };
 
 export const checkEmail = async (token, email) => {
-  const res = await fetch(`${BASE_URL}/user/check-email?email=${encodeURIComponent(email)}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
+  const res = await fetch(
+    `${BASE_URL}/user/check-email?email=${encodeURIComponent(email)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Check failed');
   return data; // { registered: bool }
@@ -144,7 +160,7 @@ export const saveProfile = async (token, email, children) => {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ email, children }),
   });
@@ -153,9 +169,9 @@ export const saveProfile = async (token, email, children) => {
   return data;
 };
 
-export const fetchProfile = async (token) => {
+export const fetchProfile = async token => {
   const res = await fetch(`${BASE_URL}/user/profile`, {
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to fetch profile');
@@ -166,11 +182,13 @@ export const fetchDidYouKnow = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/did-you-know`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/did-you-know`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    // Only active facts, return all â€” app will pick 2
+    // Only active facts, return all – app will pick 2
     return (Array.isArray(data) ? data : []).filter(f => f.isActive !== false);
   } catch (err) {
     clearTimeout(timeout);
@@ -183,7 +201,9 @@ export const fetchRiddles = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/riddles`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/riddles`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -199,7 +219,9 @@ export const fetchParentingInsights = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/parenting-insights`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/parenting-insights`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -215,7 +237,9 @@ export const fetchPhaseCards = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/phase-cards`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/phase-cards`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -236,7 +260,7 @@ export const uploadAvatar = async (token, fileUri) => {
   });
   const res = await fetch(`${BASE_URL}/upload/avatar`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
   const data = await res.json();
@@ -249,7 +273,7 @@ export const updateChild = async (token, childId, childData) => {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(childData),
   });
@@ -263,7 +287,7 @@ export const updateParentEmail = async (token, email) => {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ email }),
   });
@@ -276,7 +300,9 @@ export const fetchSubjects = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/learning-subjects/subjects`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/learning-subjects/subjects`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -288,16 +314,20 @@ export const fetchSubjects = async () => {
   }
 };
 
-export const fetchTopicsBySubject = async (subjectId) => {
+export const fetchTopicsBySubject = async subjectId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/topics`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/topics`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const topics = Array.isArray(data) ? data : [];
-    return subjectId ? topics.filter(t => String(t.subjectId) === String(subjectId)) : topics;
+    return subjectId
+      ? topics.filter(t => String(t.subjectId) === String(subjectId))
+      : topics;
   } catch (err) {
     clearTimeout(timeout);
     console.error('[Topics] fetch error:', err.message);
@@ -305,11 +335,13 @@ export const fetchTopicsBySubject = async (subjectId) => {
   }
 };
 
-export const fetchContentSetByTopic = async (topicId) => {
+export const fetchContentSetByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/content-sets`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/content-sets`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -326,7 +358,9 @@ export const fetchFaqs = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/help-faqs`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/help-faqs`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -338,11 +372,32 @@ export const fetchFaqs = async () => {
   }
 };
 
-export const fetchLearnDetailByTopic = async (topicId) => {
+export const fetchSubscriptionFaqs = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/learn-details`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}/subscription/faqs`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log('[Subscription FAQs] fetched from API:', data.length, 'faqs');
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[Subscription FAQs] fetch error:', err.message);
+    throw err;
+  }
+};
+
+export const fetchLearnDetailByTopic = async topicId => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/learn-details`, {
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -358,7 +413,10 @@ export const fetchLearnDetailByTopic = async (topicId) => {
 export const sendPhoneChangeOTP = async (token, newPhone, countryCode) => {
   const res = await fetch(`${BASE_URL}/user/change-phone/send-otp`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ newPhone, countryCode }),
   });
   const data = await res.json();
@@ -369,7 +427,10 @@ export const sendPhoneChangeOTP = async (token, newPhone, countryCode) => {
 export const verifyPhoneChange = async (token, newPhone, countryCode, otp) => {
   const res = await fetch(`${BASE_URL}/user/change-phone/verify`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ newPhone, countryCode, otp }),
   });
   const data = await res.json();
@@ -380,7 +441,10 @@ export const verifyPhoneChange = async (token, newPhone, countryCode, otp) => {
 export const updatePhone = async (token, phone, countryCode) => {
   const res = await fetch(`${BASE_URL}/user/update-phone`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ phone, countryCode }),
   });
   const data = await res.json();
@@ -391,7 +455,7 @@ export const updatePhone = async (token, phone, countryCode) => {
 export const deleteChild = async (token, childId) => {
   const res = await fetch(`${BASE_URL}/user/children/${childId}`, {
     method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to delete child');
@@ -401,7 +465,10 @@ export const deleteChild = async (token, childId) => {
 export const switchActiveChild = async (token, childId) => {
   const res = await fetch(`${BASE_URL}/user/switch-child`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ childId }),
   });
   const data = await res.json();
@@ -414,11 +481,70 @@ export const addChild = async (token, childData) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(childData),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Failed to add child');
   return data; // { message, child }
+};
+
+// ── Testimonials ──────────────────────────────────────────────────────────────
+export const fetchTestimonials = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/testimonials`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[Testimonials] fetch error:', err.message);
+    throw err;
+  }
+};
+
+// ── Question Types ────────────────────────────────────────────────────────────
+export const fetchQuestionTypes = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/question-types`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log('[QuestionTypes] fetched from API:', data.length, 'types');
+    return (Array.isArray(data) ? data : []).filter(q => q.isActive !== false);
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[QuestionTypes] fetch error:', err.message);
+    throw err;
+  }
+};
+
+// ── Quiz Settings ─────────────────────────────────────────────────────────────
+export const fetchQuizSettings = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/quiz-settings`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log('[QuizSettings] fetched from API:', data.length, 'settings');
+    return (Array.isArray(data) ? data : []).filter(s => s.isActive !== false);
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[QuizSettings] fetch error:', err.message);
+    throw err;
+  }
 };

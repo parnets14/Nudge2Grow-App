@@ -21,7 +21,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DatePicker from 'react-native-date-picker';
-import { BASE_URL, fetchAvatars, fetchBeyondSchool, fetchProfile, saveProfile, addChild as addChildApi, sendPhoneChangeOTP, verifyPhoneChange, updatePhone, updateChild, deleteChild, switchActiveChild, updateParentEmail, uploadAvatar } from '../api';
+import { BASE_URL, fetchAvatars, fetchBeyondSchool, fetchProfile, saveProfile, addChild as addChildApi, sendPhoneChangeOTP, verifyPhoneChange, updatePhone, updateChild, deleteChild, switchActiveChild, updateParentEmail, uploadAvatar, fetchSubjects } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -96,12 +96,31 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   const [newPhone, setNewPhone] = useState(userData?.phoneNumber || userData?.phone || '');
   const [newCountryCode, setNewCountryCode] = useState(userData?.countryCode || '+91');
 
-  const coreAreas = [
+  // Core subjects loaded from admin panel (Learning Subjects)
+  const [coreAreas, setCoreAreas] = useState([
     { id: 'mathematics', name: 'Mathematics', icon: 'calculator-variant-outline' },
     { id: 'science', name: 'Science', icon: 'flask-outline' },
     { id: 'english', name: 'English', icon: 'book-open-outline' },
     { id: 'social-studies', name: 'Social Studies', icon: 'earth' },
-  ];
+  ]);
+  
+  useEffect(() => {
+    fetchSubjects()
+      .then(data => {
+        if (data.length > 0) {
+          // Filter to show only non-premium (core) subjects
+          const coreSubjects = data.filter(s => s.type !== 'premium' && !s.isPremium);
+          setCoreAreas(coreSubjects.map(s => ({
+            id: s._id || s.id,
+            name: s.name || s.title,
+            icon: s.rnIcon || 'book-open-outline',
+            imageUrl: s.imageUrl || null,
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+  
   const levels = ['Basic', 'Intermediate', 'Advanced'];
 
   const grades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
@@ -176,6 +195,9 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
       }
     }
 
+    // Only save subjects that were actually selected (have a level set)
+    const finalSubjectLevels = { ...editSubjectLevels };
+
     const updatedChild = child ? {
       ...child,
       name: editChildName,
@@ -183,7 +205,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
       grade: editChildGrade,
       educationBoard: editChildBoard,
       topics: editChildTopics,
-      subjectLevels: editSubjectLevels,
+      subjectLevels: finalSubjectLevels,
       avatar: updatedAvatar,
     } : null;
 
@@ -268,6 +290,16 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
       Alert.alert('Missing Info', 'Please fill in name, date of birth and grade.');
       return;
     }
+    
+    // Check if already at limit
+    if (userData?.children && userData.children.length >= 3) {
+      Alert.alert('Limit Reached', 'You can add a maximum of 3 children to your account.');
+      return;
+    }
+    
+    // Only save subjects that were actually selected (have a level set)
+    const finalSubjectLevels = { ...newChildSubjectLevels };
+    
     const newChild = {
       name: newChildName.trim(),
       dateOfBirth: newChildDOB.trim(),
@@ -275,34 +307,46 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
       educationBoard: newChildBoard,
       avatar: newChildAvatar,
       topics: newChildTopics,
-      subjectLevels: newChildSubjectLevels,
+      subjectLevels: finalSubjectLevels,
     };
 
-    // Update local state immediately
-    const updatedChildren = [...(userData?.children || []), newChild];
-    if (onUpdateUserData) onUpdateUserData({ children: updatedChildren });
-
-    // Save to backend
+    // Save to backend first
     if (userData?.token) {
       try {
         const res = await addChildApi(userData.token, newChild);
-        // Refresh full profile so _id is populated
+        // Refresh full profile from backend to get the complete data with _id
         const fresh = await fetchProfile(userData.token);
         if (onUpdateUserData) onUpdateUserData({ children: fresh.children });
+        
+        setNewChildName('');
+        setNewChildDOB('');
+        setNewChildGrade('');
+        setNewChildBoard('');
+        setNewChildAvatar('');
+        setNewChildSubjectLevels({});
+        setNewChildTopics([]);
+        setShowAddChild(false);
+        Alert.alert('Success', `${newChild.name} has been added!`);
       } catch (e) {
         console.error('[Settings] addChild failed:', e.message);
+        const errorMsg = e.response?.data?.message || e.message || 'Failed to add child. Please try again.';
+        Alert.alert('Error', errorMsg);
       }
+    } else {
+      // No token - just update local state (shouldn't happen in normal flow)
+      const updatedChildren = [...(userData?.children || []), newChild];
+      if (onUpdateUserData) onUpdateUserData({ children: updatedChildren });
+      
+      setNewChildName('');
+      setNewChildDOB('');
+      setNewChildGrade('');
+      setNewChildBoard('');
+      setNewChildAvatar('');
+      setNewChildSubjectLevels({});
+      setNewChildTopics([]);
+      setShowAddChild(false);
+      Alert.alert('Success', `${newChild.name} has been added!`);
     }
-
-    setNewChildName('');
-    setNewChildDOB('');
-    setNewChildGrade('');
-    setNewChildBoard('');
-    setNewChildAvatar('');
-    setNewChildSubjectLevels({});
-    setNewChildTopics([]);
-    setShowAddChild(false);
-    Alert.alert('Success', `${newChild.name} has been added!`);
   };
 
   const handleDeleteChild = (c) => {
@@ -436,7 +480,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
         <View style={styles.childrenSection}>
           <View style={styles.childrenSectionHeader}>
             <Text style={styles.childrenSectionTitle}>My Children</Text>
-            {(!userData?.children || userData.children.length < 2) && (
+            {(!userData?.children || userData.children.length < 3) && (
               <TouchableOpacity style={styles.addChildBtn} onPress={() => setShowAddChild(true)}>
                 <MaterialIcon name="plus" size={16} color="#45a578" />
                 <Text style={styles.addChildBtnText}>Add Child</Text>
@@ -572,7 +616,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
           )}
         </View>
 
-        {/* ── ACCOUNT SECTION ── */}
+        {/* ── ACCOUNT SECTION ──
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
@@ -587,7 +631,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
             </View>
             <Icon name="chevron-forward" size={20} color="#999999" />
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Notifications Section */}
         <View style={styles.section}>
@@ -856,7 +900,15 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                         return (
                           <View key={area.id} style={styles.subjectLevelCard}>
                             <View style={styles.subjectLevelCardHeader}>
-                              <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                              {area.imageUrl ? (
+                                <Image 
+                                  source={{ uri: area.imageUrl }} 
+                                  style={styles.subjectCardImage}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                              )}
                               <Text style={styles.subjectLevelCardName}>{area.name}</Text>
                             </View>
                             <View style={styles.levelPillRow}>
@@ -1435,7 +1487,15 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                   return (
                     <View key={area.id} style={styles.subjectLevelCard}>
                       <View style={styles.subjectLevelCardHeader}>
-                        <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                        {area.imageUrl ? (
+                          <Image 
+                            source={{ uri: area.imageUrl }} 
+                            style={styles.subjectCardImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                        )}
                         <Text style={styles.subjectLevelCardName}>{area.name}</Text>
                       </View>
                       <View style={styles.levelPillRow}>
@@ -1893,6 +1953,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  subjectCardImage: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
   },
   subjectLevelCardName: {
     fontSize: 14,

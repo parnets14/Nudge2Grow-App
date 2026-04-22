@@ -2,7 +2,7 @@
  * Assessment Hub Screen - Shows quiz creation overview
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,17 +15,38 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { getAllSubjects, getNudgesBySubject } from '../data/nudgesData';
+import { fetchSubjects } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
 const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
-  const allSubjects = getAllSubjects();
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const child = userData?.children?.[0];
   const childName = child?.name || '';
+  const childSubjects = child?.subjectLevels || {};
+
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  const loadSubjects = async () => {
+    try {
+      const data = await fetchSubjects();
+      // Filter to show only subjects the child has selected
+      const childSubjectIds = Object.keys(childSubjects);
+      const filteredSubjects = data.filter(s => childSubjectIds.includes(s._id));
+      setSubjects(filteredSubjects);
+    } catch (err) {
+      console.error('[AssessmentHub] Failed to load subjects:', err);
+      setSubjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -70,11 +91,12 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
   ];
 
   const handleCreateQuiz = () => {
-    const subjectNames = allSubjects.map(s => s.name);
+    const subjectNames = subjects.map(s => s.name || s.title);
     onNavigate && onNavigate('assessment', {
       selectedSubjects: subjectNames,
       knownTopics: [],
       practiceTopics: [],
+      childSubjects: childSubjects,
     });
   };
 
@@ -110,7 +132,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
           </View>
           <View style={styles.heroStats}>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{allSubjects.length}</Text>
+              <Text style={styles.statNumber}>{subjects.length}</Text>
               <Text style={styles.statLabel}>Subjects</Text>
             </View>
             <View style={styles.statBox}>
@@ -133,29 +155,45 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
             scrollEventThrottle={16}
             style={styles.subjectsScrollView}
           >
-            {allSubjects.map((subject) => {
-              const config = subjectConfig[subject.name] || { icon: 'book-outline', color: '#6B7280' };
-              return (
-                <TouchableOpacity
-                  key={subject.name}
-                  style={styles.subjectCard}
-                  onPress={handleCreateQuiz}
-                >
-                  <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
-                    {config.image ? (
-                      <Image 
-                        source={config.image}
-                        style={styles.subjectIconImage}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <MaterialIcon name={config.icon} size={32} color={config.color} />
-                    )}
-                  </View>
-                  <Text style={styles.subjectName}>{subject.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            {loading ? (
+              <Text style={styles.loadingText}>Loading subjects...</Text>
+            ) : subjects.length === 0 ? (
+              <Text style={styles.emptyText}>No subjects selected in profile</Text>
+            ) : (
+              subjects.map((subject) => {
+                const subjectName = subject.name || subject.title;
+                const config = subjectConfig[subjectName] || { icon: 'book-outline', color: '#6B7280' };
+                const level = childSubjects[subject._id] || 'Intermediate';
+                
+                return (
+                  <TouchableOpacity
+                    key={subject._id}
+                    style={styles.subjectCard}
+                    onPress={handleCreateQuiz}
+                  >
+                    <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
+                      {subject.imageUrl ? (
+                        <Image 
+                          source={{ uri: subject.imageUrl }}
+                          style={styles.subjectIconImage}
+                          resizeMode="contain"
+                        />
+                      ) : config.image ? (
+                        <Image 
+                          source={config.image}
+                          style={styles.subjectIconImage}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <MaterialIcon name={config.icon} size={32} color={config.color} />
+                      )}
+                    </View>
+                    <Text style={styles.subjectName}>{subjectName}</Text>
+                    <Text style={styles.subjectLevel}>{level}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </ScrollView>
         </View>
 
@@ -365,6 +403,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Montserrat-Bold',
     lineHeight: isSmallDevice ? 16 : 18,
+  },
+  subjectLevel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#10B981',
+    textAlign: 'center',
+    fontFamily: 'Montserrat-SemiBold',
+    marginTop: 4,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+    padding: 20,
   },
   quizCard: {
     backgroundColor: '#FFFFFF',

@@ -18,12 +18,61 @@ const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const QuizCompleteScreen = ({ selectedSubjects, selectedTopics, selectedTypes, onNavigate }) => {
+const QuizCompleteScreen = ({ 
+  selectedSubjects, 
+  selectedTopics, 
+  selectedTypes, 
+  selectedSetting,
+  selectedDuration,
+  durationOptions,
+  questionTypes,
+  onNavigate 
+}) => {
   const handleBackToHome = () => {
     if (onNavigate) {
       onNavigate('assessmentHub');
     }
   };
+
+  // Get subject names
+  const subjectNames = Array.isArray(selectedSubjects) ? selectedSubjects.join(', ') : 'Subject';
+  
+  // Debug: Log all incoming props
+  console.log('[QuizComplete] === ALL PROPS ===');
+  console.log('[QuizComplete] selectedSetting:', JSON.stringify(selectedSetting, null, 2));
+  console.log('[QuizComplete] selectedDuration:', selectedDuration);
+  console.log('[QuizComplete] durationOptions:', JSON.stringify(durationOptions, null, 2));
+  console.log('[QuizComplete] questionTypes:', JSON.stringify(questionTypes, null, 2));
+  
+  // Try to get the selected setting, with fallback
+  let setting = selectedSetting;
+  if (!setting && selectedDuration && Array.isArray(durationOptions)) {
+    setting = durationOptions.find(opt => opt._id === selectedDuration);
+    console.log('[QuizComplete] Found setting from durationOptions:', setting);
+  }
+  
+  // Get quiz setting details - try multiple field names
+  let questions = 0;
+  if (setting) {
+    questions = setting.questions || setting.Questions || setting.questionCount || 0;
+    console.log('[QuizComplete] Extracted questions from setting:', questions);
+    console.log('[QuizComplete] Setting object keys:', Object.keys(setting));
+  }
+  
+  // Get question type names
+  let questionTypeNames = '';
+  if (Array.isArray(questionTypes) && questionTypes.length > 0) {
+    questionTypeNames = questionTypes.map(type => type.name).join(' + ');
+  } else if (Array.isArray(selectedTypes) && selectedTypes.length > 0) {
+    questionTypeNames = `${selectedTypes.length} question ${selectedTypes.length === 1 ? 'type' : 'types'}`;
+  } else {
+    questionTypeNames = 'Mixed types';
+  }
+
+  console.log('[QuizComplete] === FINAL VALUES ===');
+  console.log('[QuizComplete] Subject:', subjectNames);
+  console.log('[QuizComplete] Questions:', questions);
+  console.log('[QuizComplete] Question Types:', questionTypeNames);
 
   return (
     <View style={styles.container}>
@@ -56,8 +105,10 @@ const QuizCompleteScreen = ({ selectedSubjects, selectedTopics, selectedTypes, o
               <Icon name="document-outline" size={20} color="#6B7280" />
             </View>
             <View style={styles.detailContent}>
-              <Text style={styles.detailTitle}>Mathematics Quiz</Text>
-              <Text style={styles.detailSubtitle}>25 questions · MCQ + True/False</Text>
+              <Text style={styles.detailTitle}>{subjectNames}</Text>
+              <Text style={styles.detailSubtitle}>
+                {questions} Questions · {questionTypeNames}
+              </Text>
             </View>
           </View>
 

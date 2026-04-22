@@ -11,7 +11,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import PersonalSetupScreen from './src/screens/PersonalSetupScreen';
 import { fetchProfile } from './src/api';
 import HomeScreen from './src/screens/HomeScreen';
-import SubscriptionPlanScreen from './src/screens/SubscriptionPlanScreen';
+// import SubscriptionPlanScreen from './src/screens/SubscriptionPlanScreen';
 import MyChildrenScreen from './src/screens/MyChildrenScreen';
 import ProgressReportsScreen from './src/screens/ProgressReportsScreen';
 import LearningProgressScreen from './src/screens/LearningProgressScreen';
@@ -43,16 +43,66 @@ const App = () => {
 
   // Load persisted progress on mount
   useEffect(() => {
-    const saved = Storage.getItem('completedTopics');
-    if (saved) {
-      try { setCompletedTopics(new Set(JSON.parse(saved))); } catch (_) {}
-    }
+    const loadPersistedData = async () => {
+      try {
+        // Load completed topics
+        const saved = await Storage.getItem('completedTopics');
+        if (saved) {
+          setCompletedTopics(new Set(saved));
+        }
+
+        // Load user data and token for auto-login
+        const storedUserData = await Storage.getItem('userData');
+        const storedToken = await Storage.getItem('authToken');
+        
+        if (storedUserData && storedToken) {
+          console.log('[App] Found stored user data, attempting auto-login...');
+          
+          // Verify token is still valid by fetching profile
+          try {
+            const profile = await fetchProfile(storedToken);
+            
+            // Reorder children so activeChildIndex is first
+            let children = profile.children || [];
+            const activeIdx = profile.activeChildIndex || 0;
+            if (activeIdx > 0 && children.length > activeIdx) {
+              children = [children[activeIdx], ...children.filter((_, i) => i !== activeIdx)];
+            }
+            
+            const userData = {
+              ...storedUserData,
+              children,
+              email: profile.email,
+              token: storedToken,
+            };
+            
+            setUserData(userData);
+            setCurrentScreen('home');
+            console.log('[App] Auto-login successful');
+          } catch (err) {
+            console.error('[App] Auto-login failed, token may be expired:', err.message);
+            // Clear invalid data
+            await Storage.removeItem('userData');
+            await Storage.removeItem('authToken');
+            setCurrentScreen('intro');
+          }
+        } else {
+          // No stored data, show intro
+          setCurrentScreen('intro');
+        }
+      } catch (error) {
+        console.error('[App] Error loading persisted data:', error);
+        setCurrentScreen('intro');
+      }
+    };
+
+    loadPersistedData();
   }, []);
 
-  const markTopicComplete = (key) => {
+  const markTopicComplete = async (key) => {
     setCompletedTopics(prev => {
       const next = new Set([...prev, key]);
-      Storage.setItem('completedTopics', JSON.stringify([...next]));
+      Storage.setItem('completedTopics', [...next]);
       return next;
     });
   };
@@ -74,8 +124,20 @@ const App = () => {
   };
 
   const handleLoginSuccess = async (data) => {
+    console.log('[App] handleLoginSuccess called with data:', data);
+    console.log('[App] Token from login:', data.token);
+    console.log('[App] Phone:', data.phoneNumber, data.countryCode);
+    
     const merged = { ...userData, ...data };
     setUserData(merged);
+
+    // Save token for persistent login
+    if (data.token) {
+      await Storage.setItem('authToken', data.token);
+      console.log('[App] Token saved to storage');
+    } else {
+      console.log('[App] WARNING: No token in login data!');
+    }
 
     // If returning user with children, fetch full profile and go to home
     if (!data.isNewUser && data.parent?.childrenCount > 0 && data.token) {
@@ -87,15 +149,22 @@ const App = () => {
         if (activeIdx > 0 && children.length > activeIdx) {
           children = [children[activeIdx], ...children.filter((_, i) => i !== activeIdx)];
         }
-        setUserData({ ...merged, children, email: profile.email });
+        const fullUserData = { ...merged, children, email: profile.email, token: data.token };
+        setUserData(fullUserData);
+        
+        // Save user data for auto-login
+        await Storage.setItem('userData', fullUserData);
+        
         setCurrentScreen('home');
         return;
       } catch (err) {
         console.error('[App] fetchProfile failed:', err.message);
       }
     }
-    // New user or no children — go to setup, pass token directly
+    // New user or no children — go to setup, pass token and phone
+    console.log('[App] Setting setupToken to:', data.token);
     setSetupToken(data.token || null);
+    setUserData({ ...merged, phoneNumber: data.phoneNumber, countryCode: data.countryCode, token: data.token });
     setCurrentScreen('setup');
   };
 
@@ -108,8 +177,24 @@ const App = () => {
     setCurrentScreen('login');
   };
 
-  const handleSetupFinish = (data) => {
-    setUserData({ ...(userData || {}), ...data });
+  const handleSetupFinish = async (data) => {
+    console.log('[App] handleSetupFinish called with data:', data);
+    console.log('[App] Token in setup finish:', data.token);
+    
+    const fullUserData = { ...(userData || {}), ...data };
+    setUserData(fullUserData);
+    
+    // Save user data for persistent login
+    await Storage.setItem('userData', fullUserData);
+    
+    // IMPORTANT: Also save the token if present
+    if (data.token) {
+      await Storage.setItem('authToken', data.token);
+      console.log('[App] Token saved from setup');
+    } else {
+      console.log('[App] WARNING: No token in setup data!');
+    }
+    
     setCurrentScreen('home');
   };
 
@@ -350,30 +435,45 @@ const App = () => {
     }
   };
 
-  const handleSelectTopicsBack = () => {
+  const handleSelectTopicsBack = (selectedTopicIds) => {
     if (navigationHistory.length > 0) {
       const previousScreen = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(navigationHistory.slice(0, -1));
+      // Pass selected subjects back to AssessmentScreen
+      setNavigationParams({
+        ...navigationParams,
+        previouslySelectedSubjects: navigationParams.selectedSubjects,
+      });
       setCurrentScreen(previousScreen);
     } else {
       setCurrentScreen('assessment');
     }
   };
 
-  const handleSelectQuestionTypesBack = () => {
+  const handleSelectQuestionTypesBack = (selectedTopicIds) => {
     if (navigationHistory.length > 0) {
       const previousScreen = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(navigationHistory.slice(0, -1));
+      // Pass selected topics back to SelectTopicsScreen
+      setNavigationParams({
+        ...navigationParams,
+        previouslySelectedTopics: selectedTopicIds || navigationParams.selectedTopicIds,
+      });
       setCurrentScreen(previousScreen);
     } else {
       setCurrentScreen('selectTopics');
     }
   };
 
-  const handleQuizSettingsBack = () => {
+  const handleQuizSettingsBack = (selectedTypes) => {
     if (navigationHistory.length > 0) {
       const previousScreen = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(navigationHistory.slice(0, -1));
+      // Pass selected types back to SelectQuestionTypesScreen
+      setNavigationParams({
+        ...navigationParams,
+        previouslySelectedTypes: selectedTypes || navigationParams.selectedTypes,
+      });
       setCurrentScreen(previousScreen);
     } else {
       setCurrentScreen('selectQuestionTypes');
@@ -398,9 +498,11 @@ const App = () => {
     setCurrentScreen('home');
   };
 
-  const handleLogout = () => {
-    // Clear user data and go to login screen
+  const handleLogout = async () => {
+    // Clear user data and stored credentials
     setUserData(null);
+    await Storage.removeItem('userData');
+    await Storage.removeItem('authToken');
     setCurrentScreen('login');
   };
 
@@ -535,7 +637,9 @@ const App = () => {
         return (
           <AssessmentScreen 
             knownTopics={navigationParams.knownTopics} 
-            practiceTopics={navigationParams.practiceTopics} 
+            practiceTopics={navigationParams.practiceTopics}
+            childSubjects={navigationParams.childSubjects}
+            previouslySelectedSubjects={navigationParams.previouslySelectedSubjects}
             onBack={handleAssessmentBack}
             onNavigate={handleAssessmentNavigate}
           />
@@ -546,6 +650,10 @@ const App = () => {
             selectedSubjects={navigationParams.selectedSubjects}
             knownTopics={navigationParams.knownTopics}
             practiceTopics={navigationParams.practiceTopics}
+            childSubjects={navigationParams.childSubjects}
+            previouslySelectedTopics={navigationParams.previouslySelectedTopics || navigationParams.selectedTopicIds}
+            previouslySelectedTypes={navigationParams.previouslySelectedTypes}
+            previouslySelectedDuration={navigationParams.previouslySelectedDuration}
             onBack={handleSelectTopicsBack}
             onNavigate={handleAssessmentNavigate}
           />
@@ -555,8 +663,12 @@ const App = () => {
           <SelectQuestionTypesScreen
             selectedSubjects={navigationParams.selectedSubjects}
             selectedTopics={navigationParams.selectedTopics}
+            selectedTopicIds={navigationParams.selectedTopicIds}
             knownTopics={navigationParams.knownTopics}
             practiceTopics={navigationParams.practiceTopics}
+            childSubjects={navigationParams.childSubjects}
+            previouslySelectedTypes={navigationParams.previouslySelectedTypes || navigationParams.selectedTypes}
+            previouslySelectedDuration={navigationParams.previouslySelectedDuration}
             onBack={handleSelectQuestionTypesBack}
             onNavigate={handleAssessmentNavigate}
           />
@@ -567,8 +679,10 @@ const App = () => {
             selectedSubjects={navigationParams.selectedSubjects}
             selectedTopics={navigationParams.selectedTopics}
             selectedTypes={navigationParams.selectedTypes}
+            questionTypes={navigationParams.questionTypes}
             knownTopics={navigationParams.knownTopics}
             practiceTopics={navigationParams.practiceTopics}
+            previouslySelectedDuration={navigationParams.previouslySelectedDuration || navigationParams.selectedDuration}
             onBack={handleQuizSettingsBack}
             onNavigate={handleAssessmentNavigate}
           />
@@ -579,6 +693,10 @@ const App = () => {
             selectedSubjects={navigationParams.selectedSubjects}
             selectedTopics={navigationParams.selectedTopics}
             selectedTypes={navigationParams.selectedTypes}
+            selectedSetting={navigationParams.selectedSetting}
+            selectedDuration={navigationParams.selectedDuration}
+            durationOptions={navigationParams.durationOptions}
+            questionTypes={navigationParams.questionTypes}
             onNavigate={handleAssessmentNavigate}
           />
         );

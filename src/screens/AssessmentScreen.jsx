@@ -2,7 +2,7 @@
  * Assessment Screen - Step 1: Select Subjects
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,16 +15,46 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { getAllSubjects } from '../data/nudgesData';
+import { fetchSubjects } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const AssessmentScreen = ({ onBack, onNavigate, knownTopics, practiceTopics }) => {
-  const [selectedSubjects, setSelectedSubjects] = useState([]);
+const AssessmentScreen = ({ 
+  onBack, 
+  onNavigate, 
+  knownTopics, 
+  practiceTopics, 
+  childSubjects,
+  previouslySelectedSubjects // Add this prop
+}) => {
+  const [selectedSubjects, setSelectedSubjects] = useState(previouslySelectedSubjects || []);
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const allSubjects = getAllSubjects();
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  const loadSubjects = async () => {
+    try {
+      const data = await fetchSubjects();
+      // Filter to show only subjects the child has selected
+      if (childSubjects) {
+        const childSubjectIds = Object.keys(childSubjects);
+        const filteredSubjects = data.filter(s => childSubjectIds.includes(s._id));
+        setSubjects(filteredSubjects);
+      } else {
+        setSubjects(data);
+      }
+    } catch (err) {
+      console.error('[Assessment] Failed to load subjects:', err);
+      setSubjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Subject configuration
   const subjectConfig = {
@@ -47,7 +77,7 @@ const AssessmentScreen = ({ onBack, onNavigate, knownTopics, practiceTopics }) =
 
   const handleNext = () => {
     if (selectedSubjects.length > 0 && onNavigate) {
-      onNavigate('selectTopics', { selectedSubjects, knownTopics, practiceTopics });
+      onNavigate('selectTopics', { selectedSubjects, knownTopics, practiceTopics, childSubjects });
     }
   };
 
@@ -105,37 +135,51 @@ const AssessmentScreen = ({ onBack, onNavigate, knownTopics, practiceTopics }) =
         </View>
 
         <View style={styles.subjectsGrid}>
-          {allSubjects.map((subject) => {
-            const config = subjectConfig[subject.name] || { icon: 'book-outline', color: '#666666' };
-            const isSelected = selectedSubjects.includes(subject.name);
+          {loading ? (
+            <Text style={styles.loadingText}>Loading subjects...</Text>
+          ) : subjects.length === 0 ? (
+            <Text style={styles.emptyText}>No subjects available</Text>
+          ) : (
+            subjects.map((subject) => {
+              const subjectName = subject.name || subject.title;
+              const config = subjectConfig[subjectName] || { icon: 'book-outline', color: '#666666' };
+              const isSelected = selectedSubjects.includes(subjectName);
+              const level = childSubjects ? childSubjects[subject._id] : null;
 
-            return (
-              <TouchableOpacity
-                key={subject.name}
-                style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
-                onPress={() => toggleSubject(subject.name)}
-              >
-                {isSelected && (
-                  <View style={styles.checkmark}>
-                    <Icon name="checkmark" size={16} color="#FFFFFF" />
-                  </View>
-                )}
-                <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
-                  {config.image ? (
-                    <Image 
-                      source={config.image}
-                      style={styles.subjectIconImage}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <MaterialIcon name={config.icon} size={28} color={config.color} />
+              return (
+                <TouchableOpacity
+                  key={subject._id}
+                  style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
+                  onPress={() => toggleSubject(subjectName)}
+                >
+                  {isSelected && (
+                    <View style={styles.checkmark}>
+                      <Icon name="checkmark" size={16} color="#FFFFFF" />
+                    </View>
                   )}
-                </View>
-                <Text style={styles.subjectName}>{subject.name}</Text>
-                <Text style={styles.topicCount}>{subject.topicCount} topics</Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
+                    {subject.imageUrl ? (
+                      <Image 
+                        source={{ uri: subject.imageUrl }}
+                        style={styles.subjectIconImage}
+                        resizeMode="contain"
+                      />
+                    ) : config.image ? (
+                      <Image 
+                        source={config.image}
+                        style={styles.subjectIconImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <MaterialIcon name={config.icon} size={28} color={config.color} />
+                    )}
+                  </View>
+                  <Text style={styles.subjectName}>{subjectName}</Text>
+                  {level && <Text style={styles.subjectLevel}>{level}</Text>}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -278,6 +322,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Montserrat-Bold',
     marginBottom: 3,
+  },
+  subjectLevel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#10B981',
+    textAlign: 'center',
+    fontFamily: 'Montserrat-SemiBold',
+    marginTop: 2,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+    padding: 20,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Regular',
+    padding: 20,
+    textAlign: 'center',
   },
   topicCount: {
     fontSize: isTablet ? 11 : 10,
