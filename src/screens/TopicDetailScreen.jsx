@@ -3158,8 +3158,8 @@ const TopicDetailScreen = ({
   const fixUrl = url =>
     url
       ? url.replace(
-          'https://nudgebackend.onrender.com',
-          'https://nudgebackend.onrender.com',
+          'http://192.168.1.22:5000',
+          'http://192.168.1.22:5000',
         )
       : url;
 

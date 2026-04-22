@@ -683,6 +683,7 @@ const App = () => {
             knownTopics={navigationParams.knownTopics}
             practiceTopics={navigationParams.practiceTopics}
             previouslySelectedDuration={navigationParams.previouslySelectedDuration || navigationParams.selectedDuration}
+            userData={userData}
             onBack={handleQuizSettingsBack}
             onNavigate={handleAssessmentNavigate}
           />
@@ -697,6 +698,7 @@ const App = () => {
             selectedDuration={navigationParams.selectedDuration}
             durationOptions={navigationParams.durationOptions}
             questionTypes={navigationParams.questionTypes}
+            userData={userData}
             onNavigate={handleAssessmentNavigate}
           />
         );

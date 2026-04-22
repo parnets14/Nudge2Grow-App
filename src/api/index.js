@@ -7,7 +7,7 @@
 // export const BASE_URL = 'http://192.168.1.22:5000/api';
 
 // For production
-export const BASE_URL = 'https://nudgebackend.onrender.com/api';
+export const BASE_URL = 'http://192.168.1.22:5000/api';
 
 export const fetchIntroSlides = async () => {
   const controller = new AbortController();
@@ -545,6 +545,31 @@ export const fetchQuizSettings = async () => {
   } catch (err) {
     clearTimeout(timeout);
     console.error('[QuizSettings] fetch error:', err.message);
+    throw err;
+  }
+};
+
+// ── Send Quiz Email ───────────────────────────────────────────────────────────
+export const sendQuizEmail = async (quizData) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(`${BASE_URL}/quiz-questions/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(quizData),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to send quiz email');
+    console.log('[QuizEmail] Email sent successfully:', data);
+    return data;
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[QuizEmail] send error:', err.message);
     throw err;
   }
 };

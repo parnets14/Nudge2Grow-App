@@ -105,8 +105,8 @@ const SubjectsListScreen = ({
           ...s,
           imageUrl: s.imageUrl
             ? s.imageUrl.replace(
-                'https://nudgebackend.onrender.com',
-                'https://nudgebackend.onrender.com',
+                'http://192.168.1.22:5000',
+                'http://192.168.1.22:5000',
               )
             : s.imageUrl,
         }));
@@ -120,8 +120,8 @@ const SubjectsListScreen = ({
                 ...t,
                 imageUrl: t.imageUrl
                   ? t.imageUrl.replace(
-                      'https://nudgebackend.onrender.com',
-                      'https://nudgebackend.onrender.com',
+                      'http://192.168.1.22:5000',
+                      'http://192.168.1.22:5000',
                     )
                   : t.imageUrl,
               })),

@@ -2,7 +2,7 @@
  * Quiz Complete Screen - Success screen after quiz PDF generation
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,12 @@ import {
   StatusBar,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { sendQuizEmail } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -26,8 +29,69 @@ const QuizCompleteScreen = ({
   selectedDuration,
   durationOptions,
   questionTypes,
-  onNavigate 
+  onNavigate,
+  userData // Add userData to get user email
 }) => {
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
+  // Send email when component mounts
+  useEffect(() => {
+    sendEmail();
+  }, []);
+
+  const sendEmail = async () => {
+    try {
+      setEmailSending(true);
+      setEmailError('');
+
+      // Get user email from userData
+      const userEmail = userData?.email;
+      
+      if (!userEmail) {
+        setEmailError('No email address found. Please update your profile with an email address.');
+        setEmailSending(false);
+        return;
+      }
+
+      // Try to get the selected setting, with fallback
+      let setting = selectedSetting;
+      if (!setting && selectedDuration && Array.isArray(durationOptions)) {
+        setting = durationOptions.find(opt => opt._id === selectedDuration);
+      }
+
+      // Prepare quiz data for email
+      const quizData = {
+        selectedSubjects: Array.isArray(selectedSubjects) ? selectedSubjects : [selectedSubjects],
+        selectedTopics: selectedTopics || [],
+        selectedTypes: selectedTypes || [],
+        selectedSetting: setting || {},
+        userEmail: userEmail,
+      };
+
+      console.log('[QuizComplete] Sending email with data:', quizData);
+
+      // Call API to send email
+      const response = await sendQuizEmail(quizData);
+      
+      console.log('[QuizComplete] Email sent successfully:', response);
+      setEmailSent(true);
+    } catch (error) {
+      console.error('[QuizComplete] Error sending email:', error);
+      setEmailError(error.message || 'Failed to send email. Please try again.');
+      
+      // Show alert to user
+      Alert.alert(
+        'Email Error',
+        error.message || 'Failed to send quiz to your email. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const handleBackToHome = () => {
     if (onNavigate) {
       onNavigate('assessmentHub');
@@ -80,22 +144,58 @@ const QuizCompleteScreen = ({
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Done!</Text>
+          <Text style={styles.headerTitle}>
+            {emailSending ? 'Sending...' : emailSent ? 'Done!' : 'Processing...'}
+          </Text>
         </View>
 
-        {/* Success Icon */}
+        {/* Success/Loading Icon */}
         <View style={styles.iconContainer}>
           <View style={styles.iconBackground}>
-            <Icon name="checkmark" size={40} color="#27AE60" />
+            {emailSending ? (
+              <ActivityIndicator size="large" color="#27AE60" />
+            ) : emailSent ? (
+              <Icon name="checkmark" size={40} color="#27AE60" />
+            ) : emailError ? (
+              <Icon name="alert-circle" size={40} color="#EF4444" />
+            ) : (
+              <ActivityIndicator size="large" color="#27AE60" />
+            )}
           </View>
         </View>
 
-        {/* Success Message */}
+        {/* Success/Error Message */}
         <View style={styles.messageSection}>
-          <Text style={styles.mainTitle}>Quiz is Ready!</Text>
-          <Text style={styles.subtitle}>
-            Your quiz and answer sheet PDFs have been sent to your registered email address.
-          </Text>
+          {emailSending ? (
+            <>
+              <Text style={styles.mainTitle}>Generating Your Quiz...</Text>
+              <Text style={styles.subtitle}>
+                Please wait while we prepare and send your quiz PDFs to your email.
+              </Text>
+            </>
+          ) : emailSent ? (
+            <>
+              <Text style={styles.mainTitle}>Quiz is Ready!</Text>
+              <Text style={styles.subtitle}>
+                Your quiz and answer sheet PDFs have been sent to your registered email address.
+              </Text>
+              
+            </>
+          ) : emailError ? (
+            <>
+              <Text style={[styles.mainTitle, { color: '#EF4444' }]}>Email Failed</Text>
+              <Text style={styles.subtitle}>
+                {emailError}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.mainTitle}>Processing...</Text>
+              <Text style={styles.subtitle}>
+                Setting up your quiz...
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Quiz Details Card */}
@@ -126,21 +226,41 @@ const QuizCompleteScreen = ({
         </View>
 
         {/* Email Confirmation */}
-        <View style={styles.emailConfirmation}>
-          <Icon name="checkmark-circle" size={18} color="#27AE60" />
-          <Text style={styles.emailText}>Sent to your email ✓</Text>
-        </View>
+        {emailSent && (
+          <>
+            <View style={styles.emailConfirmation}>
+              <Icon name="checkmark-circle" size={18} color="#27AE60" />
+              <Text style={styles.emailText}>Sent to {userData?.email || 'your email'} ✓</Text>
+            </View>
+            
+           
+          </>
+        )}
+
+        {/* Retry Button for Error */}
+        {emailError && (
+          <TouchableOpacity style={styles.retryButton} onPress={sendEmail}>
+            <Icon name="refresh" size={16} color="#FFFFFF" />
+            <Text style={styles.retryButtonText}>Retry Sending Email</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Print Instruction */}
-        <View style={styles.printInstruction}>
-          <Icon name="print-outline" size={16} color="#6B7280" />
-          <Text style={styles.printText}>Print it out and hand it to your child!</Text>
-        </View>
+        {emailSent && (
+          <View style={styles.printInstruction}>
+            <Icon name="print-outline" size={16} color="#6B7280" />
+            <Text style={styles.printText}>Print it out and hand it to your child!</Text>
+          </View>
+        )}
       </View>
 
       {/* Footer Button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.homeButton} onPress={handleBackToHome}>
+        <TouchableOpacity 
+          style={[styles.homeButton, emailSending && styles.homeButtonDisabled]} 
+          onPress={handleBackToHome}
+          disabled={emailSending}
+        >
           <Text style={styles.homeButtonText}>Back to Home</Text>
           <Icon name="home" size={18} color="#FFFFFF" style={styles.buttonIcon} />
         </TouchableOpacity>
@@ -267,6 +387,26 @@ const styles = StyleSheet.create({
     color: '#27AE60',
     fontFamily: 'Montserrat-Bold',
   },
+  spamNotice: {
+    backgroundColor: '#FEF3C7',
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  spamNoticeText: {
+    flex: 1,
+    fontSize: isTablet ? 11 : 10,
+    fontWeight: '600',
+    color: '#92400E',
+    lineHeight: 16,
+    fontFamily: 'Montserrat-SemiBold',
+  },
   printInstruction: {
     backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
@@ -297,6 +437,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
   },
+  homeButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
   homeButtonText: {
     fontSize: isTablet ? 15 : 14,
     fontWeight: '700',
@@ -305,6 +448,23 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginLeft: 8,
+  },
+  retryButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
+  retryButtonText: {
+    fontSize: isTablet ? 12 : 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
   },
 });
 

@@ -30,7 +30,8 @@ const QuizSettingsScreen = ({
   onBack, 
   onNavigate,
   knownTopics,
-  practiceTopics 
+  practiceTopics,
+  userData // Add userData prop
 }) => {
   const [selectedDuration, setSelectedDuration] = useState(previouslySelectedDuration || null);
   const [selectedOption, setSelectedOption] = useState(null); // Store the full option object
@@ -129,6 +130,7 @@ const QuizSettingsScreen = ({
           selectedDuration, // Pass the selected duration ID
           durationOptions, // Pass all options as backup
           questionTypes, // Pass question types array
+          userData, // Pass userData to complete screen
         });
       }
     } else {
