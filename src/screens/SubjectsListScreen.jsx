@@ -21,7 +21,7 @@ import {
   getNudgesBySubject,
   getNudgesByGradeAndLevel,
 } from '../data/nudgesData';
-import { fetchSubjects, fetchTopicsBySubject } from '../api';
+import { BASE_URL, fetchSubjects, fetchTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -385,7 +385,7 @@ const SubjectsListScreen = ({
                   : 12;
                 const completedCount = gradeFilteredTopics
                   ? gradeFilteredTopics.filter(t =>
-                      completedTopics.has(`${subject.name}::${t.title}`),
+                      completedTopics.has(`${subject.name}::${t.topic || t.title}`),
                     ).length
                   : 0;
                 const progress =
@@ -443,12 +443,12 @@ const SubjectsListScreen = ({
                             subjectName: subject.name,
                             topicData: {
                               subject: subject.name,
-                              topic: apiTopics[0].title,
+                              topic: apiTopics[0].topic || apiTopics[0].title,
                               apiTopics,
                             },
                             allNudges: apiTopics.map(t => ({
                               subject: subject.name,
-                              topic: t.title,
+                              topic: t.topic || t.title,
                               apiTopic: t,
                             })),
                             apiSubject: subject,
@@ -467,7 +467,7 @@ const SubjectsListScreen = ({
                         >
                           {subject.imageUrl ? (
                             <Image
-                              source={{ uri: subject.imageUrl }}
+                              source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
                               style={styles.subjectIconImage}
                               resizeMode="contain"
                             />
@@ -623,7 +623,7 @@ const SubjectsListScreen = ({
                           >
                             {subject.imageUrl ? (
                               <Image
-                                source={{ uri: subject.imageUrl }}
+                                source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
                                 style={styles.subjectIconImage}
                                 resizeMode="contain"
                               />

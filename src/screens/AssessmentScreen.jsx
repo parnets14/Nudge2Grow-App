@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { fetchSubjects } from '../api';
+import { BASE_URL, fetchSubjects } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -160,7 +160,7 @@ const AssessmentScreen = ({
                   <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
                     {subject.imageUrl ? (
                       <Image 
-                        source={{ uri: subject.imageUrl }}
+                        source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
                         style={styles.subjectIconImage}
                         resizeMode="contain"
                       />

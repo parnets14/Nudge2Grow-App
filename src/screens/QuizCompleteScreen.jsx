@@ -61,6 +61,14 @@ const QuizCompleteScreen = ({
         setting = durationOptions.find(opt => opt._id === selectedDuration);
       }
 
+      console.log('[QuizComplete] ===== QUIZ DATA DEBUG =====');
+      console.log('[QuizComplete] selectedSetting:', selectedSetting);
+      console.log('[QuizComplete] setting after fallback:', setting);
+      console.log('[QuizComplete] setting.questions:', setting?.questions);
+      console.log('[QuizComplete] setting type:', typeof setting);
+      console.log('[QuizComplete] setting keys:', setting ? Object.keys(setting) : 'null');
+      console.log('[QuizComplete] ===== END DEBUG =====');
+
       // Prepare quiz data for email
       const quizData = {
         selectedSubjects: Array.isArray(selectedSubjects) ? selectedSubjects : [selectedSubjects],
@@ -68,9 +76,11 @@ const QuizCompleteScreen = ({
         selectedTypes: selectedTypes || [],
         selectedSetting: setting || {},
         userEmail: userEmail,
+        userId: userData?._id || null,
+        childName: userData?.children?.[0]?.name || '',
       };
 
-      console.log('[QuizComplete] Sending email with data:', quizData);
+      console.log('[QuizComplete] Sending email with data:', JSON.stringify(quizData, null, 2));
 
       // Call API to send email
       const response = await sendQuizEmail(quizData);

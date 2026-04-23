@@ -78,7 +78,7 @@ const CircularProgress = ({ percentage, color, size = 50 }) => {
   );
 };
 
-const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
+const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics = new Set() }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('weekly');
   const [selectedBar, setSelectedBar] = useState(null);
   const [showAllKnownTopics, setShowAllKnownTopics] = useState(false);
@@ -92,6 +92,63 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
   }, []);
 
   const child = userData?.children?.[0];
+
+  // Calculate user activity metrics
+  const calculateActivityMetrics = () => {
+    const completedCount = completedTopics.size;
+    
+    // Get activity from last 7 days (you can enhance this with actual timestamp tracking)
+    const metrics = {
+      completedTopics: completedCount,
+      isActive: completedCount > 0,
+      isOnFire: completedCount >= 5, // Completed 5+ topics
+      isTopPerformer: completedCount >= 10, // Completed 10+ topics
+    };
+    
+    return metrics;
+  };
+
+  const activityMetrics = calculateActivityMetrics();
+
+  // Determine user status based on activity
+  const getUserStatus = () => {
+    if (activityMetrics.completedTopics === 0) {
+      return 'New Learner';
+    } else if (activityMetrics.completedTopics < 3) {
+      return 'Getting Started';
+    } else if (activityMetrics.completedTopics < 10) {
+      return 'Active Learner';
+    } else {
+      return 'Super Learner';
+    }
+  };
+
+  // Get dynamic badges based on activity
+  const getUserBadges = () => {
+    const badges = [];
+    
+    if (activityMetrics.isOnFire) {
+      badges.push({ emoji: '🔥', text: 'On Fire!', color: '#FED7AA' });
+    }
+    
+    if (activityMetrics.isTopPerformer) {
+      badges.push({ emoji: '⭐', text: 'Top Performer', color: '#EDE9FE' });
+    }
+    
+    if (activityMetrics.completedTopics >= 20) {
+      badges.push({ emoji: '🏆', text: 'Champion', color: '#FEF3C7' });
+    }
+    
+    // If no badges earned yet, show encouraging badge
+    if (badges.length === 0 && activityMetrics.isActive) {
+      badges.push({ emoji: '🌱', text: 'Growing', color: '#D1FAE5' });
+    }
+    
+    return badges;
+  };
+
+  const userStatus = getUserStatus();
+  const userBadges = getUserBadges();
 
   // Get current month and year
   const getCurrentMonth = () => {
@@ -112,7 +169,26 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
     if (!dateOfBirth) return null;
     
     const today = new Date();
-    const birthDate = new Date(dateOfBirth);
+    
+    // Parse DD/MM/YYYY format
+    let birthDate;
+    if (dateOfBirth.includes('/')) {
+      const parts = dateOfBirth.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2], 10);
+        birthDate = new Date(year, month, day);
+      } else {
+        birthDate = new Date(dateOfBirth);
+      }
+    } else {
+      birthDate = new Date(dateOfBirth);
+    }
+    
+    // Check if date is valid
+    if (isNaN(birthDate.getTime())) return null;
+    
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
@@ -319,17 +395,28 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate }) => {
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{child?.name || 'Zues'}</Text>
               <Text style={styles.profileDetails}>
-                Age {childAge || 8} · Grade {child?.grade || '3'} · Active Learner
+                Age {childAge || 8} · {child?.grade || 'Grade 3'} · {userStatus}
               </Text>
               <View style={styles.badgesContainer}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeEmoji}>🔥</Text>
-                  <Text style={styles.badgeText}>On Fire!</Text>
-                </View>
-                <View style={[styles.badge, styles.badgePurple]}>
-                  <Text style={styles.badgeEmoji}>⭐</Text>
-                  <Text style={styles.badgeText}>Top Performer</Text>
-                </View>
+                {userBadges.length > 0 ? (
+                  userBadges.slice(0, 2).map((badge, index) => (
+                    <View 
+                      key={index} 
+                      style={[
+                        styles.badge, 
+                        { backgroundColor: badge.color }
+                      ]}
+                    >
+                      <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
+                      <Text style={styles.badgeText}>{badge.text}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={[styles.badge, { backgroundColor: '#E5E7EB' }]}>
+                    <Text style={styles.badgeEmoji}>📚</Text>
+                    <Text style={styles.badgeText}>Start Learning</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>

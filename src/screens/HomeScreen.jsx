@@ -20,7 +20,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
-import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards } from '../api';
+import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -41,6 +41,10 @@ const HomeScreen = ({ userData, onNavigate }) => {
   const [riddleAnswers, setRiddleAnswers] = useState({}); // { [id]: bool }
   const [riddleHints, setRiddleHints] = useState({});    // { [id]: bool }
   const [showAllRiddles, setShowAllRiddles] = useState(false);
+  const [todaysTopics, setTodaysTopics] = useState([]);
+  const [upcomingTopics, setUpcomingTopics] = useState([]);
+  const [apiSubjects, setApiSubjects] = useState([]);
+  const [allTopicsFromApi, setAllTopicsFromApi] = useState([]);
   
   // Track completed days for 7-day streak (true = completed, false = not completed)
   const [streakDays, setStreakDays] = useState([
@@ -105,6 +109,90 @@ const HomeScreen = ({ userData, onNavigate }) => {
     fetchPhaseCards()
       .then(data => setPhaseCards(data))
       .catch(() => {});
+
+    // Fetch subjects
+    fetchSubjects()
+      .then(data => setApiSubjects(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  // Fetch topics and filter by scheduled date
+  useEffect(() => {
+    const loadTodaysTopics = async () => {
+      try {
+        // Fetch all topics
+        const allTopics = await fetchTopicsBySubject();
+        console.log('[HomeScreen] Fetched topics:', allTopics.length);
+        console.log('[HomeScreen] First topic:', allTopics[0]);
+        
+        // Store all topics for later use
+        setAllTopicsFromApi(allTopics);
+        
+        // Filter topics with scheduled dates
+        const topicsWithDates = allTopics.filter(t => t.scheduledDate);
+        console.log('[HomeScreen] Topics with dates:', topicsWithDates.length);
+        
+        // Get today's date (start and end of day)
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        
+        // Find topics scheduled for today
+        const todaysScheduled = topicsWithDates.filter(t => {
+          const scheduledDate = new Date(t.scheduledDate);
+          return scheduledDate >= todayStart && scheduledDate <= todayEnd;
+        });
+        
+        console.log('[HomeScreen] Today\'s scheduled:', todaysScheduled.length);
+        
+        // If no topics for today, get the 2 most recent topics
+        if (todaysScheduled.length === 0) {
+          const sortedByDate = topicsWithDates.sort((a, b) => 
+            new Date(b.scheduledDate) - new Date(a.scheduledDate)
+          );
+          console.log('[HomeScreen] Using recent topics:', sortedByDate.slice(0, 2));
+          setTodaysTopics(sortedByDate.slice(0, 2));
+        } else {
+          // Show only 2 topics maximum
+          console.log('[HomeScreen] Using today\'s topics:', todaysScheduled.slice(0, 2));
+          setTodaysTopics(todaysScheduled.slice(0, 2));
+        }
+
+        // Get topics scheduled for upcoming dates (tomorrow onwards)
+        const tomorrowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        const upcomingScheduled = topicsWithDates.filter(t => {
+          const scheduledDate = new Date(t.scheduledDate);
+          return scheduledDate >= tomorrowStart;
+        });
+
+        // Sort by date (earliest first)
+        const sortedUpcoming = upcomingScheduled.sort((a, b) => 
+          new Date(a.scheduledDate) - new Date(b.scheduledDate)
+        );
+
+        // Group by date and take only one topic per day, max 3 days
+        const topicsByDate = {};
+        sortedUpcoming.forEach(topic => {
+          const dateKey = new Date(topic.scheduledDate).toDateString();
+          if (!topicsByDate[dateKey]) {
+            topicsByDate[dateKey] = topic;
+          }
+        });
+
+        // Get first 3 unique dates
+        const uniqueUpcoming = Object.values(topicsByDate).slice(0, 3);
+
+        console.log('[HomeScreen] Upcoming topics (1 per day, max 3):', uniqueUpcoming.length);
+        setUpcomingTopics(uniqueUpcoming);
+      } catch (error) {
+        console.error('[HomeScreen] Error loading topics:', error);
+        setTodaysTopics([]);
+        setUpcomingTopics([]);
+        setAllTopicsFromApi([]);
+      }
+    };
+    
+    loadTodaysTopics();
   }, []);
 
   const onRefresh = () => {
@@ -189,6 +277,27 @@ const HomeScreen = ({ userData, onNavigate }) => {
       return { uri: avatarCache[avatarId] };
     }
     return require('../assets/images/A1.jpeg');
+  };
+
+  const getDateLabel = (dateString) => {
+    const scheduledDate = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Reset time parts for comparison
+    const resetTime = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const schedDate = resetTime(scheduledDate);
+    const todayDate = resetTime(today);
+    const tomorrowDate = resetTime(tomorrow);
+
+    if (schedDate.getTime() === tomorrowDate.getTime()) {
+      return 'Tomorrow';
+    } else {
+      // Format as "Mon, Dec 6" for all other dates
+      const options = { weekday: 'short', month: 'short', day: 'numeric' };
+      return scheduledDate.toLocaleDateString('en-US', options);
+    }
   };
 
   const child = userData?.children?.[0];
@@ -354,7 +463,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <View style={styles.featuredMeta}>
                 <View style={styles.metaChip}>
                   <Icon name="people-outline" size={14} color="#666666" />
-                  <Text style={styles.metaChipText}>Grade {child?.grade || '3'}</Text>
+                  <Text style={styles.metaChipText}>{child?.grade || 'Grade 3'}</Text>
                 </View>
                 <View style={styles.metaChip}>
                   <MaterialIcon name="star" size={14} color="#FFB84D" />
@@ -382,52 +491,91 @@ const HomeScreen = ({ userData, onNavigate }) => {
             <Text style={styles.sectionTitle}>Today's Nudges</Text>
           </View>
 
-          {todaysNudgesBySubject.length === 0 ? (
+          {todaysTopics.length === 0 ? (
             <View style={styles.emptyNudgesCard}>
               <MaterialIcon name="book-clock-outline" size={36} color="#9CA3AF" />
-              <Text style={styles.emptyNudgesTitle}>Content coming soon</Text>
+              <Text style={styles.emptyNudgesTitle}>No topics scheduled</Text>
               <Text style={styles.emptyNudgesText}>
-                We're preparing nudges for {child?.grade || 'this grade'}. Check back soon!
+                Check the admin panel to schedule topics for today!
               </Text>
             </View>
           ) : (
-            todaysNudgesBySubject.slice(0, 2).map((nudge) => (
-            <TouchableOpacity 
-              key={nudge.id}
-              style={styles.card}
-              onPress={() => {
-                handleNudgeComplete(nudge.id);
-                if (onNavigate) onNavigate('topicDetail', { 
-                  subjectName: nudge.subject,
-                  topicData: nudge 
-                });
-              }}
-            >
-              <View style={styles.cardLeftSection}>
-                <View style={styles.cardIcon}>
-                  <MaterialIcon name={nudge.icon} size={24} color={nudge.iconColor} />
-                </View>
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{nudge.title}</Text>
-                <Text style={styles.cardDescription}>
-                  {nudge.shortDescription}
-                </Text>
-                <View style={styles.cardMeta}>
-                  <Text style={styles.cardCategory}>{nudge.subject}</Text>
-                  <Text style={styles.cardDot}>•</Text>
-                  <Text style={styles.cardChapter}>{nudge.chapter}</Text>
-                </View>
-              </View>
-              {completedNudges.includes(nudge.id) ? (
-                <Icon name="checkmark-circle" size={24} color="#45a578" />
-              ) : (
-                <Icon name="chevron-forward" size={24} color="#45a578" />
-              )}
-            </TouchableOpacity>
-          ))
+            todaysTopics.map((topic) => {
+              // Find the subject for this topic
+              const subject = apiSubjects.find(s => String(s._id) === String(topic.subjectId));
+              const subjectName = subject?.name || topic.subjectName || 'Learning';
+              
+              return (
+                <TouchableOpacity 
+                  key={topic._id}
+                  style={styles.card}
+                  onPress={async () => {
+                    if (onNavigate) {
+                      // Fetch all topics for this subject to show all scheduled dates in calendar
+                      try {
+                        const allTopicsForSubject = await fetchTopicsBySubject(topic.subjectId);
+                        const topicsWithDates = allTopicsForSubject.filter(t => t.scheduledDate);
+                        
+                        onNavigate('topicDetail', { 
+                          subjectName: subjectName,
+                          topicData: {
+                            subject: subjectName,
+                            topic: topic.topic || topic.title,
+                            apiTopics: topicsWithDates,
+                          },
+                          allNudges: topicsWithDates.map(t => ({
+                            subject: subjectName,
+                            topic: t.topic || t.title,
+                            apiTopic: t,
+                          })),
+                        });
+                      } catch (error) {
+                        console.error('[HomeScreen] Error fetching topics:', error);
+                        // Fallback to single topic
+                        onNavigate('topicDetail', { 
+                          subjectName: subjectName,
+                          topicData: {
+                            subject: subjectName,
+                            topic: topic.topic || topic.title,
+                            apiTopics: [topic],
+                          },
+                          allNudges: [{
+                            subject: subjectName,
+                            topic: topic.topic || topic.title,
+                            apiTopic: topic,
+                          }],
+                        });
+                      }
+                    }
+                  }}
+                >
+                  <View style={styles.cardLeftSection}>
+                    <View style={styles.cardIcon}>
+                      <MaterialIcon name="book-open-variant" size={24} color="#45a578" />
+                    </View>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle}>{topic.topic || topic.title}</Text>
+                    <Text style={styles.cardDescription}>
+                      {topic.description || 'Explore this topic together'}
+                    </Text>
+                    <View style={styles.cardMeta}>
+                      <Text style={styles.cardCategory}>{subjectName}  </Text>
+                      {topic.title && (
+                        <>
+                          <Text style={styles.cardDot}>• </Text>
+                          <Text style={styles.cardCategory}>{topic.title}</Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <Icon name="chevron-forward" size={24} color="#45a578" />
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
+
  {/* Did You Know */}
         <View style={styles.section}>
           <View style={styles.didYouKnowCard}>
@@ -666,72 +814,64 @@ const HomeScreen = ({ userData, onNavigate }) => {
           </View>
 
           <View style={styles.subjectsGrid}>
-            {allSubjects.slice(0, 4).map((subject, index) => {
-              const config = subjectConfig[subject.name] || {
-                icon: 'book-outline',
-                color: '#666666',
-                bgColor: '#F5F5F5',
-              };
-              const nudgesCount = getNudgesBySubject(subject.name).length;
-              const completedCount = Math.floor(12 * (0.6 + Math.random() * 0.3)); // Based on 12 total activities
-              const progress = Math.floor((completedCount / 12) * 100);
+            {apiSubjects.slice(0, 4).map((subject, index) => {
+              // Get the student's selected level for this subject
+              const studentLevel = Array.isArray(child?.subjectLevels) 
+                ? child.subjectLevels.find(sl => sl.subject === subject.name)?.level 
+                : null;
               
-              // Define different bar colors for each subject
-              const barColors = [
-                '#3B82F6', // Blue for first subject
-                '#EC4899', // Pink for second subject
-                '#F59E0B', // Amber for third subject
-                '#10B981', // Green for fourth subject
-              ];
-              const barColor = barColors[index] || '#666666';
+              // Count topics for this subject from allTopicsFromApi
+              const subjectTopics = allTopicsFromApi.filter(topic => 
+                String(topic.subjectId) === String(subject._id)
+              );
+              
+              // Count topics that match the student's level for this subject
+              let activityCount = 0;
+              if (studentLevel && subjectTopics.length > 0) {
+                const topicsForLevel = subjectTopics.filter(topic => 
+                  topic.level === studentLevel
+                );
+                activityCount = topicsForLevel.length;
+              } else {
+                // If no level selected, show total count for this subject
+                activityCount = subjectTopics.length;
+              }
 
-              // Define icons and colors for each subject
-              const subjectIcons = {
-                'Math': { image: require('../assets/images/math.png'), color: '#3B82F6', bgColor: '#EFF6FF' },
-                'English': { image: require('../assets/images/eng.png'), color: '#EC4899', bgColor: '#FDF2F8' },
-                'Science / EVS': { image: require('../assets/images/sci.png'), color: '#10B981', bgColor: '#ECFDF5' },
-                'Social Studies': { image: require('../assets/images/social s.png'), color: '#F59E0B', bgColor: '#FFFBEB' },
-                'Artificial Intelligence': { image: require('../assets/images/Ai s.png'), color: '#8B5CF6', bgColor: '#F5F3FF' },
-                'Financial Literacy': { image: require('../assets/images/Fl.png'), color: '#10B981', bgColor: '#ECFDF5' },
-                'Sex & Safety Education': { image: require('../assets/images/ss.png'), color: '#EC4899', bgColor: '#FDF2F8' },
-              };
-
-              const iconConfig = subjectIcons[subject.name] || { icon: 'book-outline', color: '#666666', bgColor: '#F5F5F5' };
+              // Use API image if available, otherwise use default icon
+              const hasApiImage = subject.imageUrl && subject.imageUrl.trim() !== '';
+              
+              const imageSource = hasApiImage 
+                ? { uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }
+                : null;
 
               return (
                 <TouchableOpacity 
-                  key={subject.name}
+                  key={subject._id}
                   style={styles.subjectImageCard}
                   onPress={() => {
-                    const subjectNudges = getNudgesBySubject(subject.name);
-                    if (subjectNudges.length > 0) {
-                      onNavigate && onNavigate('topicDetail', { 
-                        subjectName: subject.name,
-                        topicData: subjectNudges[0]
-                      });
-                    }
+                    onNavigate && onNavigate('subjectsList');
                   }}
                 >
                   <View style={[styles.subjectImageGradient, { backgroundColor: '#FFFFFF' }]}>
                     <View style={styles.subjectIconBox}>
-                      {iconConfig.image ? (
+                      {imageSource ? (
                         <Image 
-                          source={iconConfig.image}
+                          source={imageSource}
                           style={styles.subjectImage}
                           resizeMode="contain"
                         />
                       ) : (
                         <MaterialIcon 
-                          name={iconConfig.icon}
+                          name="book-outline"
                           size={28}
-                          color={iconConfig.color}
+                          color="#666666"
                         />
                       )}
                     </View>
                     
                     <View style={styles.subjectImageCardContent}>
                       <Text style={styles.subjectImageCardTitle}>{subject.name}</Text>
-                      <Text style={styles.subjectImageCardActivityCount}>12 activities</Text>
+                      <Text style={styles.subjectImageCardActivityCount}>{activityCount} activities</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -739,7 +879,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
             })}
           </View>
 
-          {/* Unlock Premium Subjects Banner */}
+          {/* Unlock Premium Subjects Banner
           <TouchableOpacity 
             style={styles.unlockPremiumBanner}
             onPress={() => onNavigate && onNavigate('subscription')}
@@ -754,7 +894,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
             <View style={styles.unlockPremiumButton}>
               <Text style={styles.unlockPremiumButtonText}>Upgrade</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
   {/* For This Phase - Dynamic Card Carousel */}
         {(() => {
@@ -819,56 +959,43 @@ const HomeScreen = ({ userData, onNavigate }) => {
           );
         })()}
 
-        {/* Coming Up */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Coming Up</Text>
-              <Text style={styles.sectionSubtitle}>Next 2 days</Text>
+        {/* Coming Up - Dynamic from scheduled topics */}
+        {upcomingTopics.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Coming Up</Text>
+                <Text style={styles.sectionSubtitle}>Upcoming scheduled topics</Text>
+              </View>
+            </View>
+
+            <View style={styles.comingUpContainer}>
+              {upcomingTopics.map((topic) => {
+                // Find the subject for this topic
+                const subject = apiSubjects.find(s => String(s._id) === String(topic.subjectId));
+                const subjectName = subject?.name || topic.subjectName || 'Learning';
+                
+                return (
+                  <View 
+                    key={topic._id}
+                    style={styles.comingUpItem}
+                  >
+                    <View style={styles.comingUpContent}>
+                      <Text style={styles.comingUpTitle}>{topic.topic || topic.title}</Text>
+                      <Text style={styles.comingUpSubject}>{subjectName}</Text>
+                    </View>
+                    <View style={styles.comingUpDateContainer}>
+                      <View style={styles.comingUpDateBadge}>
+                        <Icon name="calendar-outline" size={14} color="#FFFFFF" />
+                        <Text style={styles.comingUpDateText}>{getDateLabel(topic.scheduledDate)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           </View>
-
-          <View style={styles.comingUpContainer}>
-            <View style={styles.comingUpItem}>
-              <View style={styles.comingUpContent}>
-                <Text style={styles.comingUpTitle}>Exploring Emotions</Text>
-                <Text style={styles.comingUpSubject}>Life Skills</Text>
-              </View>
-              <View style={styles.comingUpDateContainer}>
-                <View style={styles.comingUpDateBadge}>
-                  <Icon name="calendar-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.comingUpDateText}>Tomorrow</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.comingUpItem}>
-              <View style={styles.comingUpContent}>
-                <Text style={styles.comingUpTitle}>Counting Adventures</Text>
-                <Text style={styles.comingUpSubject}>Mathematics</Text>
-              </View>
-              <View style={styles.comingUpDateContainer}>
-                <View style={styles.comingUpDateBadge}>
-                  <Icon name="calendar-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.comingUpDateText}>Wed, Dec 6</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.comingUpItem}>
-              <View style={styles.comingUpContent}>
-                <Text style={styles.comingUpTitle}>The Science of Plants</Text>
-                <Text style={styles.comingUpSubject}>Science</Text>
-              </View>
-              <View style={styles.comingUpDateContainer}>
-                <View style={styles.comingUpDateBadge}>
-                  <Icon name="calendar-outline" size={14} color="#FFFFFF" />
-                  <Text style={styles.comingUpDateText}>Fri, Dec 8</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
+        )}
 
         {/* Bottom Padding */}
         <View style={styles.bottomPadding} />
@@ -1396,6 +1523,12 @@ const styles = StyleSheet.create({
   cardCategory: {
     fontSize: 12,
     color: '#45a578',
+    fontWeight: '600',
+  },
+
+  cardDot: {
+    fontSize: 12,
+    color: '#000000',
     fontWeight: '600',
   },
 

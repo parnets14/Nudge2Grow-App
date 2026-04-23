@@ -622,7 +622,7 @@ const App = () => {
       case 'progressReports':
         return <ProgressReportsScreen onBack={handleProgressReportsBack} />;
       case 'learningProgress':
-        return <LearningProgressScreen userData={userData} onBack={handleLearningProgressBack} onNavigate={handleLearningProgressNavigate} />;
+        return <LearningProgressScreen userData={userData} completedTopics={completedTopics} onBack={handleLearningProgressBack} onNavigate={handleLearningProgressNavigate} />;
       case 'milestones':
         return <MilestonesScreen userData={userData} onBack={handleMilestonesBack} />;
       case 'assessmentHub':

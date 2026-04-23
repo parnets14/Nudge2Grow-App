@@ -94,12 +94,12 @@ const SelectTopicsScreen = ({
               const topicLevel = topic.level.toLowerCase();
               const isMatch = topicLevel === studentLevelLower;
               
-              console.log('[SelectTopics] Topic:', topic.title || topic.name, '| Level:', topicLevel, '| Match:', isMatch);
+              console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| Level:', topicLevel, '| Match:', isMatch);
               
               return isMatch;
             }
             // If topic doesn't have a level, exclude it for strict matching
-            console.log('[SelectTopics] Topic:', topic.title || topic.name, '| No level - excluding');
+            console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| No level - excluding');
             return false;
           });
         }
@@ -233,7 +233,7 @@ const SelectTopicsScreen = ({
           ) : (
             topics.map((topic) => {
               const isSelected = selectedTopics.includes(topic._id);
-              const topicName = topic.title || topic.name;
+              const topicName = topic.topic || topic.title || topic.name;
 
               return (
                 <TouchableOpacity
@@ -252,6 +252,15 @@ const SelectTopicsScreen = ({
                       <Text style={styles.topicMeta}>
                         {subjectDetails.name} · {topic.level || subjectDetails.level}
                       </Text>
+                      {topic.scheduledDate && (
+                        <Text style={styles.topicDate}>
+                          📅 {new Date(topic.scheduledDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </Text>
+                      )}
                     </View>
                   </View>
                   {topic.imageUrl && (
@@ -514,6 +523,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#9CA3AF',
     fontFamily: 'Montserrat-Regular',
+  },
+  topicDate: {
+    fontSize: isTablet ? 11 : 10,
+    fontWeight: '600',
+    color: '#27AE60',
+    fontFamily: 'Montserrat-SemiBold',
+    marginTop: 4,
   },
   topicImage: {
     width: 40,

@@ -3123,7 +3123,23 @@ const TopicDetailScreen = ({
   onBack,
   onNavigate,
 }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date().getDate());
+  // Initialize selectedDate to most recent scheduled date
+  const getInitialDate = () => {
+    if (allNudges && allNudges.length > 0) {
+      // Get all scheduled dates and sort them to find the most recent
+      const scheduledDates = allNudges
+        .filter(nudge => nudge.apiTopic?.scheduledDate)
+        .map(nudge => new Date(nudge.apiTopic.scheduledDate))
+        .sort((a, b) => b - a); // Sort descending (most recent first)
+      
+      if (scheduledDates.length > 0) {
+        return scheduledDates[0].getDate(); // Return the most recent date
+      }
+    }
+    return new Date().getDate();
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getInitialDate());
   const [expandedUnit, setExpandedUnit] = useState(null);
   const [currentFlashcard, setCurrentFlashcard] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -3138,9 +3154,49 @@ const TopicDetailScreen = ({
   // API content set (flashcards, Q&A, prompts from admin panel)
   const [apiContentSet, setApiContentSet] = useState(null);
   const [apiLearnDetail, setApiLearnDetail] = useState(null);
-  const [selectedApiTopic, setSelectedApiTopic] = useState(
-    topicData?.apiTopics?.[0] || null,
-  );
+  const [selectedApiTopic, setSelectedApiTopic] = useState(null);
+
+  // Set initial topic to the most recent scheduled topic
+  useEffect(() => {
+    if (allNudges && allNudges.length > 0 && !selectedApiTopic) {
+      // Get all scheduled topics and sort by date (most recent first)
+      const scheduledNudges = allNudges
+        .filter(nudge => nudge.apiTopic?.scheduledDate)
+        .sort((a, b) => {
+          const dateA = new Date(a.apiTopic.scheduledDate);
+          const dateB = new Date(b.apiTopic.scheduledDate);
+          return dateB - dateA; // Sort descending
+        });
+      
+      if (scheduledNudges.length > 0) {
+        setSelectedApiTopic(scheduledNudges[0].apiTopic);
+      } else if (topicData?.apiTopics?.[0]) {
+        setSelectedApiTopic(topicData.apiTopics[0]);
+      }
+    }
+  }, [allNudges, topicData]);
+
+  // Update selected topic when date changes
+  useEffect(() => {
+    if (allNudges && allNudges.length > 0) {
+      // Find the topic that matches the selected date
+      const matchingNudge = allNudges.find(nudge => {
+        if (nudge.apiTopic?.scheduledDate) {
+          const scheduledDate = new Date(nudge.apiTopic.scheduledDate);
+          return (
+            scheduledDate.getDate() === selectedDate &&
+            scheduledDate.getMonth() === currentDate.getMonth() &&
+            scheduledDate.getFullYear() === currentYear
+          );
+        }
+        return false;
+      });
+      
+      if (matchingNudge?.apiTopic) {
+        setSelectedApiTopic(matchingNudge.apiTopic);
+      }
+    }
+  }, [selectedDate, allNudges]);
 
   // Fetch content set and learn detail when an API topic is selected
   useEffect(() => {
@@ -3196,19 +3252,31 @@ const TopicDetailScreen = ({
 
   const getAvailableDates = () => {
     const available = [];
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - dayOfWeek);
-    for (let i = 0; i <= dayOfWeek; i++) {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + i);
-      available.push({
-        date: date.getDate(),
-        month: date.getMonth(),
-        year: date.getFullYear(),
+    
+    // Get all topics with scheduled dates from allNudges
+    if (allNudges && allNudges.length > 0) {
+      allNudges.forEach(nudge => {
+        if (nudge.apiTopic?.scheduledDate) {
+          const scheduledDate = new Date(nudge.apiTopic.scheduledDate);
+          available.push({
+            date: scheduledDate.getDate(),
+            month: scheduledDate.getMonth(),
+            year: scheduledDate.getFullYear(),
+          });
+        }
       });
     }
+    
+    // If no scheduled dates found, show today only
+    if (available.length === 0) {
+      const today = new Date();
+      available.push({
+        date: today.getDate(),
+        month: today.getMonth(),
+        year: today.getFullYear(),
+      });
+    }
+    
     return available;
   };
 
@@ -3618,7 +3686,7 @@ const TopicDetailScreen = ({
     hasApiTopics && selectedApiTopic
       ? {
           ...topicData,
-          topic: selectedApiTopic.title,
+          topic: selectedApiTopic.topic || selectedApiTopic.title,
           title: selectedApiTopic.title,
           subject: subjectName || topicData?.subject,
           description: selectedApiTopic.description,
@@ -3995,7 +4063,7 @@ const TopicDetailScreen = ({
   const createArticleContent = () => {
     if (apiLearnDetail) {
       return {
-        title: selectedApiTopic?.title || displayTopic?.topic || 'Topic',
+        title: selectedApiTopic?.topic || selectedApiTopic?.title || displayTopic?.topic || 'Topic',
         subtitle: selectedApiTopic?.description || '',
         sections: [
           apiLearnDetail.overview && {
@@ -4146,20 +4214,28 @@ const TopicDetailScreen = ({
                   style={[
                     styles.todayButton,
                     {
-                      borderColor: subjectColor,
-                      backgroundColor: `${subjectColor}10`,
+                      borderColor: hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? subjectColor : '#CCCCCC',
+                      backgroundColor: hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? `${subjectColor}10` : '#F5F5F5',
                     },
                   ]}
-                  onPress={() => setSelectedDate(currentDay)}
+                  onPress={() => {
+                    if (hasDataForDate(currentDay, currentDate.getMonth(), currentYear)) {
+                      setSelectedDate(currentDay);
+                    }
+                  }}
+                  disabled={!hasDataForDate(currentDay, currentDate.getMonth(), currentYear)}
                 >
                   <Icon
                     name="time-outline"
                     size={16}
-                    color={subjectColor}
+                    color={hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? subjectColor : '#CCCCCC'}
                     style={{ marginRight: 6 }}
                   />
                   <Text
-                    style={[styles.todayButtonText, { color: subjectColor }]}
+                    style={[
+                      styles.todayButtonText, 
+                      { color: hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? subjectColor : '#CCCCCC' }
+                    ]}
                   >
                     TODAY
                   </Text>
@@ -4170,13 +4246,13 @@ const TopicDetailScreen = ({
             <View style={styles.calendarGrid}>
               {weekDays.map((day, index) => {
                 const dateValue = dates[index];
-                const isFutureDate = dateValue > currentDay;
                 const hasData = hasDataForDate(
                   dateValue,
                   currentDate.getMonth(),
                   currentYear,
                 );
-                const isDisabled = isFutureDate || !hasData;
+                // Disable dates that don't have scheduled topics
+                const isDisabled = !hasData;
                 const isSelected = selectedDate === dateValue;
                 const isToday = dateValue === currentDay;
 
@@ -4335,9 +4411,15 @@ const TopicDetailScreen = ({
                 {displayTopic?.topic || displayTopic?.title || 'Learning Topic'}
               </Text>
 
-              {topicData?.shortDescription && (
+              {displayTopic?.title && (
+                <Text style={styles.topicSubtitle}>
+                  {displayTopic.title}
+                </Text>
+              )}
+
+              {(displayTopic?.description || topicData?.shortDescription) && (
                 <Text style={styles.topicDescription}>
-                  {topicData.shortDescription}
+                  {displayTopic?.description || topicData.shortDescription}
                 </Text>
               )}
             </View>
@@ -5004,9 +5086,17 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 26 : 22,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 12,
+    marginBottom: 8,
     lineHeight: isTablet ? 36 : 30,
     fontFamily: 'Montserrat-Bold',
+  },
+  topicSubtitle: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: '500',
+    color: '#333333',
+    marginBottom: 8,
+    lineHeight: isTablet ? 26 : 22,
+    fontFamily: 'Montserrat-Medium',
   },
   topicDescription: {
     fontSize: isTablet ? 15 : 14,

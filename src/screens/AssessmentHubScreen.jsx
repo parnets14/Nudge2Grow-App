@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { fetchSubjects } from '../api';
+import { BASE_URL, fetchSubjects, getRecentQuizzes, fetchTopicsBySubject, fetchQuestionTypes } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -24,13 +24,21 @@ const isSmallDevice = width < 375;
 const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [recentQuizzes, setRecentQuizzes] = useState([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
+  const [totalTopics, setTotalTopics] = useState(0);
+  const [totalQuestionTypes, setTotalQuestionTypes] = useState(0);
 
   const child = userData?.children?.[0];
   const childName = child?.name || '';
   const childSubjects = child?.subjectLevels || {};
+  const childGrade = child?.grade || '';
+  const userEmail = userData?.email || '';
 
   useEffect(() => {
     loadSubjects();
+    loadRecentQuizzes();
+    loadStats();
   }, []);
 
   const loadSubjects = async () => {
@@ -46,6 +54,120 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadStats = async () => {
+    try {
+      // Fetch all topics
+      const allTopics = await fetchTopicsBySubject();
+      
+      // Filter topics for child's subjects, grade, and level
+      const childSubjectIds = Object.keys(childSubjects);
+      const relevantTopics = allTopics.filter(topic => {
+        // Check if topic belongs to child's subjects
+        const subjectMatch = childSubjectIds.includes(String(topic.subjectId));
+        if (!subjectMatch) return false;
+        
+        // Check if topic matches child's grade (if grade is specified on topic)
+        const gradeMatch = !topic.grade || !childGrade || topic.grade === childGrade;
+        
+        // Check if topic matches child's level for this subject
+        const childLevelForSubject = childSubjects[topic.subjectId];
+        const levelMatch = !topic.level || !childLevelForSubject || topic.level === childLevelForSubject;
+        
+        return subjectMatch && gradeMatch && levelMatch;
+      });
+      
+      console.log('[AssessmentHub] Total topics:', allTopics.length);
+      console.log('[AssessmentHub] Child grade:', childGrade);
+      console.log('[AssessmentHub] Child subjects:', childSubjectIds);
+      console.log('[AssessmentHub] Child subject levels:', childSubjects);
+      console.log('[AssessmentHub] Filtered topics:', relevantTopics.length);
+      
+      setTotalTopics(relevantTopics.length);
+
+      // Fetch question types
+      const questionTypes = await fetchQuestionTypes();
+      setTotalQuestionTypes(questionTypes.length);
+    } catch (err) {
+      console.error('[AssessmentHub] Failed to load stats:', err);
+      setTotalTopics(0);
+      setTotalQuestionTypes(0);
+    }
+  };
+
+  const loadRecentQuizzes = async () => {
+    try {
+      if (!userEmail) {
+        console.log('[AssessmentHub] No user email available');
+        setRecentQuizzes([]);
+        return;
+      }
+      console.log('[AssessmentHub] Fetching recent quizzes for email:', userEmail, 'userId:', userData?._id);
+      const response = await getRecentQuizzes(userEmail, userData?._id, 5); // Show last 5 quizzes
+      console.log('[AssessmentHub] API response:', response);
+      if (response.success && response.quizzes) {
+        // Map the quiz history to display format
+        const mappedQuizzes = response.quizzes.map((quiz, index) => {
+          // Format topics - show first 2 topics if multiple
+          const topicsArray = quiz.topics.split(',').map(t => t.trim());
+          let topicsDisplay = topicsArray[0];
+          if (topicsArray.length > 1) {
+            topicsDisplay = topicsArray.length > 2 
+              ? `${topicsArray[0]}, ${topicsArray[1]} +${topicsArray.length - 2} more`
+              : topicsArray.join(', ');
+          }
+
+          // Find the subject from API subjects to get the uploaded image
+          const apiSubject = subjects.find(s => (s.name || s.title) === quiz.subject);
+          const config = getSubjectConfig(quiz.subject);
+
+          return {
+            id: quiz._id || index,
+            subject: quiz.subject,
+            title: `${quiz.subject} — ${topicsDisplay}`,
+            questions: quiz.questionCount,
+            types: quiz.questionTypes.join(', '),
+            status: quiz.status,
+            sentAt: quiz.sentAt,
+            imageUrl: apiSubject?.imageUrl || null, // Use API image if available
+            image: config.image, // Fallback to local image
+            color: config.color,
+          };
+        });
+        console.log('[AssessmentHub] Mapped quizzes:', mappedQuizzes);
+        setRecentQuizzes(mappedQuizzes);
+      }
+    } catch (err) {
+      console.error('[AssessmentHub] Failed to load recent quizzes:', err);
+      setRecentQuizzes([]);
+    } finally {
+      setLoadingQuizzes(false);
+    }
+  };
+
+  const getSubjectConfig = (subjectName) => {
+    const config = subjectConfig[subjectName] || { color: '#6B7280' };
+    return {
+      image: config.image,
+      color: config.color,
+    };
+  };
+
+  const formatQuizDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const getGreeting = () => {
@@ -65,30 +187,6 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
     'Financial Literacy': { image: require('../assets/images/Fl.png'), color: '#14B8A6' },
     'Sex & Safety': { image: require('../assets/images/ss.png'), color: '#EF4444' },
   };
-
-  // Get recent quizzes (mock data)
-  const recentQuizzes = [
-    {
-      id: 1,
-      subject: 'Math',
-      title: 'Mathematics — Numbers',
-      questions: 25,
-      types: 'True/False, MCQ',
-      status: 'Sent',
-      image: require('../assets/images/math.png'),
-      color: '#3B82F6',
-    },
-    {
-      id: 2,
-      subject: 'Science / EVS',
-      title: 'Science / EVS — Plants',
-      questions: 10,
-      types: 'Fill in Blanks',
-      status: 'Sent',
-      image: require('../assets/images/sci.png'),
-      color: '#10B981',
-    },
-  ];
 
   const handleCreateQuiz = () => {
     const subjectNames = subjects.map(s => s.name || s.title);
@@ -136,11 +234,11 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
               <Text style={styles.statLabel}>Subjects</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>18</Text>
+              <Text style={styles.statNumber}>{totalTopics || '...'}</Text>
               <Text style={styles.statLabel}>Topics</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>4</Text>
+              <Text style={styles.statNumber}>{totalQuestionTypes || '...'}</Text>
               <Text style={styles.statLabel}>Q Types</Text>
             </View>
           </View>
@@ -174,7 +272,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
                     <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
                       {subject.imageUrl ? (
                         <Image 
-                          source={{ uri: subject.imageUrl }}
+                          source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
                           style={styles.subjectIconImage}
                           resizeMode="contain"
                         />
@@ -200,32 +298,50 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
         {/* Recent Quizzes Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Quizzes</Text>
-          {recentQuizzes.map((quiz) => (
-            <TouchableOpacity key={quiz.id} style={styles.quizCard}>
-              <View style={styles.quizLeft}>
-                <View style={[styles.quizIcon, { backgroundColor: 'transparent' }]}>
-                  {quiz.image ? (
-                    <Image 
-                      source={quiz.image}
-                      style={styles.quizIconImage}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <MaterialIcon name={quiz.icon} size={24} color={quiz.color} />
-                  )}
+          {loadingQuizzes ? (
+            <Text style={styles.loadingText}>Loading recent quizzes...</Text>
+          ) : recentQuizzes.length === 0 ? (
+            <View style={styles.emptyQuizzesContainer}>
+              <Text style={styles.emptyQuizzesText}>No quizzes sent yet</Text>
+              <Text style={styles.emptyQuizzesSubtext}>Create and send your first quiz!</Text>
+            </View>
+          ) : (
+            recentQuizzes.map((quiz) => (
+              <TouchableOpacity key={quiz.id} style={styles.quizCard}>
+                <View style={styles.quizLeft}>
+                  <View style={[styles.quizIcon, { backgroundColor: 'transparent' }]}>
+                    {quiz.imageUrl ? (
+                      <Image 
+                        source={{ uri: `${BASE_URL.replace('/api', '')}${quiz.imageUrl}` }}
+                        style={styles.quizIconImage}
+                        resizeMode="contain"
+                      />
+                    ) : quiz.image ? (
+                      <Image 
+                        source={quiz.image}
+                        style={styles.quizIconImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <MaterialIcon name="book-outline" size={24} color={quiz.color} />
+                    )}
+                  </View>
+                  <View style={styles.quizInfo}>
+                    <Text style={styles.quizTitle}>{quiz.title}</Text>
+                    <Text style={styles.quizMeta}>
+                      {quiz.questions} questions · {quiz.types}
+                    </Text>
+                    {quiz.sentAt && (
+                      <Text style={styles.quizDate}>{formatQuizDate(quiz.sentAt)}</Text>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.quizInfo}>
-                  <Text style={styles.quizTitle}>{quiz.title}</Text>
-                  <Text style={styles.quizMeta}>
-                    {quiz.questions} questions · {quiz.types}
-                  </Text>
+                <View style={[styles.statusBadge, { backgroundColor: '#D1FAE5' }]}>
+                  <Text style={[styles.statusText, { color: '#10B981' }]}>{quiz.status}</Text>
                 </View>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: '#D1FAE5' }]}>
-                <Text style={[styles.statusText, { color: '#10B981' }]}>{quiz.status}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -424,6 +540,28 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     padding: 20,
   },
+  emptyQuizzesContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 16 : 18,
+    padding: isSmallDevice ? 24 : 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    borderStyle: 'dashed',
+  },
+  emptyQuizzesText: {
+    fontSize: isSmallDevice ? 14 : 15,
+    fontWeight: '700',
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Bold',
+    marginBottom: 6,
+  },
+  emptyQuizzesSubtext: {
+    fontSize: isSmallDevice ? 12 : 13,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+  },
   quizCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: isSmallDevice ? 16 : 18,
@@ -471,6 +609,12 @@ const styles = StyleSheet.create({
     fontSize: isSmallDevice ? 12 : 13,
     color: '#6B7280',
     fontFamily: 'Montserrat-Regular',
+  },
+  quizDate: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+    marginTop: 4,
   },
   statusBadge: {
     paddingHorizontal: isSmallDevice ? 12 : 14,

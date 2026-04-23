@@ -32,7 +32,26 @@ const MilestonesScreen = ({ userData, onBack }) => {
     if (!dateOfBirth) return null;
     
     const today = new Date();
-    const birthDate = new Date(dateOfBirth);
+    
+    // Parse DD/MM/YYYY format
+    let birthDate;
+    if (dateOfBirth.includes('/')) {
+      const parts = dateOfBirth.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2], 10);
+        birthDate = new Date(year, month, day);
+      } else {
+        birthDate = new Date(dateOfBirth);
+      }
+    } else {
+      birthDate = new Date(dateOfBirth);
+    }
+    
+    // Check if date is valid
+    if (isNaN(birthDate.getTime())) return null;
+    
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     

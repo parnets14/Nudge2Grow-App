@@ -573,3 +573,27 @@ export const sendQuizEmail = async (quizData) => {
     throw err;
   }
 };
+
+// ── Get Recent Quizzes ────────────────────────────────────────────────────────
+export const getRecentQuizzes = async (userEmail, userId = null, limit = 10) => {
+  try {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    if (userEmail) params.append('userEmail', userEmail);
+    params.append('limit', limit);
+
+    const res = await fetch(`${BASE_URL}/quiz-questions/recent-quizzes?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch recent quizzes');
+    console.log('[QuizHistory] Recent quizzes fetched:', data);
+    return data;
+  } catch (err) {
+    console.error('[QuizHistory] fetch error:', err.message);
+    throw err;
+  }
+};
