@@ -32,6 +32,7 @@ import QACardsScreen from './src/screens/QACardsScreen';
 import PromptCardsScreen from './src/screens/PromptCardsScreen';
 import VocabCardsScreen from './src/screens/VocabCardsScreen';
 import RiddlesScreen from './src/screens/RiddlesScreen';
+import FeaturedContentDetailScreen from './src/screens/FeaturedContentDetailScreen';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('splash');
@@ -100,8 +101,14 @@ const App = () => {
   }, []);
 
   const markTopicComplete = async (key) => {
+    // Add timestamp to track when topic was completed (for weekly reset)
+    const timestamp = Date.now();
+    const keyWithTimestamp = `${key}::${timestamp}`;
+    
+    console.log('[App] Marking topic complete:', keyWithTimestamp);
+    
     setCompletedTopics(prev => {
-      const next = new Set([...prev, key]);
+      const next = new Set([...prev, keyWithTimestamp]);
       Storage.setItem('completedTopics', [...next]);
       return next;
     });
@@ -210,6 +217,10 @@ const App = () => {
       setNavigationHistory([...navigationHistory, 'home']);
       setNavigationParams(params);
       setCurrentScreen('topicDetail');
+    } else if (screen === 'featuredContentDetail') {
+      setNavigationHistory([...navigationHistory, 'home']);
+      setNavigationParams(params);
+      setCurrentScreen('featuredContentDetail');
     } else if (screen === 'subscription') {
       setCurrentScreen('subscription');
     } else if (screen === 'myChildren') {
@@ -555,7 +566,24 @@ const App = () => {
       case 'setup':
         return <PersonalSetupScreen token={setupToken} onFinish={handleSetupFinish} onBack={handleSetupBack} />;
       case 'home':
-        return <HomeScreen userData={userData} onBack={handleHomeBack} onNavigate={handleHomeNavigate} />;
+        return <HomeScreen userData={userData} completedTopics={completedTopics} onBack={handleHomeBack} onNavigate={handleHomeNavigate} />;
+      case 'featuredContentDetail':
+        return (
+          <FeaturedContentDetailScreen
+            route={{ params: navigationParams }}
+            navigation={{
+              goBack: () => {
+                if (navigationHistory.length > 0) {
+                  const previousScreen = navigationHistory[navigationHistory.length - 1];
+                  setNavigationHistory(navigationHistory.slice(0, -1));
+                  setCurrentScreen(previousScreen);
+                } else {
+                  setCurrentScreen('home');
+                }
+              }
+            }}
+          />
+        );
       case 'subjectsList':
         return <SubjectsListScreen userData={userData} completedTopics={completedTopics} onNavigate={handleSubjectsListNavigate} onBack={handleSubjectsListBack} />;
       case 'topicDetail':

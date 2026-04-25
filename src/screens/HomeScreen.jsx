@@ -2,7 +2,7 @@
  * Home Screen with Side Menu - Enhanced with Full Functionality
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,13 +20,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
-import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects } from '../api';
+import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const HomeScreen = ({ userData, onNavigate }) => {
+const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnimation] = useState(new Animated.Value(-width * 0.75));
   const [refreshing, setRefreshing] = useState(false);
@@ -45,17 +45,7 @@ const HomeScreen = ({ userData, onNavigate }) => {
   const [upcomingTopics, setUpcomingTopics] = useState([]);
   const [apiSubjects, setApiSubjects] = useState([]);
   const [allTopicsFromApi, setAllTopicsFromApi] = useState([]);
-  
-  // Track completed days for 7-day streak (true = completed, false = not completed)
-  const [streakDays, setStreakDays] = useState([
-    true,  // Monday - completed
-    true,  // Tuesday - completed
-    true,  // Wednesday - completed
-    true,  // Thursday - completed
-    true,  // Friday - completed
-    false, // Saturday - not completed yet
-    false, // Sunday - not completed yet
-  ]);
+  const [featuredContent, setFeaturedContent] = useState([]);
 
   const toggleMenu = () => {
     const toValue = menuVisible ? -width * 0.75 : 0;
@@ -115,6 +105,40 @@ const HomeScreen = ({ userData, onNavigate }) => {
       .then(data => setApiSubjects(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
+
+  // Fetch featured content based on student's grade
+  useEffect(() => {
+    const child = userData?.children?.[0];
+    const studentGrade = child?.grade; // e.g., "Grade 1", "Grade 2", etc.
+    
+    console.log('[HomeScreen] Fetching featured content for student grade:', studentGrade);
+    
+    fetchFeaturedContent()
+      .then(data => {
+        console.log('[HomeScreen] Featured content API response:', data);
+        if (Array.isArray(data)) {
+          console.log('[HomeScreen] Total featured content items:', data.length);
+          
+          // Filter by student's grade or "All Grades"
+          const filtered = data.filter(item => {
+            const matches = item.grade === 'All Grades' || item.grade === studentGrade;
+            console.log('[HomeScreen] Item:', item.title, '| Grade:', item.grade, '| Matches:', matches);
+            return matches;
+          });
+          
+          console.log('[HomeScreen] Filtered featured content for', studentGrade, ':', filtered.length);
+          console.log('[HomeScreen] Filtered items:', filtered);
+          setFeaturedContent(filtered);
+        } else {
+          console.log('[HomeScreen] Featured content response is not an array:', typeof data);
+          setFeaturedContent([]);
+        }
+      })
+      .catch(err => {
+        console.error('[HomeScreen] Error fetching featured content:', err);
+        setFeaturedContent([]);
+      });
+  }, [userData]);
 
   // Fetch topics and filter by scheduled date
   useEffect(() => {
@@ -202,6 +226,169 @@ const HomeScreen = ({ userData, onNavigate }) => {
       setRefreshing(false);
     }, 1500);
   };
+
+  // Calculate weekly impact data based on completed topics
+  const calculateWeeklyImpact = () => {
+    const now = new Date();
+    const child = userData?.children?.[0];
+    
+    // Get the start of current week (Monday)
+    const currentDay = now.getDay();
+    const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    console.log('[HomeScreen] Calculating weekly impact...');
+    console.log('[HomeScreen] Start of week:', startOfWeek.toISOString());
+    console.log('[HomeScreen] Total completed topics:', completedTopics.size);
+    
+    let weeklyCompleted = 0;
+    let totalTopicsThisWeek = 0;
+    const subjectScores = {}; // Track scores per subject
+    const daysWithActivity = new Set();
+    
+    // Count topics completed this week
+    completedTopics.forEach(topicKey => {
+      const parts = topicKey.split('::');
+      if (parts.length >= 2) {
+        const subjectName = parts[0];
+        
+        // Extract timestamp if available
+        let timestamp = null;
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          timestamp = new Date(parseInt(parts[2]));
+        }
+        
+        // Only count if completed this week
+        if (!timestamp || timestamp >= startOfWeek) {
+          weeklyCompleted++;
+          
+          // Track subject scores (assume 100% for completed topics)
+          if (!subjectScores[subjectName]) {
+            subjectScores[subjectName] = { total: 0, count: 0 };
+          }
+          subjectScores[subjectName].total += 100;
+          subjectScores[subjectName].count += 1;
+          
+          // Track days with activity
+          if (timestamp) {
+            const dayKey = timestamp.toDateString();
+            daysWithActivity.add(dayKey);
+            console.log('[HomeScreen] Added activity day:', dayKey);
+          } else {
+            // If no timestamp, assume it's today
+            const todayKey = now.toDateString();
+            daysWithActivity.add(todayKey);
+            console.log('[HomeScreen] Added activity day (no timestamp, using today):', todayKey);
+          }
+        }
+      }
+    });
+    
+    console.log('[HomeScreen] Weekly completed:', weeklyCompleted);
+    console.log('[HomeScreen] Days with activity:', daysWithActivity.size);
+    console.log('[HomeScreen] Activity days:', Array.from(daysWithActivity));
+    
+    // Calculate total topics for the week (from student's subjects)
+    const subjectLevels = child?.subjectLevels || {};
+    Object.entries(subjectLevels).forEach(([subjectKey, level]) => {
+      // Estimate topics per subject per week (20% of total)
+      const levelMultiplier = {
+        'Basic': 8,
+        'Intermediate': 12,
+        'Advanced': 15
+      };
+      const estimatedTotal = levelMultiplier[level] || 10;
+      totalTopicsThisWeek += Math.max(Math.ceil(estimatedTotal * 0.2), 3);
+    });
+    
+    // If no subjects, use a default
+    if (totalTopicsThisWeek === 0) {
+      totalTopicsThisWeek = 10;
+    }
+    
+    // Calculate completion rate
+    const completionRate = totalTopicsThisWeek > 0 
+      ? Math.round((weeklyCompleted / totalTopicsThisWeek) * 100)
+      : 0;
+    
+    // Calculate active days (out of 7)
+    const activeDays = daysWithActivity.size;
+    
+    // Check if there's activity today
+    const todayKey = now.toDateString();
+    const hasActivityToday = daysWithActivity.has(todayKey);
+    
+    console.log('[HomeScreen] Has activity today:', hasActivityToday);
+    
+    // Calculate streak days array (Monday to Sunday)
+    const streakDaysArray = [];
+    for (let i = 0; i < 7; i++) {
+      const checkDate = new Date(startOfWeek);
+      checkDate.setDate(startOfWeek.getDate() + i);
+      checkDate.setHours(0, 0, 0, 0);
+      
+      const checkDateKey = checkDate.toDateString();
+      const hasActivity = daysWithActivity.has(checkDateKey);
+      
+      // Only mark as active if the day has passed or is today
+      const isPastOrToday = checkDate <= now;
+      streakDaysArray.push(hasActivity && isPastOrToday);
+    }
+    
+    console.log('[HomeScreen] Streak days array (Mon-Sun):', streakDaysArray);
+    
+    // Calculate remaining days from today until Sunday
+    const currentDayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysUntilSunday = currentDayOfWeek === 0 ? 0 : 7 - currentDayOfWeek;
+    
+    console.log('[HomeScreen] Current day of week:', currentDayOfWeek, 'Days until Sunday:', daysUntilSunday);
+    
+    // Find best subject (highest average score)
+    let bestSubject = 'Math';
+    let bestScore = 0;
+    Object.entries(subjectScores).forEach(([subject, data]) => {
+      const avgScore = data.total / data.count;
+      if (avgScore > bestScore) {
+        bestScore = avgScore;
+        bestSubject = subject;
+      }
+    });
+    
+    // If no subjects completed, use first enrolled subject
+    if (Object.keys(subjectScores).length === 0 && child?.subjectLevels) {
+      const firstSubjectKey = Object.keys(child.subjectLevels)[0];
+      if (firstSubjectKey) {
+        // Try to get friendly name
+        const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(str);
+        if (isObjectId(firstSubjectKey)) {
+          const apiSubject = apiSubjects.find(s => s._id === firstSubjectKey);
+          bestSubject = apiSubject?.name || 'Math';
+        } else {
+          bestSubject = 
+            firstSubjectKey === 'mathematics' ? 'Math' :
+            firstSubjectKey === 'science' ? 'Science' :
+            firstSubjectKey === 'english' ? 'English' :
+            'Math';
+        }
+      }
+    }
+    
+    return {
+      completionRate: completionRate,
+      completionGrowth: completionRate > 0 ? Math.min(Math.round(completionRate * 0.15), 15) : 0,
+      activeDays: activeDays,
+      totalDays: 7,
+      bestSubject: bestSubject,
+      bestSubjectScore: Math.round(bestScore),
+      hasActivityToday: hasActivityToday,
+      streakDaysArray: streakDaysArray, // Array of 7 booleans (Mon-Sun)
+      daysRemaining: daysUntilSunday, // Days remaining from today until Sunday
+    };
+  };
+  
+  const weeklyImpact = useMemo(() => calculateWeeklyImpact(), [completedTopics, userData, apiSubjects]);
 
   const handleNudgeComplete = (nudgeId) => {
     if (!completedNudges.includes(nudgeId)) {
@@ -302,6 +489,10 @@ const HomeScreen = ({ userData, onNavigate }) => {
 
   const child = userData?.children?.[0];
   console.log('[HomeScreen] child:', child?.name, '| avatar:', child?.avatar?.substring(0, 20));
+  console.log('[HomeScreen] Featured content state:', featuredContent.length, 'items');
+  if (featuredContent.length > 0) {
+    console.log('[HomeScreen] First featured item:', featuredContent[0]);
+  }
   const timeRecommendation = getTimeBasedRecommendation();
   
   // Did You Know — show 2 most recently added active facts from admin panel
@@ -439,51 +630,65 @@ const HomeScreen = ({ userData, onNavigate }) => {
         </View>
 
         {/* Featured Nudge of the Day */}
-        <View style={styles.section}>
-          <View style={styles.featuredBadge}>
-            <MaterialIcon name="star" size={16} color="#FFB84D" />
-            <Text style={styles.featuredBadgeText}>Featured Today</Text>
-          </View>
-          <View 
-            style={styles.featuredCard}
-          >
-            <View style={styles.featuredContent}>
-              <View style={styles.featuredHeader}>
-                <View style={styles.featuredIconLarge}>
-                  <MaterialIcon name="telescope" size={32} color="#4A90E2" />
+        {console.log('[HomeScreen RENDER] About to check featuredContent.length:', featuredContent.length)}
+        {featuredContent.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.featuredBadge}>
+              <MaterialIcon name="star" size={16} color="#FFB84D" />
+              <Text style={styles.featuredBadgeText}>Featured Today</Text>
+            </View>
+            <View 
+              style={styles.featuredCard}
+            >
+              <View style={styles.featuredContent}>
+                <View style={styles.featuredHeader}>
+                  <View style={[styles.featuredIconLarge, { backgroundColor: featuredContent[0].iconColor + '20' }]}>
+                    <MaterialIcon 
+                      name={featuredContent[0].icon || 'telescope'} 
+                      size={32} 
+                      color={featuredContent[0].iconColor || '#4A90E2'} 
+                    />
+                  </View>
+                  <View style={styles.featuredInfo}>
+                    <Text style={styles.featuredTitle}>{featuredContent[0].title}</Text>
+                    <Text style={styles.featuredSubtitle}>{featuredContent[0].subtitle}</Text>
+                  </View>
                 </View>
-                <View style={styles.featuredInfo}>
-                  <Text style={styles.featuredTitle}>The Moon's Secret Phases</Text>
-                  <Text style={styles.featuredSubtitle}>Perfect for tonight's bedtime routine</Text>
+                <Text style={styles.featuredDescription}>
+                  {featuredContent[0].description}
+                </Text>
+                <View style={styles.featuredMeta}>
+                  <View style={styles.metaChip}>
+                    <Icon name="people-outline" size={14} color="#666666" />
+                    <Text style={styles.metaChipText}>{featuredContent[0].grade}</Text>
+                  </View>
+                  <View style={styles.metaChip}>
+                    <MaterialIcon name="star" size={14} color="#FFB84D" />
+                    <Text style={styles.metaChipText}>Popular</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.featuredDescription}>
-                "Why does the moon change shape?" Explore lunar phases together and spark curiosity about space. Includes a simple activity to track the moon for a week!
-              </Text>
-              <View style={styles.featuredMeta}>
-                <View style={styles.metaChip}>
-                  <Icon name="people-outline" size={14} color="#666666" />
-                  <Text style={styles.metaChipText}>{child?.grade || 'Grade 3'}</Text>
-                </View>
-                <View style={styles.metaChip}>
-                  <MaterialIcon name="star" size={14} color="#FFB84D" />
-                  <Text style={styles.metaChipText}>Popular</Text>
-                </View>
-              </View>
-              <View style={styles.featuredButton}>
-                <LinearGradient
-                  colors={['#00CED1', '#45a578', '#90EE90']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.featuredButtonGradient}
+                <TouchableOpacity 
+                  style={styles.featuredButton}
+                  onPress={() => {
+                    if (onNavigate) {
+                      onNavigate('featuredContentDetail', { content: featuredContent[0] });
+                    }
+                  }}
                 >
-                  <Text style={styles.featuredButtonText}>Start This Nudge</Text>
-                  <Icon name="arrow-forward" size={18} color="#FFFFFF" />
-                </LinearGradient>
+                  <LinearGradient
+                    colors={['#00CED1', '#45a578', '#90EE90']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.featuredButtonGradient}
+                  >
+                    <Text style={styles.featuredButtonText}>Start This Nudge</Text>
+                    <Icon name="arrow-forward" size={18} color="#FFFFFF" />
+                  </LinearGradient>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
-        </View>
+        ) : null}
 
         {/* Today's Nudges Section */}
         <View style={styles.section}>
@@ -599,23 +804,58 @@ const HomeScreen = ({ userData, onNavigate }) => {
         <View style={styles.section}>
           <View style={styles.streakCard}>
             <View style={styles.streakTitleRow}>
-              <MaterialIcon name="flash" size={24} color="#FFA500" />
-              <Text style={styles.streakTitle}>7 Day Streak! 🎉</Text>
+              <MaterialIcon name="flash" size={24} color={weeklyImpact.activeDays >= 7 ? '#FFA500' : '#9CA3AF'} />
+              <Text style={styles.streakTitle}>
+                {weeklyImpact.activeDays >= 7 ? '7 Day Streak! 🎉' : `${weeklyImpact.activeDays} Day${weeklyImpact.activeDays !== 1 ? 's' : ''} Active`}
+              </Text>
             </View>
-            <Text style={styles.streakSubtitle}>Amazing! You're building consistent learning habits</Text>
+            <Text style={styles.streakSubtitle}>
+              {weeklyImpact.activeDays >= 7 
+                ? 'Amazing! You\'re building consistent learning habits' 
+                : weeklyImpact.activeDays > 0
+                  ? 'Keep going! Build your learning streak'
+                  : 'Start your learning streak today!'}
+            </Text>
             <View style={styles.streakDays}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-                <View key={index} style={styles.streakDayContainer}>
-                  <View style={[styles.streakDay, streakDays[index] && styles.streakDayActive]}>
-                    {streakDays[index] && (
-                      <Icon name="checkmark" size={20} color="#FFFFFF" />
-                    )}
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
+                const hasActivity = weeklyImpact.streakDaysArray[index];
+                return (
+                  <View key={index} style={styles.streakDayContainer}>
+                    <View style={[
+                      styles.streakDay, 
+                      hasActivity && styles.streakDayActive
+                    ]}>
+                      {hasActivity && (
+                        <Icon name="checkmark" size={20} color="#FFFFFF" />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.streakDayLabel, 
+                      hasActivity && styles.streakDayLabelActive
+                    ]}>{day}</Text>
                   </View>
-                  <Text style={[styles.streakDayLabel, streakDays[index] && styles.streakDayLabelActive]}>{day}</Text>
-                </View>
-              ))}
+                );
+              })}
             </View>
-            <Text style={styles.streakMessage}>Keep going! Just 3 more days to reach your 10-day milestone 💛</Text>
+            <Text style={styles.streakMessage}>
+              {weeklyImpact.daysRemaining === 0
+                ? weeklyImpact.activeDays >= 7
+                  ? 'Perfect week! You completed all 7 days! Keep up the amazing work 💛'
+                  : 'Today is Sunday! Complete the week strong 💛'
+                : weeklyImpact.daysRemaining === 1
+                  ? 'Just 1 more day to complete the week! 💛'
+                  : weeklyImpact.daysRemaining === 2
+                    ? 'Just 2 more days to complete the week! 💛'
+                    : weeklyImpact.daysRemaining === 3
+                      ? '3 more days to complete the week! 💛'
+                      : weeklyImpact.daysRemaining === 4
+                        ? '4 more days to complete the week! 💛'
+                        : weeklyImpact.daysRemaining === 5
+                          ? '5 more days to complete the week! 💛'
+                          : weeklyImpact.daysRemaining === 6
+                            ? '6 more days to complete the week! 💛'
+                            : 'Complete a topic today to start your streak! 💛'}
+            </Text>
           </View>
         </View>
 
@@ -765,22 +1005,26 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <View style={[styles.impactCardIconContainer, { backgroundColor: '#FFFFFF' }]}>
                 <MaterialIcon name="bullseye-arrow" size={18} color="#10B981" />
               </View>
-              <Text style={styles.impactCardNumber}>87%</Text>
+              <Text style={styles.impactCardNumber}>{weeklyImpact.completionRate}%</Text>
               <Text style={styles.impactCardLabel}>Completion Rate</Text>
-              <View style={styles.impactCardGrowth}>
-                <Icon name="trending-up" size={12} color="#10B981" />
-                <Text style={styles.impactCardGrowthText}>+12%</Text>
-              </View>
+              {weeklyImpact.completionGrowth > 0 && (
+                <View style={styles.impactCardGrowth}>
+                  <Icon name="trending-up" size={12} color="#10B981" />
+                  <Text style={styles.impactCardGrowthText}>+{weeklyImpact.completionGrowth}%</Text>
+                </View>
+              )}
             </View>
 
             {/* Active Days Card */}
-            <View style={[styles.impactSmallCard, { backgroundColor: '#F5EFE7' }]}>
+            <View style={[styles.impactSmallCard, { backgroundColor: weeklyImpact.hasActivityToday ? '#FFEDD5' : '#F3F4F6' }]}>
               <View style={[styles.impactCardIconContainer, { backgroundColor: '#FFFFFF' }]}>
-                <MaterialIcon name="lightning-bolt" size={18} color="#F59E0B" />
+                <MaterialIcon name="lightning-bolt" size={18} color={weeklyImpact.hasActivityToday ? '#F59E0B' : '#9CA3AF'} />
               </View>
-              <Text style={styles.impactCardNumber}>5/7</Text>
-              <Text style={styles.impactCardLabel}>Active Days</Text>
-              <Text style={styles.impactCardSubtext}>This week</Text>
+              <Text style={[styles.impactCardNumber, { color: weeklyImpact.hasActivityToday ? '#1F2937' : '#6B7280' }]}>{weeklyImpact.activeDays}/{weeklyImpact.totalDays}</Text>
+              <Text style={[styles.impactCardLabel, { color: weeklyImpact.hasActivityToday ? '#1F2937' : '#9CA3AF' }]}>Active Days</Text>
+              <Text style={[styles.impactCardSubtext, { color: weeklyImpact.hasActivityToday ? '#F59E0B' : '#9CA3AF' }]}>
+                {weeklyImpact.hasActivityToday ? 'Active today!' : 'This week'}
+              </Text>
             </View>
 
             {/* Best Subject Card */}
@@ -788,12 +1032,14 @@ const HomeScreen = ({ userData, onNavigate }) => {
               <View style={[styles.impactCardIconContainer, { backgroundColor: '#FFFFFF' }]}>
                 <MaterialIcon name="medal" size={18} color="#8B5CF6" />
               </View>
-              <Text style={styles.impactCardNumber}>Math</Text>
+              <Text style={styles.impactCardNumber}>{weeklyImpact.bestSubject}</Text>
               <Text style={styles.impactCardLabel}>Best Subject</Text>
-              <View style={styles.impactCardGrowth}>
-                <Icon name="arrow-up" size={12} color="#8B5CF6" />
-                <Text style={[styles.impactCardGrowthText, { color: '#8B5CF6' }]}>95% avg</Text>
-              </View>
+              {weeklyImpact.bestSubjectScore > 0 && (
+                <View style={styles.impactCardGrowth}>
+                  <Icon name="arrow-up" size={12} color="#8B5CF6" />
+                  <Text style={[styles.impactCardGrowthText, { color: '#8B5CF6' }]}>{weeklyImpact.bestSubjectScore}% avg</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -1628,10 +1874,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#999999',
     fontFamily: 'Montserrat-Medium',
+    textAlign: 'center',
   },
 
   streakDayLabelActive: {
     color: '#f5a05aff',
+    fontWeight: '600',
   },
 
   currentStreakRow: {

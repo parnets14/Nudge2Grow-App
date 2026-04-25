@@ -251,6 +251,49 @@ export const fetchPhaseCards = async () => {
   }
 };
 
+export const fetchFeaturedContent = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/featured-content/active`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[FeaturedContent] fetch error:', err.message);
+    throw err;
+  }
+};
+
+export const fetchFeaturedContentDetail = async (featuredContentId) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/featured-content-detail/${featuredContentId}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      if (res.status === 404) {
+        console.log('[FeaturedContentDetail] No detail found for ID:', featuredContentId);
+        return null;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    console.log('[FeaturedContentDetail] fetched successfully');
+    return data;
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[FeaturedContentDetail] fetch error:', err.message);
+    throw err;
+  }
+};
+
 export const uploadAvatar = async (token, fileUri) => {
   const formData = new FormData();
   formData.append('photo', {

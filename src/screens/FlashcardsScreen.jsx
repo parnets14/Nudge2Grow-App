@@ -181,7 +181,12 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
         
         <View style={styles.cardBody}>
           {item.title ? (
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
+            <ScrollView 
+              style={{ flex: 1 }} 
+              contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={true} 
+              bounces={true}
+            >
               <View style={styles.aboutBadge}>
                 <Text style={styles.aboutBadgeText}>ABOUT</Text>
               </View>
@@ -205,11 +210,14 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
               {(item.section2 || item.subdescription) ? (
                 <Text style={styles.sectionText}>{item.section2 || item.subdescription}</Text>
               ) : null}
-
-              <View style={{ height: 20 }} />
             </ScrollView>
           ) : item.type === 'qa' ? (
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
+            <ScrollView 
+              style={{ flex: 1 }} 
+              contentContainerStyle={{ paddingBottom: 80 }}
+              showsVerticalScrollIndicator={true} 
+              bounces={true}
+            >
               <View style={styles.qaBadge}>
                 <Text style={styles.qaBadgeText}>QUESTION</Text>
               </View>
@@ -220,10 +228,14 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
                   <Text style={styles.answerBoxText}>{item.answer}</Text>
                 </View>
               )}
-              <View style={{ height: 60 }} />
             </ScrollView>
           ) : item.type === 'prompt' ? (
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
+            <ScrollView 
+              style={{ flex: 1 }} 
+              contentContainerStyle={{ paddingBottom: 80 }}
+              showsVerticalScrollIndicator={true} 
+              bounces={true}
+            >
               <View style={[styles.qaBadge, { backgroundColor: '#FEF3C7' }]}>
                 <Text style={[styles.qaBadgeText, { color: '#D97706' }]}>PROMPT</Text>
               </View>
@@ -234,7 +246,6 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
                   <Text style={[styles.answerBoxText, { color: '#92400E' }]}>{item.answer}</Text>
                 </View>
               )}
-              <View style={{ height: 60 }} />
             </ScrollView>
           ) : (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -646,19 +657,20 @@ const styles = StyleSheet.create({
 
   deckContainer: {
     width: CARD_WIDTH,
-    minHeight: CARD_HEIGHT,
+    height: CARD_HEIGHT,
     position: 'relative',
   },
 
   cardPositioned: {
     position: 'absolute',
     width: CARD_WIDTH,
-    minHeight: CARD_HEIGHT,
+    height: CARD_HEIGHT,
   },
 
   glassCard: {
     width: CARD_WIDTH,
-    minHeight: CARD_HEIGHT,
+    height: CARD_HEIGHT,
+    maxHeight: CARD_HEIGHT,
     borderRadius: 28,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,

@@ -79,7 +79,11 @@ const SelectTopicsScreen = ({
         
         console.log('[SelectTopics] Fetched topics:', fetchedTopics.length);
         
-        // Filter topics by the student's exact level
+        // Get today's date (start of day for comparison)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Filter topics by the student's exact level AND scheduled date
         let filteredTopics = fetchedTopics;
         
         if (studentLevel) {
@@ -87,20 +91,46 @@ const SelectTopicsScreen = ({
           
           console.log('[SelectTopics] Filtering for exact level:', studentLevel);
           
-          // Filter topics that match ONLY the student's exact level
+          // Filter topics that match ONLY the student's exact level AND are scheduled for today or earlier
           filteredTopics = fetchedTopics.filter(topic => {
             // Check if topic has a level field
             if (topic.level) {
               const topicLevel = topic.level.toLowerCase();
-              const isMatch = topicLevel === studentLevelLower;
+              const isLevelMatch = topicLevel === studentLevelLower;
               
-              console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| Level:', topicLevel, '| Match:', isMatch);
+              // Check scheduled date - only show if today or earlier
+              let isDateValid = true;
+              if (topic.scheduledDate) {
+                const scheduledDate = new Date(topic.scheduledDate);
+                scheduledDate.setHours(0, 0, 0, 0);
+                isDateValid = scheduledDate <= today;
+                
+                console.log('[SelectTopics] Topic:', topic.topic || topic.name, 
+                  '| Level:', topicLevel, 
+                  '| Scheduled:', scheduledDate.toDateString(),
+                  '| Today:', today.toDateString(),
+                  '| Date Valid:', isDateValid);
+              }
+              
+              const isMatch = isLevelMatch && isDateValid;
+              
+              console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| Level Match:', isLevelMatch, '| Date Valid:', isDateValid, '| Final Match:', isMatch);
               
               return isMatch;
             }
             // If topic doesn't have a level, exclude it for strict matching
             console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| No level - excluding');
             return false;
+          });
+        } else {
+          // If no student level, still filter by date
+          filteredTopics = fetchedTopics.filter(topic => {
+            if (topic.scheduledDate) {
+              const scheduledDate = new Date(topic.scheduledDate);
+              scheduledDate.setHours(0, 0, 0, 0);
+              return scheduledDate <= today;
+            }
+            return true; // Show topics without scheduled date
           });
         }
         
@@ -252,15 +282,6 @@ const SelectTopicsScreen = ({
                       <Text style={styles.topicMeta}>
                         {subjectDetails.name} · {topic.level || subjectDetails.level}
                       </Text>
-                      {topic.scheduledDate && (
-                        <Text style={styles.topicDate}>
-                          📅 {new Date(topic.scheduledDate).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}
-                        </Text>
-                      )}
                     </View>
                   </View>
                   {topic.imageUrl && (

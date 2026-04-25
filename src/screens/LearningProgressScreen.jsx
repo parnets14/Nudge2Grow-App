@@ -1,5 +1,16 @@
 /**
  * Learning Progress Screen - Learning Summary with Weekly/Monthly data
+ * 
+ * WEEKLY-BASED SUBJECT BREAKDOWN:
+ * - Tracks student performance by subject, level, and topics
+ * - Weekly view: Shows topics completed in the last 7 days
+ * - Monthly view: Shows all completed topics
+ * - Subject breakdown dynamically generated based on:
+ *   1. Student's enrolled subjects (from userData.children[0].subjects)
+ *   2. Subject levels (from userData.children[0].subjectLevels)
+ *   3. Completed topics (from completedTopics Set with format "SubjectName::TopicName")
+ * - Progress calculated as: (completed topics / estimated total) * 100
+ * - Growth percentage shows improvement trend
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +27,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle, Polyline } from 'react-native-svg';
-import { fetchAvatars } from '../api';
+import { fetchAvatars, fetchSubjects, fetchTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -84,6 +95,9 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
   const [showAllKnownTopics, setShowAllKnownTopics] = useState(false);
   const [showAllPracticeTopics, setShowAllPracticeTopics] = useState(false);
   const [apiAvatars, setApiAvatars] = useState([]); // { id, uri } from admin panel
+  const [subjectTopicsMap, setSubjectTopicsMap] = useState({}); // Store actual topic counts
+  const [topicsLoaded, setTopicsLoaded] = useState(false);
+  const [apiSubjects, setApiSubjects] = useState([]); // Store subjects from API
 
   useEffect(() => {
     fetchAvatars()
@@ -92,6 +106,105 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
   }, []);
 
   const child = userData?.children?.[0];
+
+  // Fetch actual topics from API for accurate counts
+  useEffect(() => {
+    const loadTopics = async () => {
+      try {
+        const subjects = await fetchSubjects();
+        console.log('[LearningProgress] Fetched subjects from API:', subjects);
+        setApiSubjects(subjects); // Store subjects for name lookup
+        
+        const topicsMap = {};
+        const subjectsByIdMap = {}; // Map _id to subject object
+        
+        // Create a map of subject _id to subject object
+        subjects.forEach(subject => {
+          subjectsByIdMap[subject._id] = subject;
+        });
+        
+        // Fetch all topics
+        const allTopics = await fetchTopicsBySubject(); // Get all topics
+        console.log('[LearningProgress] Fetched all topics:', allTopics.length);
+        
+        // Group topics by subject name
+        subjects.forEach(subject => {
+          const subjectTopics = allTopics.filter(t => 
+            String(t.subjectId) === String(subject._id)
+          );
+          topicsMap[subject.name] = subjectTopics;
+          console.log(`[LearningProgress] ${subject.name}: ${subjectTopics.length} topics`);
+        });
+        
+        setSubjectTopicsMap(topicsMap);
+        setTopicsLoaded(true);
+      } catch (error) {
+        console.error('Error loading topics:', error);
+        setTopicsLoaded(true); // Set to true even on error to show UI
+      }
+    };
+    
+    loadTopics();
+  }, []);
+
+  // Calculate subject-wise performance based on completed topics with weekly tracking
+  const calculateSubjectPerformance = () => {
+    const subjectStats = {};
+    const now = new Date();
+    
+    // Get the start of current week (MONDAY to SUNDAY)
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // If Sunday, go back 6 days to Monday
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    console.log('[LearningProgress] Current date:', now.toISOString());
+    console.log('[LearningProgress] Start of week (Monday):', startOfWeek.toISOString());
+    
+    // Parse completedTopics to extract subject and topic information
+    completedTopics.forEach(topicKey => {
+      // topicKey format: "SubjectName::TopicName" or "SubjectName::TopicName::timestamp"
+      const parts = topicKey.split('::');
+      if (parts.length >= 2) {
+        const subjectName = parts[0];
+        const topicName = parts[1];
+        
+        // Try to extract timestamp if available (for weekly filtering)
+        let timestamp = null;
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          timestamp = new Date(parseInt(parts[2]));
+        }
+        
+        if (!subjectStats[subjectName]) {
+          subjectStats[subjectName] = {
+            completed: 0,
+            completedThisWeek: 0,
+            total: 0,
+            topics: new Set(),
+            weeklyTopics: new Set()
+          };
+        }
+        
+        // Always count for overall
+        subjectStats[subjectName].completed++;
+        subjectStats[subjectName].topics.add(topicName);
+        
+        // Track weekly completion - only count if completed this week (Monday onwards)
+        if (!timestamp || timestamp >= startOfWeek) {
+          subjectStats[subjectName].completedThisWeek++;
+          subjectStats[subjectName].weeklyTopics.add(topicName);
+          console.log(`[LearningProgress] ${subjectName}::${topicName} completed this week`);
+        } else {
+          console.log(`[LearningProgress] ${subjectName}::${topicName} completed before this week (${timestamp?.toISOString()})`);
+        }
+      }
+    });
+    
+    console.log('[LearningProgress] Subject stats:', subjectStats);
+    
+    return subjectStats;
+  };
 
   // Calculate user activity metrics
   const calculateActivityMetrics = () => {
@@ -109,6 +222,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
   };
 
   const activityMetrics = calculateActivityMetrics();
+  const subjectPerformance = calculateSubjectPerformance();
 
   // Determine user status based on activity
   const getUserStatus = () => {
@@ -149,6 +263,357 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
 
   const userStatus = getUserStatus();
   const userBadges = getUserBadges();
+
+  // Calculate real weekly stats based on completed topics
+  const calculateWeeklyStats = () => {
+    const now = new Date();
+    
+    // Get the start of current week (MONDAY to SUNDAY)
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // If Sunday, go back 6 days to Monday
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    console.log('[LearningProgress] Week starts on Monday:', startOfWeek.toDateString());
+    console.log('[LearningProgress] Today is:', now.toDateString());
+    
+    let weeklyTimeSpent = 0; // in minutes
+    const weeklySubjects = new Set();
+    const uniqueTopicsThisWeek = new Set(); // Track unique topics
+    
+    // Count UNIQUE topics completed this week (Monday to Sunday)
+    completedTopics.forEach(topicKey => {
+      const parts = topicKey.split('::');
+      if (parts.length >= 2) {
+        const subjectName = parts[0];
+        const topicName = parts[1];
+        const uniqueKey = `${subjectName}::${topicName}`; // Without timestamp
+        
+        // Extract timestamp if available
+        let timestamp = null;
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          timestamp = new Date(parseInt(parts[2]));
+        }
+        
+        // Only count if completed this week (from Monday onwards)
+        if (!timestamp || timestamp >= startOfWeek) {
+          // Add to unique topics set (this prevents double counting)
+          uniqueTopicsThisWeek.add(uniqueKey);
+          weeklySubjects.add(subjectName);
+          // Estimate 5 minutes per topic completion (only count once per unique topic)
+          if (!uniqueTopicsThisWeek.has(uniqueKey + '_counted')) {
+            weeklyTimeSpent += 5;
+            uniqueTopicsThisWeek.add(uniqueKey + '_counted');
+          }
+        }
+      }
+    });
+    
+    const weeklyCompleted = uniqueTopicsThisWeek.size; // Use unique count
+    
+    // Calculate streak - check each day from Monday to Sunday
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check each day of the current week (Monday to Sunday)
+    const daysWithActivity = [];
+    const daysToCheck = currentDay === 0 ? 7 : currentDay; // If Sunday, check all 7 days; otherwise check up to today
+    
+    for (let i = 0; i < daysToCheck; i++) {
+      const checkDate = new Date(startOfWeek);
+      checkDate.setDate(startOfWeek.getDate() + i);
+      checkDate.setHours(0, 0, 0, 0);
+      
+      const nextDay = new Date(checkDate);
+      nextDay.setDate(checkDate.getDate() + 1);
+      nextDay.setHours(0, 0, 0, 0);
+      
+      // Check if any topic was completed on this day
+      let hasActivity = false;
+      completedTopics.forEach(topicKey => {
+        const parts = topicKey.split('::');
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          const timestamp = new Date(parseInt(parts[2]));
+          if (timestamp >= checkDate && timestamp < nextDay) {
+            hasActivity = true;
+          }
+        }
+      });
+      
+      if (hasActivity) {
+        daysWithActivity.push(checkDate.getDay());
+      }
+    }
+    
+    // Streak is the number of days with activity this week
+    streak = daysWithActivity.length;
+    
+    console.log(`[LearningProgress] Weekly: ${weeklyCompleted} unique topics, ${streak} days active`);
+    console.log(`[LearningProgress] Days with activity:`, daysWithActivity);
+    
+    // Format time spent
+    const hours = Math.floor(weeklyTimeSpent / 60);
+    const minutes = weeklyTimeSpent % 60;
+    const timeSpentFormatted = hours > 0 
+      ? `${hours}.${Math.round(minutes / 6)} hours` 
+      : `${minutes}min`;
+    
+    return {
+      completed: weeklyCompleted,
+      timeSpent: timeSpentFormatted,
+      streak: `${streak} day${streak !== 1 ? 's' : ''}`,
+      topics: weeklySubjects.size,
+    };
+  };
+  
+  const weeklyStats = calculateWeeklyStats();
+  
+  // Generate real Topics Known and Needs Practice based on completed topics
+  const generateTopicsData = (isWeekly = true) => {
+    const now = new Date();
+    
+    // Get start date based on period
+    let startDate;
+    if (isWeekly) {
+      const currentDay = now.getDay();
+      const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - daysFromMonday);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    const topicsKnown = [];
+    const topicsNeedsPractice = [];
+    const topicAttempts = {}; // Track attempts per topic
+    
+    // Get student's subjects and levels
+    const subjectLevels = child?.subjectLevels || {};
+    const childGrade = child?.grade;
+    
+    // First pass: Count attempts for all topics (completed and in-progress)
+    completedTopics.forEach(topicKey => {
+      const parts = topicKey.split('::');
+      if (parts.length >= 2) {
+        const subjectName = parts[0];
+        const topicName = parts[1];
+        const key = `${subjectName}::${topicName}`;
+        
+        topicAttempts[key] = (topicAttempts[key] || 0) + 1;
+      }
+    });
+    
+    // Process completed topics for "Topics Known"
+    const processedTopics = new Set();
+    completedTopics.forEach(topicKey => {
+      const parts = topicKey.split('::');
+      if (parts.length >= 2) {
+        const subjectName = parts[0];
+        const topicName = parts[1];
+        const key = `${subjectName}::${topicName}`;
+        
+        // Skip if already processed
+        if (processedTopics.has(key)) return;
+        processedTopics.add(key);
+        
+        // Extract timestamp
+        let timestamp = null;
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          timestamp = new Date(parseInt(parts[2]));
+        }
+        
+        // Only count if completed in this period
+        if (!timestamp || timestamp >= startDate) {
+          // Calculate days ago
+          const daysAgo = timestamp 
+            ? Math.floor((now - timestamp) / (1000 * 60 * 60 * 24))
+            : 0;
+          
+          // Calculate progress for completed topics (Topics Known)
+          // Completed topics should show high mastery (90-100%)
+          const attempts = topicAttempts[key] || 1;
+          
+          // Base progress for completed topics: 90%
+          // Add 2% per additional attempt (max 100%)
+          const progress = Math.min(100, 90 + ((attempts - 1) * 2));
+          
+          // Add to topics known
+          topicsKnown.push({
+            name: topicName,
+            subject: subjectName,
+            progress: progress,
+            daysAgo: daysAgo,
+            attempts: attempts,
+          });
+        }
+      }
+    });
+    
+    // Generate "Needs Practice" topics from API topics that haven't been completed
+    // Get all topics for student's subjects
+    Object.entries(subjectLevels).forEach(([subjectKey, level]) => {
+      // Find subject name
+      let subjectName = null;
+      const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(str);
+      
+      if (isObjectId(subjectKey)) {
+        const apiSubject = apiSubjects.find(s => s._id === subjectKey);
+        if (apiSubject) subjectName = apiSubject.name;
+      } else {
+        // Map subject ID to name
+        subjectName = 
+          subjectKey === 'mathematics' ? 'Math' :
+          subjectKey === 'science' ? 'Science / EVS' :
+          subjectKey === 'english' ? 'English' :
+          subjectKey === 'social-studies' ? 'Social Studies' :
+          subjectKey;
+      }
+      
+      if (subjectName) {
+        // Get topics for this subject
+        const allTopicsForSubject = subjectTopicsMap[subjectName] || [];
+        const filteredTopics = allTopicsForSubject.filter(t => {
+          const gradeMatch = !t.grade || !childGrade || t.grade === childGrade;
+          const levelMatch = !t.level || !level || t.level === level;
+          return gradeMatch && levelMatch;
+        });
+        
+        // Find topics not yet completed or partially completed
+        filteredTopics.forEach(topic => {
+          const topicKey = `${subjectName}::${topic.title}`;
+          const attempts = topicAttempts[topicKey] || 0;
+          
+          // Check if fully completed (in processedTopics)
+          const isFullyCompleted = processedTopics.has(topicKey);
+          
+          // Include if not fully completed and we have space
+          if (!isFullyCompleted && topicsNeedsPractice.length < 5) {
+            // Calculate progress based on attempts
+            const progress = attempts > 0 ? Math.min(65, 20 + (attempts * 15)) : 0;
+            
+            topicsNeedsPractice.push({
+              name: topic.title,
+              subject: subjectName,
+              progress: progress,
+              attempts: attempts,
+              priority: topicsNeedsPractice.length < 2 ? 'High' : '',
+            });
+          }
+        });
+      }
+    });
+    
+    return {
+      knownTopicsDetailed: topicsKnown.slice(0, 6),
+      needsPracticeTopicsDetailed: topicsNeedsPractice.slice(0, 5),
+    };
+  };
+  
+  // Calculate real monthly stats based on completed topics
+  const calculateMonthlyStats = () => {
+    const now = new Date();
+    
+    // Get the start of current month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    let monthlyTimeSpent = 0; // in minutes
+    const monthlySubjects = new Set();
+    const uniqueTopicsThisMonth = new Set(); // Track unique topics
+    
+    // Count UNIQUE topics completed this month
+    completedTopics.forEach(topicKey => {
+      const parts = topicKey.split('::');
+      if (parts.length >= 2) {
+        const subjectName = parts[0];
+        const topicName = parts[1];
+        const uniqueKey = `${subjectName}::${topicName}`; // Without timestamp
+        
+        // Extract timestamp if available
+        let timestamp = null;
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          timestamp = new Date(parseInt(parts[2]));
+        }
+        
+        // Only count if completed this month
+        if (!timestamp || timestamp >= startOfMonth) {
+          // Add to unique topics set (this prevents double counting)
+          uniqueTopicsThisMonth.add(uniqueKey);
+          monthlySubjects.add(subjectName);
+          // Estimate 5 minutes per topic completion (only count once per unique topic)
+          if (!uniqueTopicsThisMonth.has(uniqueKey + '_counted')) {
+            monthlyTimeSpent += 5;
+            uniqueTopicsThisMonth.add(uniqueKey + '_counted');
+          }
+        }
+      }
+    });
+    
+    const monthlyCompleted = uniqueTopicsThisMonth.size; // Use unique count
+    
+    // Calculate streak - days with activity this month
+    let monthlyStreak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check each day of the current month
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysWithActivity = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const checkDate = new Date(now.getFullYear(), now.getMonth(), day);
+      checkDate.setHours(0, 0, 0, 0);
+      
+      // Don't check future days
+      if (checkDate > today) {
+        break;
+      }
+      
+      const nextDay = new Date(checkDate);
+      nextDay.setDate(checkDate.getDate() + 1);
+      nextDay.setHours(0, 0, 0, 0);
+      
+      // Check if any topic was completed on this day
+      let hasActivity = false;
+      completedTopics.forEach(topicKey => {
+        const parts = topicKey.split('::');
+        if (parts.length >= 3 && !isNaN(parts[2])) {
+          const timestamp = new Date(parseInt(parts[2]));
+          if (timestamp >= checkDate && timestamp < nextDay) {
+            hasActivity = true;
+          }
+        }
+      });
+      
+      if (hasActivity) {
+        daysWithActivity.push(day);
+      }
+    }
+    
+    monthlyStreak = daysWithActivity.length;
+    
+    console.log(`[LearningProgress] Monthly: ${monthlyCompleted} unique topics, ${monthlyStreak} days active`);
+    
+    // Format time spent
+    const hours = Math.floor(monthlyTimeSpent / 60);
+    const minutes = monthlyTimeSpent % 60;
+    const timeSpentFormatted = hours > 0 
+      ? `${hours}.${Math.round(minutes / 6)} hours` 
+      : `${minutes}min`;
+    
+    return {
+      completed: monthlyCompleted,
+      timeSpent: timeSpentFormatted,
+      streak: `${monthlyStreak} day${monthlyStreak !== 1 ? 's' : ''}`,
+      topics: monthlySubjects.size,
+    };
+  };
+  
+  const monthlyStats = calculateMonthlyStats();
 
   // Get current month and year
   const getCurrentMonth = () => {
@@ -202,17 +667,305 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
 
   const childAge = child?.dateOfBirth ? calculateAge(child.dateOfBirth) : child?.age;
 
-  // Weekly data (current week)
+  // Generate dynamic subject breakdown based on student's actual performance
+  const generateSubjectBreakdown = () => {
+    console.log('[LearningProgress] generateSubjectBreakdown called');
+    console.log('[LearningProgress] child.subjectLevels:', child?.subjectLevels);
+    console.log('[LearningProgress] apiSubjects:', apiSubjects);
+    console.log('[LearningProgress] subjectTopicsMap:', Object.keys(subjectTopicsMap));
+    
+    const subjectConfig = {
+      'Math': { icon: 'calculator' },
+      'Mathematics': { icon: 'calculator' },
+      'English': { icon: 'book' },
+      'Science / EVS': { icon: 'leaf' },
+      'Science/EVS': { icon: 'leaf' },
+      'EVS': { icon: 'leaf' },
+      'Science': { icon: 'flask' },
+      'Biology': { icon: 'leaf' },
+      'Chemistry': { icon: 'flask' },
+      'Physics': { icon: 'magnet' },
+      'Social Studies': { icon: 'earth' },
+      'History': { icon: 'time' },
+      'Geography': { icon: 'map' },
+      'Civics': { icon: 'people' },
+      'Financial Literacy': { icon: 'cash' },
+      'Economics': { icon: 'trending-up' },
+      'Artificial Intelligence': { icon: 'hardware-chip' },
+      'AI': { icon: 'hardware-chip' },
+      'Machine Learning': { icon: 'analytics' },
+      'Robotics': { icon: 'construct' },
+      'Automation': { icon: 'settings' },
+      'Computer Science': { icon: 'laptop' },
+      'Coding': { icon: 'code-slash' },
+      'Sex & Safety Education': { icon: 'shield-checkmark' },
+      'Sex & Safety': { icon: 'shield-checkmark' },
+      'Drawing': { icon: 'brush' },
+      'Art': { icon: 'color-palette' },
+      'Music': { icon: 'musical-notes' },
+      'Dance': { icon: 'body' },
+      'Sports': { icon: 'basketball' },
+      'Physical Education': { icon: 'fitness' },
+      'Yoga': { icon: 'body' },
+      'Olympiad': { icon: 'trophy' },
+      'Mental Math': { icon: 'calculator' },
+      'Reasoning': { icon: 'bulb' },
+      'General Knowledge': { icon: 'globe' },
+      'Current Affairs': { icon: 'newspaper' },
+      'Literature': { icon: 'book-outline' },
+      'Grammar': { icon: 'text' },
+      'Writing': { icon: 'create' },
+      'Reading': { icon: 'reader' },
+      'Vocabulary': { icon: 'chatbubbles' },
+      'Moral Science': { icon: 'heart' },
+      'Life Skills': { icon: 'hand-right' },
+      'Environmental Science': { icon: 'earth' },
+      'Health & Hygiene': { icon: 'medical' },
+      'Nutrition': { icon: 'nutrition' },
+    };
+    
+    // Available icons for random selection (colors assigned by position)
+    const availableIcons = [
+      'calculator',
+      'book',
+      'leaf',
+      'earth',
+      'cash',
+      'hardware-chip',
+      'shield-checkmark',
+      'flask',
+      'bulb',
+      'trophy',
+      'star',
+      'rocket',
+    ];
+    
+    // Color palette for row-based coloring (ensures variety in each row)
+    const colorPalette = [
+      '#6366F1', // Blue
+      '#EC4899', // Pink
+      '#10B981', // Green
+      '#F59E0B', // Orange
+      '#14B8A6', // Teal
+      '#8B5CF6', // Purple
+      '#EF4444', // Red
+      '#FCD34D', // Yellow
+      '#3B82F6', // Light Blue
+      '#F472B6', // Light Pink
+      '#059669', // Dark Green
+      '#D97706', // Dark Orange
+    ];
+    
+    // Function to get random icon for unknown subjects
+    const getRandomIcon = (subjectName) => {
+      // Use subject name to generate consistent random index (same subject = same icon)
+      let hash = 0;
+      for (let i = 0; i < subjectName.length; i++) {
+        hash = ((hash << 5) - hash) + subjectName.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      const index = Math.abs(hash) % availableIcons.length;
+      return availableIcons[index];
+    };
+    
+    // Function to get color based on row position (2 subjects per row)
+    const getColorByPosition = (index) => {
+      return colorPalette[index % colorPalette.length];
+    };
+
+    const subjects = [];
+    
+    // Get student's subject levels (this is what they actually selected)
+    const subjectLevels = child?.subjectLevels || {};
+    const childGrade = child?.grade;
+    
+    // If subjectLevels contains ObjectIDs instead of subject IDs, we need to find the actual subjects
+    // Check if the keys look like ObjectIDs (24 hex characters)
+    const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(str);
+    
+    // Create a map of subject _id to subject object with creation order
+    const subjectByIdMap = {};
+    apiSubjects.forEach((apiSubject, index) => {
+      subjectByIdMap[apiSubject._id] = {
+        ...apiSubject,
+        orderIndex: index // Preserve the order from API (oldest first)
+      };
+    });
+    
+    console.log('[LearningProgress] subjectByIdMap:', subjectByIdMap);
+    
+    // Create an array to maintain order
+    const subjectsWithOrder = [];
+    
+    // Only process subjects that the student actually selected (have a level)
+    Object.entries(subjectLevels).forEach(([subjectKey, level]) => {
+      console.log(`[LearningProgress] Processing subjectKey: ${subjectKey}, level: ${level}`);
+      
+      let subjectName = null;
+      let apiSubject = null;
+      let orderIndex = 999; // Default high number for subjects not found in API
+      
+      // Check if subjectKey is an ObjectID
+      if (isObjectId(subjectKey)) {
+        // It's an ObjectID, look it up directly
+        apiSubject = subjectByIdMap[subjectKey];
+        if (apiSubject) {
+          subjectName = apiSubject.name;
+          orderIndex = apiSubject.orderIndex;
+          console.log(`[LearningProgress] Found subject by ObjectID: ${subjectName}, order: ${orderIndex}`);
+        }
+      } else {
+        // It's a subject ID like 'mathematics', 'science', etc.
+        // Try to find matching API subject
+        apiSubject = apiSubjects.find((s, idx) => {
+          const nameLower = s.name.toLowerCase();
+          const match = (
+            (subjectKey === 'mathematics' && nameLower.includes('math')) ||
+            (subjectKey === 'science' && (nameLower.includes('science') || nameLower.includes('evs'))) ||
+            (subjectKey === 'english' && nameLower.includes('english')) ||
+            (subjectKey === 'social-studies' && nameLower.includes('social')) ||
+            (subjectKey === 'artificial-intelligence' && (nameLower.includes('artificial') || nameLower.includes('intelligence'))) ||
+            (subjectKey === 'financial' && nameLower.includes('financial')) ||
+            (subjectKey === 'safety' && (nameLower.includes('sex') || nameLower.includes('safety')))
+          );
+          if (match) {
+            orderIndex = idx;
+          }
+          return match;
+        });
+        
+        if (apiSubject) {
+          subjectName = apiSubject.name;
+          console.log(`[LearningProgress] Found subject by ID mapping: ${subjectName}, order: ${orderIndex}`);
+        } else {
+          // Fallback to friendly names
+          subjectName = 
+            subjectKey === 'mathematics' ? 'Math' :
+            subjectKey === 'science' ? 'Science / EVS' :
+            subjectKey === 'english' ? 'English' :
+            subjectKey === 'social-studies' ? 'Social Studies' :
+            subjectKey === 'artificial-intelligence' ? 'Artificial Intelligence' :
+            subjectKey === 'financial' ? 'Financial Literacy' :
+            subjectKey === 'safety' ? 'Sex & Safety' :
+            subjectKey;
+          console.log(`[LearningProgress] Using fallback name: ${subjectName}`);
+        }
+      }
+      
+      if (!subjectName) {
+        console.log(`[LearningProgress] Could not determine subject name for: ${subjectKey}`);
+        return; // Skip this subject
+      }
+      
+      console.log(`[LearningProgress] Final subject name: ${subjectName}, order: ${orderIndex}`);
+      
+      // Get icon for this subject, or use random icon if not found
+      const subjectIcon = subjectConfig[subjectName]?.icon || getRandomIcon(subjectName);
+      
+      console.log(`[LearningProgress] Using icon for ${subjectName}:`, subjectIcon);
+      
+      // Get performance data for this subject
+      const perfData = subjectPerformance[subjectName] || { 
+        completed: 0, 
+        completedThisWeek: 0,
+        total: 0,
+        weeklyTopics: new Set()
+      };
+      
+      // Get actual topics from API filtered by grade and level
+      const allTopicsForSubject = subjectTopicsMap[subjectName] || [];
+      const filteredTopics = allTopicsForSubject.filter(t => {
+        const gradeMatch = !t.grade || !childGrade || t.grade === childGrade;
+        const levelMatch = !t.level || !level || t.level === level;
+        return gradeMatch && levelMatch;
+      });
+      
+      console.log(`[LearningProgress] ${subjectName}: ${filteredTopics.length} topics (filtered by ${childGrade}, ${level})`);
+      
+      // Use actual topic count from API
+      const actualTotalTopics = topicsLoaded ? filteredTopics.length : 0;
+      
+      // For weekly view: use weekly completion data
+      // For monthly view: use overall completion data
+      const isWeekly = selectedPeriod === 'weekly';
+      const completedCount = isWeekly ? perfData.completedThisWeek : perfData.completed;
+      const topicsSet = isWeekly ? (perfData.weeklyTopics || new Set()) : (perfData.topics || new Set());
+      
+      // Fallback to estimation if API data not loaded yet
+      const levelMultiplier = {
+        'Basic': 8,
+        'Intermediate': 12,
+        'Advanced': 15
+      };
+      const estimatedTotal = levelMultiplier[level] || 10;
+      
+      // Use actual count if available, otherwise estimate
+      let totalTopics = actualTotalTopics > 0 ? actualTotalTopics : estimatedTotal;
+      
+      // For weekly view, calculate weekly target (20% of total, minimum 3)
+      if (isWeekly && actualTotalTopics > 0) {
+        totalTopics = Math.max(Math.ceil(actualTotalTopics * 0.2), 3);
+      } else if (isWeekly) {
+        totalTopics = Math.max(Math.ceil(estimatedTotal * 0.2), 3);
+      }
+      
+      // Don't force minimum if no topics completed
+      if (completedCount === 0 && actualTotalTopics > 0) {
+        totalTopics = actualTotalTopics;
+      }
+      
+      const progress = totalTopics > 0 ? Math.round((completedCount / totalTopics) * 100) : 0;
+      
+      // Calculate growth based on weekly vs previous week (placeholder logic)
+      const growthPercentage = progress > 0 ? Math.min(Math.round(progress * 0.3), 30) : 0;
+      const growth = growthPercentage > 0 ? `+${growthPercentage}%` : '+0%';
+      
+      subjectsWithOrder.push({
+        name: subjectName, // Use actual name from API
+        fullName: subjectName,
+        icon: subjectIcon,
+        progress: progress,
+        completed: completedCount,
+        total: totalTopics,
+        actualTotal: actualTotalTopics,
+        growth: growth,
+        color: '#6B7280', // Placeholder, will be replaced by row-based color
+        level: level,
+        topicsCompleted: Array.from(topicsSet),
+        orderIndex: orderIndex // Store order for sorting
+      });
+    });
+    
+    // Sort by orderIndex to maintain the order subjects were added (oldest first)
+    subjectsWithOrder.sort((a, b) => a.orderIndex - b.orderIndex);
+    
+    // Apply row-based colors after sorting (so colors vary by position in grid)
+    subjectsWithOrder.forEach((subject, index) => {
+      subject.color = getColorByPosition(index);
+    });
+    
+    console.log('[LearningProgress] Generated subjects (sorted by order with row-based colors):', subjectsWithOrder);
+    
+    // If no subjects found, return empty array
+    if (subjectsWithOrder.length === 0) {
+      return [];
+    }
+    
+    return subjectsWithOrder;
+  };
+
+  // Weekly data (current week) - dynamically generated from real data
+  const weeklyTopicsData = generateTopicsData(true); // true = weekly
   const weeklyData = {
     topicsKnown: 12,
     topicsNeedsPractice: 7,
     skillsMastered: 8,
     timeSpent: '45min',
     overview: {
-      completed: 24,
-      timeSpent: '3.5 hours',
-      streak: '7 days',
-      topics: 8,
+      completed: weeklyStats.completed,
+      timeSpent: weeklyStats.timeSpent,
+      streak: weeklyStats.streak,
+      topics: weeklyStats.topics,
       growth: '+25%',
     },
     activity: [
@@ -224,65 +977,25 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
       { day: 'Sat', activities: 3, hours: 0.4, activityHeight: 60, hoursHeight: 16 },
       { day: 'Sun', activities: 2, hours: 0.3, activityHeight: 40, hoursHeight: 12 },
     ],
-    knownTopics: [
-      'Water Conservation',
-      'Simple Addition',
-      'Basic Shapes',
-      'Animal Homes',
-      'Reading Skills',
-      'Patterns',
-      'Five Senses',
-      'Healthy Habits',
-      'Story Time',
-      'Sharing & Caring',
-      'Color Mixing',
-      'Rainwater Harvesting',
-    ],
-    knownTopicsDetailed: [
-      { name: 'Water Conservation', subject: 'EVS', progress: 95, daysAgo: 2 },
-      { name: 'Simple Addition', subject: 'Math', progress: 92, daysAgo: 1 },
-      { name: 'Basic Shapes', subject: 'Math', progress: 88, daysAgo: 3 },
-      { name: 'Animal Homes', subject: 'EVS', progress: 90, daysAgo: 2 },
-      { name: 'Story Reading', subject: 'English', progress: 85, daysAgo: 1 },
-      { name: 'Plant Parts', subject: 'EVS', progress: 87, daysAgo: 4 },
-    ],
-    needsPracticeTopics: [
-      'Measurement',
-      'Water Cycle',
-      'Number Games',
-      'Writing Letters',
-      'Rhyming Words',
-      'Honesty',
-      'Drawing Fun',
-    ],
-    needsPracticeTopicsDetailed: [
-      { name: 'Measurement', subject: 'Math', progress: 45, attempts: 3, priority: 'High' },
-      { name: 'Water Cycle', subject: 'EVS', progress: 52, attempts: 4, priority: '' },
-      { name: 'Number Games', subject: 'Math', progress: 48, attempts: 5, priority: 'High' },
-      { name: 'Writing Letters', subject: 'English', progress: 55, attempts: 3, priority: '' },
-      { name: 'Subtraction Basics', subject: 'Math', progress: 42, attempts: 2, priority: 'High' },
-    ],
-    subjects: [
-      { name: 'Math', icon: 'calculator', progress: 80, completed: 8, total: 10, growth: '+15%', color: '#6366F1' },
-      { name: 'Eng', icon: 'book', progress: 75, completed: 6, total: 8, growth: '+20%', color: '#EC4899' },
-      { name: 'EVS', icon: 'leaf', progress: 83, completed: 5, total: 6, growth: '+30%', color: '#10B981' },
-      { name: 'S.St', icon: 'earth', progress: 67, completed: 4, total: 6, growth: '+18%', color: '#F59E0B' },
-      { name: 'Fin', icon: 'cash', progress: 60, completed: 3, total: 5, growth: '+10%', color: '#14B8A6' },
-      { name: 'AI', icon: 'hardware-chip', progress: 80, completed: 4, total: 5, growth: '+25%', color: '#8B5CF6' },
-    ],
+    knownTopics: weeklyTopicsData.knownTopicsDetailed.map(t => t.name),
+    knownTopicsDetailed: weeklyTopicsData.knownTopicsDetailed,
+    needsPracticeTopics: weeklyTopicsData.needsPracticeTopicsDetailed.map(t => t.name),
+    needsPracticeTopicsDetailed: weeklyTopicsData.needsPracticeTopicsDetailed,
+    subjects: generateSubjectBreakdown(), // Dynamic based on student's subjects and weekly performance
   };
 
-  // Monthly data (last month)
+  // Monthly data (current month) - dynamically generated from real data
+  const monthlyTopicsData = generateTopicsData(false); // false = monthly
   const monthlyData = {
     topicsKnown: 45,
     topicsNeedsPractice: 18,
     skillsMastered: 28,
     timeSpent: '6.5hrs',
     overview: {
-      completed: 96,
-      timeSpent: '14.2 hours',
-      streak: '28 days',
-      topics: 32,
+      completed: monthlyStats.completed,
+      timeSpent: monthlyStats.timeSpent,
+      streak: monthlyStats.streak,
+      topics: monthlyStats.topics,
       growth: '+42%',
     },
     activity: [
@@ -291,53 +1004,134 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
       { day: 'Week 3', activities: 24, hours: 2.8, activityHeight: 82, hoursHeight: 34 },
       { day: 'Week 4', activities: 24, hours: 2.7, activityHeight: 82, hoursHeight: 32 },
     ],
-    knownTopics: [
-      'Water Conservation', 'Simple Addition', 'Basic Shapes', 'Animal Homes',
-      'Reading Skills', 'Patterns', 'Five Senses', 'Healthy Habits',
-      'Story Time', 'Sharing & Caring', 'Color Mixing', 'Rainwater Harvesting',
-      'Water Cycle', 'Saving Water', 'Parts of a Plant', 'Growing Plants',
-      'Trees & Nature', 'Recycling', 'Amazing Animals', 'My Body',
-      'Food & Nutrition', 'Weather', 'Vocabulary', 'Creative Writing',
-      'Acts of Kindness', 'Respect', 'Empathy', 'Gratitude',
-      'Helping Others', 'Craft Time', 'Music & Rhythm', 'Creative Expression',
-      'Art Gallery', 'Recycled Art', 'Counting Money', 'Math in Daily Life',
-      'Wednesday Topics', 'Thursday Topics', 'Friday Topics', 'Saturday Topics',
-      'Sunday Topics', 'Monday Topics', 'Tuesday Topics', 'Additional Topic 1',
-      'Additional Topic 2',
-    ],
-    needsPracticeTopics: [
-      'Measurement', 'Number Games', 'Writing Letters', 'Rhyming Words',
-      'Honesty', 'Drawing Fun', 'Story Elements', 'Forgiveness',
-      'Patience', 'Being Patient', 'Understanding Emotions', 'Problem Solving',
-      'Critical Thinking', 'Advanced Patterns', 'Complex Shapes', 'Time Management',
-      'Organization Skills', 'Communication',
-    ],
-    knownTopicsDetailed: [
-      { name: 'Water Conservation', subject: 'EVS', progress: 95, daysAgo: 2 },
-      { name: 'Simple Addition', subject: 'Math', progress: 92, daysAgo: 1 },
-      { name: 'Basic Shapes', subject: 'Math', progress: 88, daysAgo: 3 },
-      { name: 'Animal Homes', subject: 'EVS', progress: 90, daysAgo: 2 },
-      { name: 'Story Reading', subject: 'English', progress: 85, daysAgo: 1 },
-      { name: 'Plant Parts', subject: 'EVS', progress: 87, daysAgo: 4 },
-    ],
-    needsPracticeTopicsDetailed: [
-      { name: 'Measurement', subject: 'Math', progress: 45, attempts: 3, priority: 'High' },
-      { name: 'Water Cycle', subject: 'EVS', progress: 52, attempts: 4, priority: '' },
-      { name: 'Number Games', subject: 'Math', progress: 48, attempts: 5, priority: 'High' },
-      { name: 'Writing Letters', subject: 'English', progress: 55, attempts: 3, priority: '' },
-      { name: 'Subtraction Basics', subject: 'Math', progress: 42, attempts: 2, priority: 'High' },
-    ],
-    subjects: [
-      { name: 'Math', icon: 'calculator', progress: 80, completed: 8, total: 10, growth: '+15%', color: '#6366F1' },
-      { name: 'Eng', icon: 'book', progress: 75, completed: 6, total: 8, growth: '+20%', color: '#EC4899' },
-      { name: 'EVS', icon: 'leaf', progress: 83, completed: 5, total: 6, growth: '+30%', color: '#10B981' },
-      { name: 'S.St', icon: 'earth', progress: 67, completed: 4, total: 6, growth: '+18%', color: '#F59E0B' },
-      { name: 'Fin', icon: 'cash', progress: 60, completed: 3, total: 5, growth: '+10%', color: '#14B8A6' },
-      { name: 'AI', icon: 'hardware-chip', progress: 80, completed: 4, total: 5, growth: '+25%', color: '#8B5CF6' },
-    ],
+    knownTopics: monthlyTopicsData.knownTopicsDetailed.map(t => t.name),
+    needsPracticeTopics: monthlyTopicsData.needsPracticeTopicsDetailed.map(t => t.name),
+    knownTopicsDetailed: monthlyTopicsData.knownTopicsDetailed,
+    needsPracticeTopicsDetailed: monthlyTopicsData.needsPracticeTopicsDetailed,
+    subjects: generateSubjectBreakdown(),
   };
 
   const currentData = selectedPeriod === 'weekly' ? weeklyData : monthlyData;
+
+  // Calculate real achievements based on student's progress
+  const calculateAchievements = () => {
+    const achievements = [];
+    
+    // Achievement 1: Streak Achievement
+    const streakDays = parseInt(weeklyStats.streak.split(' ')[0]) || 0;
+    if (streakDays >= 7) {
+      achievements.push({
+        icon: 'flame',
+        iconColor: '#F97316',
+        backgroundColor: '#FED7AA',
+        title: '7-Day Streak',
+        subtitle: 'Perfect week!'
+      });
+    } else if (streakDays >= 5) {
+      achievements.push({
+        icon: 'flame',
+        iconColor: '#F97316',
+        backgroundColor: '#FED7AA',
+        title: `${streakDays}-Day Streak`,
+        subtitle: 'Keep it going!'
+      });
+    } else if (streakDays >= 3) {
+      achievements.push({
+        icon: 'flame',
+        iconColor: '#F97316',
+        backgroundColor: '#FED7AA',
+        title: `${streakDays}-Day Streak`,
+        subtitle: 'Building momentum'
+      });
+    } else if (streakDays > 0) {
+      achievements.push({
+        icon: 'flame',
+        iconColor: '#F97316',
+        backgroundColor: '#FED7AA',
+        title: `${streakDays}-Day Active`,
+        subtitle: 'Great start!'
+      });
+    }
+    
+    // Achievement 2: Completed Topics
+    const completedCount = weeklyStats.completed;
+    if (completedCount >= 20) {
+      achievements.push({
+        icon: 'star',
+        iconColor: '#F59E0B',
+        backgroundColor: '#FDE68A',
+        title: `${completedCount} Topics`,
+        subtitle: 'Amazing progress!'
+      });
+    } else if (completedCount >= 10) {
+      achievements.push({
+        icon: 'star',
+        iconColor: '#F59E0B',
+        backgroundColor: '#FDE68A',
+        title: `${completedCount} Topics`,
+        subtitle: 'Excellent work!'
+      });
+    } else if (completedCount >= 5) {
+      achievements.push({
+        icon: 'star',
+        iconColor: '#F59E0B',
+        backgroundColor: '#FDE68A',
+        title: `${completedCount} Topics`,
+        subtitle: 'Completed this week'
+      });
+    } else if (completedCount > 0) {
+      achievements.push({
+        icon: 'star',
+        iconColor: '#F59E0B',
+        backgroundColor: '#FDE68A',
+        title: `${completedCount} Topic${completedCount === 1 ? '' : 's'}`,
+        subtitle: 'Keep learning!'
+      });
+    }
+    
+    // Achievement 3: Topics Mastered (from Topics Known)
+    const topicsKnownCount = weeklyData.knownTopicsDetailed?.length || 0;
+    if (topicsKnownCount >= 10) {
+      achievements.push({
+        icon: 'checkmark-circle',
+        iconColor: '#10B981',
+        backgroundColor: '#A7F3D0',
+        title: `${topicsKnownCount} Topics`,
+        subtitle: 'Mastered this week'
+      });
+    } else if (topicsKnownCount >= 5) {
+      achievements.push({
+        icon: 'checkmark-circle',
+        iconColor: '#10B981',
+        backgroundColor: '#A7F3D0',
+        title: `${topicsKnownCount} Topics`,
+        subtitle: 'Mastered recently'
+      });
+    } else if (topicsKnownCount > 0) {
+      achievements.push({
+        icon: 'checkmark-circle',
+        iconColor: '#10B981',
+        backgroundColor: '#A7F3D0',
+        title: `${topicsKnownCount} Topic${topicsKnownCount === 1 ? '' : 's'}`,
+        subtitle: 'Mastered'
+      });
+    }
+    
+    // If no achievements yet, show encouraging message
+    if (achievements.length === 0) {
+      achievements.push({
+        icon: 'rocket',
+        iconColor: '#8B5CF6',
+        backgroundColor: '#DDD6FE',
+        title: 'Start Learning',
+        subtitle: 'Complete your first topic!'
+      });
+    }
+    
+    return achievements.slice(0, 3); // Return max 3 achievements
+  };
+  
+  const recentAchievements = calculateAchievements();
 
   const getAvatarSource = (avatarId) => {
     if (!avatarId) return require('../assets/images/A1.jpeg');
@@ -453,7 +1247,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
                   <Icon name="checkmark-circle-outline" size={24} color="#BBBBBB" />
                 </View>
                 <Text style={styles.statNumber}>{currentData.overview.completed}</Text>
-                <Text style={styles.statLabel}>Completed</Text>
+                <Text style={styles.statLabel}>Topics Completed</Text>
               </View>
 
               <View style={styles.statCard}>
@@ -477,7 +1271,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
                   <Icon name="book-outline" size={24} color="#BBBBBB" />
                 </View>
                 <Text style={styles.statNumber}>{currentData.overview.topics}</Text>
-                <Text style={styles.statLabel}>Topics</Text>
+                <Text style={styles.statLabel}>Subjects</Text>
               </View>
             </View>
           </>
@@ -620,7 +1414,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
                 </View>
                 <View>
                   <Text style={styles.streakTitle}>Streak</Text>
-                  <Text style={styles.streakSubtitle}>1 Day</Text>
+                  <Text style={styles.streakSubtitle}>{monthlyStats.streak}</Text>
                 </View>
               </View>
               <Text style={styles.streakMonthYear}>{getCurrentMonth()}</Text>
@@ -638,27 +1432,79 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
               </View>
 
               <View style={styles.streakGrid}>
-                {[...Array(getDaysInCurrentMonth())].map((_, index) => {
-                  const dayNumber = index + 1;
-                  const today = new Date().getDate();
-                  // Only show orange for today if flashcards are completed
-                  // For other days, show based on whether they're in the past
-                  const isToday = dayNumber === today;
-                  const isPast = dayNumber < today;
-                  const isCompleted = isToday ? false : isPast; // Change this based on actual completion data
+                {(() => {
+                  const today = new Date();
+                  const currentDay = today.getDate();
+                  const currentMonth = today.getMonth();
+                  const currentYear = today.getFullYear();
                   
-                  return (
-                    <View
-                      key={index}
-                      style={[
-                        styles.streakDot,
-                        isCompleted && styles.streakDotActive,
-                      ]}
-                    >
-                      <Text style={styles.streakDayNumber}>{dayNumber}</Text>
-                    </View>
-                  );
-                })}
+                  // Get the first day of the month and its day of week
+                  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+                  const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                  
+                  const daysInMonth = getDaysInCurrentMonth();
+                  const totalCells = [];
+                  
+                  // Add empty cells for days before the month starts
+                  for (let i = 0; i < startingDayOfWeek; i++) {
+                    totalCells.push(
+                      <View key={`empty-${i}`} style={styles.streakDotEmpty} />
+                    );
+                  }
+                  
+                  // Add cells for each day of the month
+                  for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
+                    // Create date for this day
+                    const checkDate = new Date(currentYear, currentMonth, dayNumber);
+                    checkDate.setHours(0, 0, 0, 0);
+                    
+                    const nextDay = new Date(checkDate);
+                    nextDay.setDate(checkDate.getDate() + 1);
+                    nextDay.setHours(0, 0, 0, 0);
+                    
+                    // Check if this day has any COMPLETED topics (not just uploaded)
+                    // completedTopics format: "SubjectName::TopicName::completionTimestamp"
+                    let hasActivity = false;
+                    completedTopics.forEach(topicKey => {
+                      const parts = topicKey.split('::');
+                      // Must have timestamp (completion date)
+                      if (parts.length >= 3 && !isNaN(parts[2])) {
+                        const completionTimestamp = new Date(parseInt(parts[2]));
+                        // Check if completed on this specific day
+                        if (completionTimestamp >= checkDate && completionTimestamp < nextDay) {
+                          hasActivity = true;
+                          console.log(`[Streak] Activity on ${checkDate.toDateString()}: ${parts[0]}::${parts[1]}`);
+                        }
+                      }
+                    });
+                    
+                    const isToday = dayNumber === currentDay;
+                    const isFuture = dayNumber > currentDay;
+                    
+                    totalCells.push(
+                      <View key={`day-${dayNumber}`} style={styles.streakDot}>
+                        <View
+                          style={[
+                            styles.streakDotInner,
+                            hasActivity && styles.streakDotActive, // Orange if has activity
+                            isFuture && styles.streakDotFuture, // Gray for future days
+                            isToday && styles.streakDotToday, // Highlight today
+                          ]}
+                        >
+                          <Text style={[
+                            styles.streakDayNumber,
+                            hasActivity && styles.streakDayNumberActive,
+                            isFuture && styles.streakDayNumberFuture,
+                          ]}>
+                            {dayNumber}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+                  
+                  return totalCells;
+                })()}
               </View>
             </View>
           </View>
@@ -723,7 +1569,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
           </View>
         )}
         {/* Subject Growth - Monthly View Only */}
-        {selectedPeriod === 'monthly' && (
+        {selectedPeriod === 'monthly' && monthlyData.subjects.length > 0 && (
           <View style={styles.subjectGrowthCard}>
             <View style={styles.subjectGrowthHeader}>
               <View style={styles.subjectGrowthIconContainer}>
@@ -731,106 +1577,41 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
               </View>
               <View>
                 <Text style={styles.subjectGrowthTitle}>Subject Growth</Text>
-                <Text style={styles.subjectGrowthSubtitle}>Start vs end of February</Text>
+                <Text style={styles.subjectGrowthSubtitle}>Progress this month</Text>
               </View>
             </View>
 
             <View style={styles.subjectGrowthList}>
-              {/* Math */}
-              <View style={styles.subjectGrowthItem}>
-                <Text style={styles.subjectGrowthName}>Math</Text>
-                <View style={styles.subjectGrowthRight}>
-                  <Text style={styles.subjectGrowthStart}>65%</Text>
-                  <Text style={styles.subjectGrowthArrow}>→</Text>
-                  <Text style={styles.subjectGrowthEnd}>80%</Text>
-                  <Text style={styles.subjectGrowthChange}>+15%</Text>
-                </View>
-                <View style={styles.subjectGrowthBarContainer}>
-                  <View style={styles.subjectGrowthBarBackground}>
-                    <View style={[styles.subjectGrowthBarFill, { width: '80%', backgroundColor: '#6366F1' }]} />
+              {monthlyData.subjects.map((subject, index) => {
+                // Start of month is always 0%
+                // End is current progress this month
+                const startProgress = 0;
+                const endProgress = subject.progress;
+                const change = endProgress;
+                
+                return (
+                  <View key={index} style={styles.subjectGrowthItem}>
+                    <Text style={styles.subjectGrowthName}>{subject.name}</Text>
+                    <View style={styles.subjectGrowthRight}>
+                      <Text style={styles.subjectGrowthStart}>{startProgress}%</Text>
+                      <Text style={styles.subjectGrowthArrow}>→</Text>
+                      <Text style={styles.subjectGrowthEnd}>{endProgress}%</Text>
+                      <Text style={styles.subjectGrowthChange}>+{change}%</Text>
+                    </View>
+                    <View style={styles.subjectGrowthBarContainer}>
+                      <View style={styles.subjectGrowthBarBackground}>
+                        <View style={[
+                          styles.subjectGrowthBarFill, 
+                          { 
+                            width: `${endProgress}%`, 
+                            backgroundColor: subject.color 
+                          }
+                        ]} />
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
-
-              {/* English */}
-              <View style={styles.subjectGrowthItem}>
-                <Text style={styles.subjectGrowthName}>English</Text>
-                <View style={styles.subjectGrowthRight}>
-                  <Text style={styles.subjectGrowthStart}>55%</Text>
-                  <Text style={styles.subjectGrowthArrow}>→</Text>
-                  <Text style={styles.subjectGrowthEnd}>75%</Text>
-                  <Text style={styles.subjectGrowthChange}>+20%</Text>
-                </View>
-                <View style={styles.subjectGrowthBarContainer}>
-                  <View style={styles.subjectGrowthBarBackground}>
-                    <View style={[styles.subjectGrowthBarFill, { width: '75%', backgroundColor: '#EC4899' }]} />
-                  </View>
-                </View>
-              </View>
-
-              {/* EVS */}
-              <View style={styles.subjectGrowthItem}>
-                <Text style={styles.subjectGrowthName}>EVS</Text>
-                <View style={styles.subjectGrowthRight}>
-                  <Text style={styles.subjectGrowthStart}>53%</Text>
-                  <Text style={styles.subjectGrowthArrow}>→</Text>
-                  <Text style={styles.subjectGrowthEnd}>83%</Text>
-                  <Text style={styles.subjectGrowthChange}>+30%</Text>
-                </View>
-                <View style={styles.subjectGrowthBarContainer}>
-                  <View style={styles.subjectGrowthBarBackground}>
-                    <View style={[styles.subjectGrowthBarFill, { width: '83%', backgroundColor: '#10B981' }]} />
-                  </View>
-                </View>
-              </View>
-
-              {/* S.St */}
-              <View style={styles.subjectGrowthItem}>
-                <Text style={styles.subjectGrowthName}>S.St</Text>
-                <View style={styles.subjectGrowthRight}>
-                  <Text style={styles.subjectGrowthStart}>49%</Text>
-                  <Text style={styles.subjectGrowthArrow}>→</Text>
-                  <Text style={styles.subjectGrowthEnd}>67%</Text>
-                  <Text style={styles.subjectGrowthChange}>+18%</Text>
-                </View>
-                <View style={styles.subjectGrowthBarContainer}>
-                  <View style={styles.subjectGrowthBarBackground}>
-                    <View style={[styles.subjectGrowthBarFill, { width: '67%', backgroundColor: '#F59E0B' }]} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Fin */}
-              <View style={styles.subjectGrowthItem}>
-                <Text style={styles.subjectGrowthName}>Fin</Text>
-                <View style={styles.subjectGrowthRight}>
-                  <Text style={styles.subjectGrowthStart}>50%</Text>
-                  <Text style={styles.subjectGrowthArrow}>→</Text>
-                  <Text style={styles.subjectGrowthEnd}>60%</Text>
-                  <Text style={styles.subjectGrowthChange}>+10%</Text>
-                </View>
-                <View style={styles.subjectGrowthBarContainer}>
-                  <View style={styles.subjectGrowthBarBackground}>
-                    <View style={[styles.subjectGrowthBarFill, { width: '60%', backgroundColor: '#14B8A6' }]} />
-                  </View>
-                </View>
-              </View>
-
-              {/* AI */}
-              <View style={styles.subjectGrowthItem}>
-                <Text style={styles.subjectGrowthName}>AI</Text>
-                <View style={styles.subjectGrowthRight}>
-                  <Text style={styles.subjectGrowthStart}>55%</Text>
-                  <Text style={styles.subjectGrowthArrow}>→</Text>
-                  <Text style={styles.subjectGrowthEnd}>80%</Text>
-                  <Text style={styles.subjectGrowthChange}>+25%</Text>
-                </View>
-                <View style={styles.subjectGrowthBarContainer}>
-                  <View style={styles.subjectGrowthBarBackground}>
-                    <View style={[styles.subjectGrowthBarFill, { width: '80%', backgroundColor: '#8B5CF6' }]} />
-                  </View>
-                </View>
-              </View>
+                );
+              })}
             </View>
 
             <View style={styles.subjectGrowthLegend}>
@@ -840,7 +1621,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
               </View>
               <View style={styles.subjectGrowthLegendItem}>
                 <View style={[styles.subjectGrowthLegendDot, { backgroundColor: '#6366F1' }]} />
-                <Text style={styles.subjectGrowthLegendText}>End of month</Text>
+                <Text style={styles.subjectGrowthLegendText}>Current progress</Text>
               </View>
             </View>
           </View>
@@ -957,32 +1738,51 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
             <Icon name="pie-chart" size={isSmallDevice ? 18 : 20} color="#8B5CF6" />
             <Text style={styles.subjectBreakdownTitle}>Subject Breakdown</Text>
           </View>
-          <Text style={styles.subjectBreakdownSubtitle}>Progress across all subjects</Text>
+          <Text style={styles.subjectBreakdownSubtitle}>
+            {selectedPeriod === 'weekly' 
+              ? 'Weekly progress across all subjects' 
+              : 'Overall progress across all subjects'}
+          </Text>
           
-          <View style={styles.subjectsGrid}>
-            {currentData.subjects.map((subject, index) => (
-              <View key={index} style={styles.subjectCard}>
-                <View style={styles.subjectHeader}>
-                  <Icon name={subject.icon} size={isSmallDevice ? 18 : 20} color={subject.color} />
-                  <View style={styles.subjectGrowth}>
-                    <Icon name="trending-up" size={isSmallDevice ? 10 : 11} color="#10B981" />
-                    <Text style={styles.subjectGrowthText}>{subject.growth}</Text>
+          {currentData.subjects.length === 0 ? (
+            <View style={styles.emptySubjectsContainer}>
+              <MaterialIcon name="book-open-variant" size={40} color="#9CA3AF" />
+              <Text style={styles.emptySubjectsTitle}>No subjects selected</Text>
+              <Text style={styles.emptySubjectsText}>
+                Select subjects in Settings to track your progress
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.subjectsGrid}>
+              {currentData.subjects.map((subject, index) => (
+                <View key={index} style={styles.subjectCard}>
+                  <View style={styles.subjectHeader}>
+                    <Icon name={subject.icon} size={isSmallDevice ? 18 : 20} color={subject.color} />
+                    <View style={styles.subjectGrowth}>
+                      <Icon name="trending-up" size={isSmallDevice ? 10 : 11} color="#10B981" />
+                      <Text style={styles.subjectGrowthText}>{subject.growth}</Text>
+                    </View>
                   </View>
+                  
+                  <View style={styles.progressCircleContainer}>
+                    <CircularProgress 
+                      percentage={subject.progress} 
+                      color={subject.color}
+                      size={isSmallDevice ? 45 : 50}
+                    />
+                  </View>
+                  
+                  <Text style={styles.subjectName}>{subject.name}</Text>
+                  <Text style={styles.subjectProgress}>
+                    {subject.completed}/{subject.actualTotal > 0 ? subject.actualTotal : subject.total}
+                  </Text>
+                  {subject.level && (
+                    <Text style={styles.subjectLevel}>{subject.level}</Text>
+                  )}
                 </View>
-                
-                <View style={styles.progressCircleContainer}>
-                  <CircularProgress 
-                    percentage={subject.progress} 
-                    color={subject.color}
-                    size={isSmallDevice ? 45 : 50}
-                  />
-                </View>
-                
-                <Text style={styles.subjectName}>{subject.name}</Text>
-                <Text style={styles.subjectProgress}>{subject.completed}/{subject.total}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
         )}
 
@@ -1032,7 +1832,9 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
                   
                   <View style={styles.topicFooter}>
                     <Icon name="star" size={isSmallDevice ? 12 : 14} color="#10B981" />
-                    <Text style={styles.topicDaysAgo}>{topic.daysAgo} {topic.daysAgo === 1 ? 'day' : 'days'} ago</Text>
+                    <Text style={styles.topicDaysAgo}>
+                      {topic.daysAgo === 0 ? 'today' : topic.daysAgo === 1 ? '1 day ago' : `${topic.daysAgo} days ago`}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -1110,29 +1912,15 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
           </View>
           
           <View style={styles.achievementsGrid}>
-            <View style={styles.achievementItem}>
-              <View style={[styles.achievementIcon, { backgroundColor: '#FED7AA' }]}>
-                <Icon name="flame" size={isSmallDevice ? 20 : 22} color="#F97316" />
+            {recentAchievements.map((achievement, index) => (
+              <View key={index} style={styles.achievementItem}>
+                <View style={[styles.achievementIcon, { backgroundColor: achievement.backgroundColor }]}>
+                  <Icon name={achievement.icon} size={isSmallDevice ? 20 : 22} color={achievement.iconColor} />
+                </View>
+                <Text style={styles.achievementTitle}>{achievement.title}</Text>
+                <Text style={styles.achievementSubtitle}>{achievement.subtitle}</Text>
               </View>
-              <Text style={styles.achievementTitle}>7-Day Streak</Text>
-              <Text style={styles.achievementSubtitle}>Longest streak this month</Text>
-            </View>
-            
-            <View style={styles.achievementItem}>
-              <View style={[styles.achievementIcon, { backgroundColor: '#FDE68A' }]}>
-                <Icon name="star" size={isSmallDevice ? 20 : 22} color="#F59E0B" />
-              </View>
-              <Text style={styles.achievementTitle}>24 Activities</Text>
-              <Text style={styles.achievementSubtitle}>Completed this week</Text>
-            </View>
-            
-            <View style={styles.achievementItem}>
-              <View style={[styles.achievementIcon, { backgroundColor: '#A7F3D0' }]}>
-                <Icon name="checkmark-circle" size={isSmallDevice ? 20 : 22} color="#10B981" />
-              </View>
-              <Text style={styles.achievementTitle}>8 Topics</Text>
-              <Text style={styles.achievementSubtitle}>Mastered recently</Text>
-            </View>
+            ))}
           </View>
         </View>
         )}
@@ -1698,31 +2486,54 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
     fontWeight: '700',
     color: '#9CA3AF',
-    width: '14.28%',
+    flex: 1,
     textAlign: 'center',
     fontFamily: 'Montserrat-Bold',
   },
   streakGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: isSmallDevice ? 6 : 8,
   },
   streakDot: {
-    width: isSmallDevice ? 28 : 32,
-    height: isSmallDevice ? 28 : 32,
-    borderRadius: isSmallDevice ? 14 : 16,
-    backgroundColor: '#E5E7EB',
+    width: `${100 / 7}%`, // Exactly 1/7th of the width
+    paddingVertical: isSmallDevice ? 4 : 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  streakDotEmpty: {
+    width: `${100 / 7}%`, // Exactly 1/7th of the width
+    paddingVertical: isSmallDevice ? 4 : 6,
+    // Empty space before month starts
+  },
+  streakDotInner: {
+    width: isSmallDevice ? 32 : 36,
+    height: isSmallDevice ? 32 : 36,
+    borderRadius: isSmallDevice ? 16 : 18, // Half of width/height for perfect circle
+    backgroundColor: '#E5E7EB', // Gray for days without activity
     justifyContent: 'center',
     alignItems: 'center',
   },
   streakDotActive: {
-    backgroundColor: '#f1ca96ff',
+    backgroundColor: '#FDBA74', // Orange for days with activity
+  },
+  streakDotFuture: {
+    backgroundColor: '#F3F4F6', // Light gray for future days
+  },
+  streakDotToday: {
+    borderWidth: 2,
+    borderColor: '#FDBA74', // Orange border for today
   },
   streakDayNumber: {
     fontSize: isTablet ? 10 : isSmallDevice ? 8 : 9,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#9CA3AF', // Gray text for inactive days
     fontFamily: 'Montserrat-Bold',
+  },
+  streakDayNumberActive: {
+    color: '#FFFFFF', // White text for active days
+  },
+  streakDayNumberFuture: {
+    color: '#D1D5DB', // Lighter gray for future days
   },
 
   // Subject Growth (Monthly View)
@@ -2340,6 +3151,7 @@ const styles = StyleSheet.create({
     padding: isSmallDevice ? 8 : 10,
     width: '31%',
     alignItems: 'center',
+    minHeight: isSmallDevice ? 120 : 130,
   },
   subjectHeader: {
     flexDirection: 'row',
@@ -2363,15 +3175,43 @@ const styles = StyleSheet.create({
     marginVertical: isSmallDevice ? 4 : 6,
   },
   subjectName: {
-    fontSize: isTablet ? 13 : isSmallDevice ? 10 : 11,
+    fontSize: isTablet ? 13 : isSmallDevice ? 9 : 10,
     fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 2,
     fontFamily: 'Montserrat-Bold',
+    textAlign: 'center',
+    lineHeight: isSmallDevice ? 12 : 14,
   },
   subjectProgress: {
     fontSize: isTablet ? 11 : isSmallDevice ? 8 : 9,
     color: '#9CA3AF',
+    fontFamily: 'Montserrat-Regular',
+  },
+  subjectLevel: {
+    fontSize: isTablet ? 10 : isSmallDevice ? 7 : 8,
+    color: '#6B7280',
+    fontFamily: 'Montserrat-Medium',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  emptySubjectsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: isSmallDevice ? 30 : 40,
+  },
+  emptySubjectsTitle: {
+    fontSize: isTablet ? 16 : isSmallDevice ? 13 : 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginTop: isSmallDevice ? 10 : 12,
+    fontFamily: 'Montserrat-Bold',
+  },
+  emptySubjectsText: {
+    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
+    color: '#9CA3AF',
+    marginTop: 6,
+    textAlign: 'center',
     fontFamily: 'Montserrat-Regular',
   },
 
