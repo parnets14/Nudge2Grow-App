@@ -15,17 +15,27 @@ import {
   Platform,
   Image,
   Dimensions,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { fetchGrades, fetchBoards, fetchAvatars, fetchBeyondSchool, fetchSubjects, saveProfile } from '../api';
+import { fetchGrades, fetchBoards, fetchAvatars, fetchBeyondSchool, fetchSubjects, saveProfile, checkEmail, BASE_URL } from '../api';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
+
+// Build a full URL from a relative /uploads/... path stored in the DB
+const SERVER_BASE = BASE_URL.replace('/api', ''); // e.g. https://nudgebackend.onrender.com
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('data:') || url.startsWith('http')) return url;
+  if (url.startsWith('/uploads/')) return `${SERVER_BASE}${url}`;
+  return `${SERVER_BASE}/uploads/${url}`;
+};
 
 
 const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
@@ -37,6 +47,29 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const [showTopicPreferences, setShowTopicPreferences] = useState(false);
   const [showLifeSkills, setShowLifeSkills] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+  
+  // Toast
+  const [toast, setToast] = useState(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    Animated.spring(toastAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 60,
+    }).start();
+    setTimeout(() => dismissToast(), 4000);
+  };
+
+  const dismissToast = () => {
+    Animated.timing(toastAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setToast(null));
+  };
   
   // Child form fields
   const [childName, setChildName] = useState('');
@@ -145,8 +178,17 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     setIsValid(emailRegex.test(text));
   };
 
-  const handleNext = () => {
-    if (isValid) {
+  const handleNext = async () => {
+    if (!isValid) return;
+    try {
+      const result = await checkEmail(token, email);
+      if (result.registered) {
+        showToast('This email is already registered with another account. Please use a different email.', 'error');
+        return;
+      }
+      setShowChildForm(true);
+    } catch (err) {
+      // If check fails for network reasons, still allow proceeding
       setShowChildForm(true);
     }
   };
@@ -250,14 +292,23 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
           avatar: childrenData[i]?.avatar || sc.avatar,
         }));
         if (onFinish) {
-          onFinish({ email, children: savedChildren, token });
+          onFinish({
+            email,
+            children: savedChildren,
+            token,
+            _id: result?.parent?.id || result?.parent?._id || null,
+          });
         }
         return;
       } catch (err) {
         console.error('[Setup] Save failed:', err);
         console.error('[Setup] Error message:', err.message);
         console.error('[Setup] Error response:', err.response?.data);
-        // Continue to home even if save fails
+        if (err.message && err.message.toLowerCase().includes('email already registered')) {
+          showToast('This email is already registered with another account. Please use a different email.', 'error');
+          return; // Stop — don't navigate away
+        }
+        // Continue to home for other non-email errors
       }
     } else {
       console.log('[Setup] No token, skipping backend save');
@@ -268,6 +319,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -533,7 +585,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
                     >
                       {area.imageUrl ? (
                         <Image 
-                          source={{ uri: area.imageUrl }} 
+                          source={{ uri: getImageUrl(area.imageUrl) }} 
                           style={styles.subjectCardImage}
                           resizeMode="cover"
                         />
@@ -951,6 +1003,33 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
         title="Select Date of Birth"
       />
     </KeyboardAvoidingView>
+
+    {/* Toast notification */}
+    {toast && (
+      <Animated.View
+        style={[
+          styles.toastContainer,
+          {
+            opacity: toastAnim,
+            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.toastInner}>
+          <Icon
+            name="alert-circle"
+            size={22}
+            color="#e53e3e"
+            style={{ marginRight: 10 }}
+          />
+          <Text style={styles.toastMessage} numberOfLines={3}>{toast.message}</Text>
+        </View>
+        <TouchableOpacity onPress={dismissToast} style={styles.toastDismissBtn}>
+          <Text style={styles.toastDismissText}>Dismiss</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    )}
+    </View>
   );
 };
 
@@ -1935,6 +2014,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: 'Montserrat-Bold',
+  },
+
+  toastContainer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 9999,
+  },
+
+  toastInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  toastMessage: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Montserrat-Regular',
+    lineHeight: 20,
+  },
+
+  toastDismissBtn: {
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+
+  toastDismissText: {
+    color: '#e53e3e',
+    fontSize: 13,
+    fontWeight: '700',
     fontFamily: 'Montserrat-Bold',
   },
 });

@@ -2,7 +2,7 @@
  * Login Screen - Phone Number with Send OTP
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
   ScrollView,
   FlatList,
   Dimensions,
-  Alert,
+  Animated,
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -40,6 +40,26 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
   const [devOtp, setDevOtp] = useState(''); // shows OTP on screen (dev only)
   const [statusMsg, setStatusMsg] = useState(''); // 'registered' | 'new' | ''
   const [isVerifying, setIsVerifying] = useState(false); // Prevent duplicate OTP verification
+  const [toast, setToast] = useState(null); // { message, type, onAction, actionLabel }
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  const showToast = (message, type = 'info', actionLabel = null, onAction = null) => {
+    setToast({ message, type, actionLabel, onAction });
+    Animated.spring(toastAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 60,
+    }).start();
+  };
+
+  const dismissToast = () => {
+    Animated.timing(toastAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setToast(null));
+  };
 
   // Reset verification flag on component mount
   useEffect(() => {
@@ -223,42 +243,35 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
         // Phone not registered - create account and go to setup
         setLoading(false);
         
-        Alert.alert(
-          'Not Registered',
+        showToast(
           'This phone number is not registered. Let\'s create your account!',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Create Account',
-              onPress: async () => {
-                setLoading(true);
-                try {
-                  // Send OTP to create parent record and get token
-                  const otpResult = await apiSendOTP(phoneNumber, countryCode);
-                  // Auto-verify to get token
-                  const verifyResult = await apiVerifyOTP(phoneNumber, otpResult.otp);
-                  
-                  setLoading(false);
-                  // Navigate to setup with token and phone
-                  if (onSendOTP) {
-                    onSendOTP({ 
-                      phoneNumber, 
-                      countryCode, 
-                      token: verifyResult.token, 
-                      isNewUser: true, 
-                      parent: verifyResult.parent 
-                    });
-                  }
-                } catch (err) {
-                  setLoading(false);
-                  setErrorMsg(err.message || 'Failed to create account');
-                }
-              },
-            },
-          ]
+          'warning',
+          'Create Account',
+          async () => {
+            dismissToast();
+            setLoading(true);
+            try {
+              // Send OTP to create parent record and get token
+              const otpResult = await apiSendOTP(phoneNumber, countryCode);
+              // Auto-verify to get token
+              const verifyResult = await apiVerifyOTP(phoneNumber, otpResult.otp);
+              
+              setLoading(false);
+              // Navigate to setup with token and phone
+              if (onSendOTP) {
+                onSendOTP({ 
+                  phoneNumber, 
+                  countryCode, 
+                  token: verifyResult.token, 
+                  isNewUser: true, 
+                  parent: verifyResult.parent 
+                });
+              }
+            } catch (err) {
+              setLoading(false);
+              setErrorMsg(err.message || 'Failed to create account');
+            }
+          }
         );
         return;
       }
@@ -367,6 +380,7 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
@@ -576,6 +590,40 @@ const LoginScreen = ({ onSendOTP, onBack, onRegister }) => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* Android-style Toast */}
+    {toast && (
+      <Animated.View
+        style={[
+          styles.toastContainer,
+          {
+            opacity: toastAnim,
+            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.toastInner}>
+          <Icon
+            name={toast.type === 'warning' ? 'alert-circle' : toast.type === 'success' ? 'checkmark-circle' : 'information-circle'}
+            size={22}
+            color={toast.type === 'warning' ? '#FF9800' : toast.type === 'success' ? '#00bf62' : '#2196F3'}
+            style={{ marginRight: 10 }}
+          />
+          <Text style={styles.toastMessage} numberOfLines={3}>{toast.message}</Text>
+        </View>
+        <View style={styles.toastActions}>
+          <TouchableOpacity onPress={dismissToast} style={styles.toastBtn}>
+            <Text style={styles.toastBtnDismiss}>Dismiss</Text>
+          </TouchableOpacity>
+          {toast.actionLabel && toast.onAction && (
+            <TouchableOpacity onPress={toast.onAction} style={styles.toastBtn}>
+              <Text style={styles.toastBtnAction}>{toast.actionLabel}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
+    )}
+    </View>
   );
 };
 
@@ -879,5 +927,53 @@ const styles = StyleSheet.create({
     color: '#FF9800',
     fontFamily: 'Montserrat-Medium',
     fontWeight: '600',
+  },
+
+  toastContainer: {
+    position: 'absolute',
+    bottom: 32,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  toastInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  toastMessage: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  toastActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+    gap: 8,
+  },
+  toastBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  toastBtnDismiss: {
+    color: '#AAAAAA',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  toastBtnAction: {
+    color: '#00bf62',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

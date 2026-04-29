@@ -58,7 +58,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
   const [showTerms, setShowTerms] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showRateUs, setShowRateUs] = useState(false);
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+    const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
 
   // Add Child form fields
@@ -135,7 +135,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
   useEffect(() => {
     fetchBeyondSchool()
-      .then(data => { if (data.length > 0) setExploratoryAreas(data); })
+      .then(data => { if (data.length > 0) setExploratoryAreas(data.map(i => ({ ...i, rnIcon: i.rnIcon || i.icon || 'star-outline' }))); })
       .catch(() => {});
   }, []);
   
@@ -501,7 +501,10 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                 return null;
               })();
               const resolvedTopics = (c.topics || [])
-                .map(t => exploratoryAreas.find(a => a._id === t || a.name === t)?.name)
+                .map(t => {
+                  const area = exploratoryAreas.find(a => a._id === t || a.name === t);
+                  return area ? { name: area.name, rnIcon: area.rnIcon || 'star-outline' } : null;
+                })
                 .filter(Boolean);
 
               return (
@@ -598,8 +601,8 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                     <View style={styles.childCardChipsRow}>
                       {resolvedTopics.map((t, ti) => (
                         <View key={ti} style={styles.childTopicChip}>
-                          <MaterialIcon name="star-four-points-small" size={11} color="#3B82F6" />
-                          <Text style={styles.childTopicChipText}>{t}</Text>
+                          <MaterialIcon name={t.rnIcon} size={13} color="#3B82F6" />
+                          <Text style={styles.childTopicChipText}>{t.name}</Text>
                         </View>
                       ))}
                     </View>
@@ -677,7 +680,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => setShowPrivacyPolicy(true)}
+            onPress={() => onNavigate && onNavigate('PrivacyPolicy')}
           >
             <MaterialIcon name="shield-check-outline" size={24} color="#666666" />
             <Text style={styles.settingText}>Privacy Policy</Text>
@@ -686,7 +689,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => setShowTerms(true)}
+            onPress={() => onNavigate && onNavigate('TermsOfService')}
           >
             <MaterialIcon name="file-document-outline" size={24} color="#666666" />
             <Text style={styles.settingText}>Terms of Service</Text>
@@ -709,7 +712,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => setShowRateUs(true)}
+            onPress={() => onNavigate && onNavigate('RateUs')}
           >
             <MaterialIcon name="star-outline" size={24} color="#666666" />
             <Text style={styles.settingText}>Rate Us</Text>
@@ -718,7 +721,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
 
           <TouchableOpacity
             style={styles.settingItem}
-            onPress={() => setShowAbout(true)}
+            onPress={() => onNavigate && onNavigate('AboutUs')}
           >
             <MaterialIcon name="information-outline" size={24} color="#666666" />
             <Text style={styles.settingText}>About</Text>
@@ -907,7 +910,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                                   resizeMode="cover"
                                 />
                               ) : (
-                                <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                                <MaterialIcon name={area.rnIcon || 'star-outline'} size={18} color="#45a578" />
                               )}
                               <Text style={styles.subjectLevelCardName}>{area.name}</Text>
                             </View>
@@ -985,323 +988,6 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
         </View>
       </Modal>
 
-      {/* Privacy Policy Modal */}
-      <Modal
-        visible={showPrivacyPolicy}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowPrivacyPolicy(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Privacy Policy</Text>
-              <TouchableOpacity onPress={() => setShowPrivacyPolicy(false)}>
-                <Icon name="close" size={28} color="#333333" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              <Text style={styles.policyTitle}>Last Updated: February 26, 2026</Text>
-              
-              <Text style={styles.policySection}>1. Information We Collect</Text>
-              <Text style={styles.policyText}>
-                We collect information you provide directly to us, including your name, email address, phone number, and learning progress data. We also collect information about your device and how you use our app.
-              </Text>
-
-              <Text style={styles.policySection}>2. How We Use Your Information</Text>
-              <Text style={styles.policyText}>
-                We use the information we collect to provide, maintain, and improve our services, to personalize your learning experience, and to communicate with you about updates and new features.
-              </Text>
-
-              <Text style={styles.policySection}>3. Information Sharing</Text>
-              <Text style={styles.policyText}>
-                We do not sell your personal information. We may share your information with service providers who help us operate our app, and when required by law.
-              </Text>
-
-              <Text style={styles.policySection}>4. Data Security</Text>
-              <Text style={styles.policyText}>
-                We implement appropriate security measures to protect your personal information. However, no method of transmission over the internet is 100% secure.
-              </Text>
-
-              <Text style={styles.policySection}>5. Your Rights</Text>
-              <Text style={styles.policyText}>
-                You have the right to access, update, or delete your personal information. You can do this through your account settings or by contacting us.
-              </Text>
-
-              <Text style={styles.policySection}>6. Children's Privacy</Text>
-              <Text style={styles.policyText}>
-                Our service is designed for parents and guardians. We do not knowingly collect personal information from children under 13 without parental consent.
-              </Text>
-
-              <Text style={styles.policySection}>7. Contact Us</Text>
-              <Text style={[styles.policyText, { marginBottom: 40 }]}>
-                If you have any questions about this Privacy Policy, please contact us at support@nudge2grow.com
-              </Text>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.fullButton}
-                onPress={() => setShowPrivacyPolicy(false)}
-              >
-                <Text style={styles.fullButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Terms of Service Modal */}
-      <Modal
-        visible={showTerms}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowTerms(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Terms of Service</Text>
-              <TouchableOpacity onPress={() => setShowTerms(false)}>
-                <Icon name="close" size={28} color="#333333" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              <Text style={styles.policyTitle}>Last Updated: February 26, 2026</Text>
-              
-              <Text style={styles.policySection}>1. Acceptance of Terms</Text>
-              <Text style={styles.policyText}>
-                By accessing and using Nudge2Grow, you accept and agree to be bound by these Terms of Service. If you do not agree, please do not use our service.
-              </Text>
-
-              <Text style={styles.policySection}>2. Use of Service</Text>
-              <Text style={styles.policyText}>
-                You agree to use our service only for lawful purposes and in accordance with these Terms. You are responsible for maintaining the confidentiality of your account.
-              </Text>
-
-              <Text style={styles.policySection}>3. Subscription and Payment</Text>
-              <Text style={styles.policyText}>
-                Some features require a paid subscription. You agree to pay all fees associated with your subscription. Subscriptions automatically renew unless cancelled.
-              </Text>
-
-              <Text style={styles.policySection}>4. Content Ownership</Text>
-              <Text style={styles.policyText}>
-                All content provided through our service, including text, graphics, and educational materials, is owned by Nudge2Grow and protected by copyright laws.
-              </Text>
-
-              <Text style={styles.policySection}>5. User Conduct</Text>
-              <Text style={styles.policyText}>
-                You agree not to misuse our service, interfere with its operation, or attempt to access it through unauthorized means.
-              </Text>
-
-              <Text style={styles.policySection}>6. Termination</Text>
-              <Text style={styles.policyText}>
-                We reserve the right to suspend or terminate your account if you violate these Terms or engage in fraudulent activity.
-              </Text>
-
-              <Text style={styles.policySection}>7. Limitation of Liability</Text>
-              <Text style={styles.policyText}>
-                Nudge2Grow is provided "as is" without warranties. We are not liable for any indirect, incidental, or consequential damages.
-              </Text>
-
-              <Text style={styles.policySection}>8. Changes to Terms</Text>
-              <Text style={[styles.policyText, { marginBottom: 40 }]}>
-                We may modify these Terms at any time. Continued use of the service after changes constitutes acceptance of the new Terms.
-              </Text>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.fullButton}
-                onPress={() => setShowTerms(false)}
-              >
-                <Text style={styles.fullButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Rate Us Modal */}
-      <Modal
-        visible={showRateUs}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowRateUs(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Rate Nudge2Grow</Text>
-              <TouchableOpacity onPress={() => setShowRateUs(false)}>
-                <Icon name="close" size={28} color="#333333" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.rateContainer}>
-                <MaterialIcon name="star" size={60} color="#FFB84D" />
-                <Text style={styles.rateTitle}>How would you rate us?</Text>
-                <Text style={styles.rateSubtitle}>
-                  Your feedback helps us improve and serve you better
-                </Text>
-
-                <View style={styles.starsContainer}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity
-                      key={star}
-                      onPress={() => setRating(star)}
-                      style={styles.starButton}
-                    >
-                      <Icon
-                        name={star <= rating ? 'star' : 'star-outline'}
-                        size={48}
-                        color={star <= rating ? '#FFB84D' : '#E0E0E0'}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {rating > 0 && (
-                  <Text style={styles.ratingText}>
-                    {rating === 1 && 'Poor'}
-                    {rating === 2 && 'Fair'}
-                    {rating === 3 && 'Good'}
-                    {rating === 4 && 'Very Good'}
-                    {rating === 5 && 'Excellent'}
-                  </Text>
-                )}
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Tell us more (Optional)</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={feedback}
-                    onChangeText={setFeedback}
-                    placeholder="Share your experience with us..."
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setShowRateUs(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, rating === 0 && styles.disabledButton]}
-                onPress={handleSubmitRating}
-                disabled={rating === 0}
-              >
-                <Text style={styles.saveButtonText}>Submit Rating</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* About Modal */}
-      <Modal
-        visible={showAbout}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAbout(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>About Nudge2Grow</Text>
-              <TouchableOpacity onPress={() => setShowAbout(false)}>
-                <Icon name="close" size={28} color="#333333" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              <View style={styles.aboutContainer}>
-                <View style={styles.appIconContainer}>
-                  <Image 
-                    source={require('../assets/images/logo.jpeg')}
-                    style={styles.appLogo}
-                    resizeMode="contain"
-                  />
-                </View>
-                
-                <Text style={styles.appName}>Nudge2Grow</Text>
-                <Text style={styles.appVersion}>Version 1.0.0</Text>
-                <Text style={styles.appTagline}>
-                  Empowering Parents, Nurturing Children
-                </Text>
-
-                <View style={styles.aboutSection}>
-                  <Text style={styles.aboutTitle}>Our Mission</Text>
-                  <Text style={styles.aboutText}>
-                    Nudge2Grow is dedicated to helping parents create meaningful learning moments with their children. We provide bite-sized educational activities that fit seamlessly into your daily routine.
-                  </Text>
-                </View>
-
-                <View style={styles.aboutSection}>
-                  <Text style={styles.aboutTitle}>What We Offer</Text>
-                  <View style={styles.featureList}>
-                    <View style={styles.featureItem}>
-                      <Icon name="checkmark-circle" size={20} color="#45a578" />
-                      <Text style={styles.featureText}>Daily learning nudges</Text>
-                    </View>
-                    <View style={styles.featureItem}>
-                      <Icon name="checkmark-circle" size={20} color="#45a578" />
-                      <Text style={styles.featureText}>Progress tracking</Text>
-                    </View>
-                    <View style={styles.featureItem}>
-                      <Icon name="checkmark-circle" size={20} color="#45a578" />
-                      <Text style={styles.featureText}>Expert-curated content</Text>
-                    </View>
-                    <View style={styles.featureItem}>
-                      <Icon name="checkmark-circle" size={20} color="#45a578" />
-                      <Text style={styles.featureText}>Personalized recommendations</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.aboutSection}>
-                  <Text style={styles.aboutTitle}>Contact Us</Text>
-                  <View style={styles.contactItem}>
-                    <MaterialIcon name="email" size={20} color="#666666" />
-                    <Text style={styles.contactText}>support@nudge2grow.com</Text>
-                  </View>
-                  <View style={styles.contactItem}>
-                    <MaterialIcon name="phone" size={20} color="#666666" />
-                    <Text style={styles.contactText}>+91 1800-123-4567</Text>
-                  </View>
-                  <View style={styles.contactItem}>
-                    <MaterialIcon name="web" size={20} color="#666666" />
-                    <Text style={styles.contactText}>www.nudge2grow.com</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.copyright}>
-                  © 2026 Nudge2Grow. All rights reserved.
-                </Text>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.fullButton}
-                onPress={() => setShowAbout(false)}
-              >
-                <Text style={styles.fullButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Avatar Picker Modal */}
       <Modal
@@ -1494,7 +1180,7 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                             resizeMode="cover"
                           />
                         ) : (
-                          <MaterialIcon name={area.icon} size={18} color="#45a578" />
+                          <MaterialIcon name={area.rnIcon || 'star-outline'} size={18} color="#45a578" />
                         )}
                         <Text style={styles.subjectLevelCardName}>{area.name}</Text>
                       </View>

@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Storage } from './src/utils/storage';
+import { initializeFCM, subscribeToUserTopics, registerFCMOnLogin, requestNotificationPermission } from './src/services/firebaseNotificationService';
+import { sendTopicCompletionNotification, addNotificationToStorage } from './src/services/notificationService';
 import SplashScreen from './src/screens/SplashScreen';
 import IntroScreen from './src/screens/IntroScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -22,6 +24,10 @@ import SelectTopicsScreen from './src/screens/SelectTopicsScreen';
 import SelectQuestionTypesScreen from './src/screens/SelectQuestionTypesScreen';
 import QuizSettingsScreen from './src/screens/QuizSettingsScreen';
 import QuizCompleteScreen from './src/screens/QuizCompleteScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from './src/screens/TermsOfServiceScreen';
+import RateUsScreen from './src/screens/RateUsScreen';
+import AboutUsScreen from './src/screens/AboutUsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import HelpSupportScreen from './src/screens/HelpSupportScreen';
 import NotificationsScreen from './src/screens/NotificationScreen';
@@ -41,11 +47,62 @@ const App = () => {
   const [navigationParams, setNavigationParams] = useState({});
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [completedTopics, setCompletedTopics] = useState(new Set());
+  const [fcmUnsubscribe, setFcmUnsubscribe] = useState(null);
+
+  // Holds the screen to navigate to once splash finishes
+  const pendingScreenRef = React.useRef(null);
+
+  // Initialize Firebase Cloud Messaging when user data is available
+  useEffect(() => {
+    let unsubscribeFn = null;
+
+    const initializeFirebaseNotifications = async () => {
+      if (!userData?.token) {
+        console.log('[App] No user token, skipping FCM initialization');
+        return;
+      }
+
+      try {
+        console.log('[App] Initializing Firebase Cloud Messaging...');
+
+        unsubscribeFn = await initializeFCM((notification) => {
+          console.log('[App] Notification received:', notification);
+          if (notification.type === 'new_nudge' && notification.topicId) {
+            console.log('[App] New nudge notification:', notification.title);
+          }
+        });
+
+        setFcmUnsubscribe(() => unsubscribeFn);
+
+        if (userData.children?.[0]) {
+          await subscribeToUserTopics(userData);
+          console.log('[App] Subscribed to user topics');
+        }
+
+        console.log('[App] Firebase Cloud Messaging initialized successfully');
+      } catch (error) {
+        console.error('[App] Error initializing Firebase notifications:', error);
+      }
+    };
+
+    initializeFirebaseNotifications();
+    return () => {
+      if (unsubscribeFn) {
+        console.log('[App] Cleaning up FCM listeners');
+        unsubscribeFn();
+        unsubscribeFn = null;
+      }
+    };
+  }, [userData?.token]); // ← removed userData?.children — children changes must NOT re-register listeners
 
   // Load persisted progress on mount
   useEffect(() => {
     const loadPersistedData = async () => {
       try {
+        // Request notification permission early — while splash is still visible
+        // so the system dialog appears over the splash, not a black screen
+        requestNotificationPermission().catch(() => {});
+
         // Load completed topics
         const saved = await Storage.getItem('completedTopics');
         if (saved) {
@@ -55,45 +112,48 @@ const App = () => {
         // Load user data and token for auto-login
         const storedUserData = await Storage.getItem('userData');
         const storedToken = await Storage.getItem('authToken');
-        
+
         if (storedUserData && storedToken) {
           console.log('[App] Found stored user data, attempting auto-login...');
-          
-          // Verify token is still valid by fetching profile
+
           try {
             const profile = await fetchProfile(storedToken);
-            
-            // Reorder children so activeChildIndex is first
+
             let children = profile.children || [];
             const activeIdx = profile.activeChildIndex || 0;
             if (activeIdx > 0 && children.length > activeIdx) {
               children = [children[activeIdx], ...children.filter((_, i) => i !== activeIdx)];
             }
-            
-            const userData = {
+
+            const resolvedUserData = {
               ...storedUserData,
+              _id: profile._id || profile.id || storedUserData._id,
               children,
               email: profile.email,
               token: storedToken,
             };
-            
-            setUserData(userData);
-            setCurrentScreen('home');
-            console.log('[App] Auto-login successful');
+
+            setUserData(resolvedUserData);
+            // Don't skip splash — store destination and let splash finish naturally
+            pendingScreenRef.current = 'home';
+            console.log('[App] Auto-login successful, will navigate to home after splash');
+
+            // Re-register FCM token on every app start so it's always fresh in DB
+            registerFCMOnLogin(storedToken).catch(err =>
+              console.error('[App] FCM re-registration failed:', err.message)
+            );
           } catch (err) {
             console.error('[App] Auto-login failed, token may be expired:', err.message);
-            // Clear invalid data
             await Storage.removeItem('userData');
             await Storage.removeItem('authToken');
-            setCurrentScreen('intro');
+            pendingScreenRef.current = 'intro';
           }
         } else {
-          // No stored data, show intro
-          setCurrentScreen('intro');
+          pendingScreenRef.current = 'intro';
         }
       } catch (error) {
         console.error('[App] Error loading persisted data:', error);
-        setCurrentScreen('intro');
+        pendingScreenRef.current = 'intro';
       }
     };
 
@@ -101,21 +161,95 @@ const App = () => {
   }, []);
 
   const markTopicComplete = async (key) => {
-    // Add timestamp to track when topic was completed (for weekly reset)
     const timestamp = Date.now();
     const keyWithTimestamp = `${key}::${timestamp}`;
-    
     console.log('[App] Marking topic complete:', keyWithTimestamp);
-    
+
     setCompletedTopics(prev => {
       const next = new Set([...prev, keyWithTimestamp]);
       Storage.setItem('completedTopics', [...next]);
       return next;
     });
+
+    // Send completion notification
+    try {
+      const parts = key.split('::');
+      if (parts.length < 2) {
+        console.log('[App] Invalid key format:', key);
+        return;
+      }
+
+      const subjectName = parts[0];
+      const topicName = parts[1];
+      console.log('[App] Completing topic - Subject:', subjectName, '| Topic:', topicName);
+
+      // Check if we already sent a completion notification for this topic (prevent duplicates)
+      const completionKey = `completion_${subjectName}_${topicName}`;
+      const existingCompletions = (await Storage.getItem('completedNotifications')) || [];
+      console.log('[App] Existing completions:', existingCompletions);
+
+      if (existingCompletions.includes(completionKey)) {
+        console.log('[App] Already completed this topic, skipping notification');
+        return;
+      }
+
+      // Get auth token — use Storage (same key used at login)
+      const token = await Storage.getItem('authToken');
+      console.log('[App] Auth token found:', !!token);
+
+      if (!token) {
+        console.log('[App] No auth token, creating local-only notification');
+        const notification = {
+          _id: `completion_${Date.now()}`,
+          title: '🎉 Topic Completed!',
+          message: `Great job! You've completed "${topicName}" in ${subjectName}. Keep up the excellent work!`,
+          type: 'completed',
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          subject: subjectName,
+        };
+        await addNotificationToStorage(notification);
+        const updatedCompletions = [...existingCompletions, completionKey];
+        await Storage.setItem('completedNotifications', updatedCompletions);
+        return;
+      }
+
+      // Get user info
+      const child = userData?.children?.[0];
+      const userName = child?.name || 'Student';
+      const grade = child?.grade || '';
+
+      // Build updated completions list BEFORE using it
+      const updatedCompletions = [...existingCompletions, completionKey];
+
+      const completionData = {
+        topicName,
+        subjectName,
+        userName,
+        grade,
+        level: 'Basic',
+        topicId: `${subjectName}_${topicName}`,
+        completionCount: updatedCompletions.length,
+      };
+
+      console.log('[App] Sending completion notification:', completionData);
+      const result = await sendTopicCompletionNotification(completionData, token);
+
+      if (result) {
+        // Save that we've sent a notification for this topic
+        await Storage.setItem('completedNotifications', updatedCompletions);
+        console.log('[App] ✅ Completion notification sent and saved');
+      } else {
+        console.log('[App] ❌ Completion notification failed');
+      }
+    } catch (error) {
+      console.error('[App] Error in markTopicComplete:', error.message);
+    }
   };
 
-  const handleSplashFinish = () => {
-    setCurrentScreen('intro');
+  const handleSplashFinish = async () => {
+    // Navigate to wherever loadPersistedData resolved (home or intro)
+    setCurrentScreen(pendingScreenRef.current || 'intro');
   };
 
   const handleIntroBack = () => {
@@ -134,7 +268,14 @@ const App = () => {
     console.log('[App] handleLoginSuccess called with data:', data);
     console.log('[App] Token from login:', data.token);
     console.log('[App] Phone:', data.phoneNumber, data.countryCode);
-    
+
+    // Clear previous user's cached notifications before loading new user's data
+    try {
+      const { clearNotificationData } = require('./src/services/notificationService');
+      const prevUserId = userData?._id || userData?.id || null;
+      await clearNotificationData(prevUserId);
+    } catch (_) {}
+
     const merged = { ...userData, ...data };
     setUserData(merged);
 
@@ -142,6 +283,11 @@ const App = () => {
     if (data.token) {
       await Storage.setItem('authToken', data.token);
       console.log('[App] Token saved to storage');
+
+      // Register FCM token immediately so push notifications work right away
+      registerFCMOnLogin(data.token).catch(err =>
+        console.error('[App] FCM registration failed:', err.message)
+      );
     } else {
       console.log('[App] WARNING: No token in login data!');
     }
@@ -156,10 +302,8 @@ const App = () => {
         if (activeIdx > 0 && children.length > activeIdx) {
           children = [children[activeIdx], ...children.filter((_, i) => i !== activeIdx)];
         }
-        const fullUserData = { ...merged, children, email: profile.email, token: data.token };
+        const fullUserData = { ...merged, _id: profile._id || profile.id, children, email: profile.email, token: data.token };
         setUserData(fullUserData);
-        
-        // Save user data for auto-login
         await Storage.setItem('userData', fullUserData);
         
         setCurrentScreen('home');
@@ -198,13 +342,16 @@ const App = () => {
     if (data.token) {
       await Storage.setItem('authToken', data.token);
       console.log('[App] Token saved from setup');
+
+      // Register FCM token for new users completing setup
+      registerFCMOnLogin(data.token).catch(err =>
+        console.error('[App] FCM registration failed on setup:', err.message)
+      );
     } else {
       console.log('[App] WARNING: No token in setup data!');
     }
-    
     setCurrentScreen('home');
   };
-
   const handleHomeBack = () => {
     setCurrentScreen('setup');
   };
@@ -502,6 +649,18 @@ const App = () => {
     } else if (screen === 'SubscriptionPlan') {
       setNavigationHistory([...navigationHistory, 'settings']);
       setCurrentScreen('subscription');
+    } else if (screen === 'PrivacyPolicy') {
+      setNavigationHistory([...navigationHistory, 'settings']);
+      setCurrentScreen('privacyPolicy');
+    } else if (screen === 'TermsOfService') {
+      setNavigationHistory([...navigationHistory, 'settings']);
+      setCurrentScreen('termsOfService');
+    } else if (screen === 'RateUs') {
+      setNavigationHistory([...navigationHistory, 'settings']);
+      setCurrentScreen('rateUs');
+    } else if (screen === 'AboutUs') {
+      setNavigationHistory([...navigationHistory, 'settings']);
+      setCurrentScreen('aboutUs');
     }
   };
 
@@ -510,10 +669,17 @@ const App = () => {
   };
 
   const handleLogout = async () => {
-    // Clear user data and stored credentials
+    // Clear notification cache for this user before logging out
+    try {
+      const { clearNotificationData } = require('./src/services/notificationService');
+      const userId = userData?._id || userData?.id || null;
+      await clearNotificationData(userId);
+    } catch (_) {}
+
     setUserData(null);
     await Storage.removeItem('userData');
     await Storage.removeItem('authToken');
+    await Storage.removeItem('completedNotifications');
     setCurrentScreen('login');
   };
 
@@ -566,7 +732,7 @@ const App = () => {
       case 'setup':
         return <PersonalSetupScreen token={setupToken} onFinish={handleSetupFinish} onBack={handleSetupBack} />;
       case 'home':
-        return <HomeScreen userData={userData} completedTopics={completedTopics} onBack={handleHomeBack} onNavigate={handleHomeNavigate} />;
+        return <HomeScreen userData={userData} completedTopics={completedTopics} onBack={handleHomeBack} onNavigate={handleHomeNavigate} onMarkTopicComplete={markTopicComplete} />;
       case 'featuredContentDetail':
         return (
           <FeaturedContentDetailScreen
@@ -592,6 +758,7 @@ const App = () => {
             topicData={navigationParams.topicData}
             subjectName={navigationParams.subjectName}
             allNudges={navigationParams.allNudges}
+            initialTopicId={navigationParams.initialTopicId}
             userData={userData}
             onBack={handleTopicDetailBack}
             onNavigate={handleTopicDetailNavigate}
@@ -626,15 +793,7 @@ const App = () => {
             onBack={handlePromptCardsBack}
           />
         );
-      case 'vocabCards':
-        return (
-          <VocabCardsScreen
-            vocabulary={navigationParams.vocabulary}
-            topic={navigationParams.topic}
-            subject={navigationParams.subject}
-            onBack={handleVocabCardsBack}
-          />
-        );
+  
       case 'subscription':
         return <SubscriptionPlanScreen onBack={() => {
           if (navigationHistory.length > 0) {
@@ -738,11 +897,19 @@ const App = () => {
           onNavigate={handleSettingsNavigate} 
         />;
       case 'notifications':
-        return <NotificationsScreen onBack={handleNotificationsBack} />;
+        return <NotificationsScreen onBack={handleNotificationsBack} userData={userData} />;
       case 'riddles':
         return <RiddlesScreen riddles={navigationParams?.riddles} onBack={() => { setNavigationHistory(navigationHistory.slice(0, -1)); setCurrentScreen('home'); }} />;
       case 'helpSupport':
         return <HelpSupportScreen onBack={handleHelpSupportBack} onNavigate={handleHelpSupportNavigate} />;
+      case 'privacyPolicy':
+        return <PrivacyPolicyScreen onBack={() => setCurrentScreen('settings')} />;
+      case 'termsOfService':
+        return <TermsOfServiceScreen onBack={() => setCurrentScreen('settings')} />;
+      case 'rateUs':
+        return <RateUsScreen onBack={() => setCurrentScreen('settings')} userData={userData} />;
+      case 'aboutUs':
+        return <AboutUsScreen onBack={() => setCurrentScreen('settings')} />;
       default:
         return <SplashScreen onFinish={handleSplashFinish} />;
     }

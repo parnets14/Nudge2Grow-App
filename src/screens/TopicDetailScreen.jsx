@@ -31,6 +31,7 @@ const TopicDetailScreen = ({
   userData,
   onBack,
   onNavigate,
+  initialTopicId,
 }) => {
   // Initialize selectedDate to most recent scheduled date
   const getInitialDate = () => {
@@ -91,46 +92,40 @@ const TopicDetailScreen = ({
   const [apiLearnDetail, setApiLearnDetail] = useState(null);
   const [selectedApiTopic, setSelectedApiTopic] = useState(null);
 
-  // Set initial topic to the most recent scheduled topic
+  // Set initial topic — prefer the one passed from HomeScreen card tap
   useEffect(() => {
     if (allNudges && allNudges.length > 0 && !selectedApiTopic) {
+      // If a specific topic was tapped, open directly on it
+      if (initialTopicId) {
+        const targeted = allNudges.find(n => String(n.apiTopic?._id) === String(initialTopicId));
+        if (targeted?.apiTopic) {
+          setSelectedApiTopic(targeted.apiTopic);
+          const d = new Date(targeted.apiTopic.scheduledDate);
+          setSelectedDate(d.getDate());
+          return;
+        }
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      console.log('=== [useEffect Initial Topic] Finding most recent past/today topic ===');
-      
-      // Get all scheduled topics that are TODAY or in the PAST, sorted by date (most recent first)
+
+      // Fall back to most recent past/today topic
       const pastOrTodayNudges = allNudges
         .filter(nudge => {
           if (!nudge.apiTopic?.scheduledDate) return false;
-          
           const scheduledDate = new Date(nudge.apiTopic.scheduledDate);
           scheduledDate.setHours(0, 0, 0, 0);
-          
-          // CRITICAL: Only include dates that are today or in the past
-          const isPastOrToday = scheduledDate <= today;
-          
-          console.log('[useEffect Initial Topic] Checking:', scheduledDate.toDateString(), 
-            '| Is past/today?', isPastOrToday);
-          
-          return isPastOrToday;
+          return scheduledDate <= today;
         })
-        .sort((a, b) => {
-          const dateA = new Date(a.apiTopic.scheduledDate);
-          const dateB = new Date(b.apiTopic.scheduledDate);
-          return dateB - dateA; // Sort descending (most recent first)
-        });
-      
+        .sort((a, b) => new Date(b.apiTopic.scheduledDate) - new Date(a.apiTopic.scheduledDate));
+
       if (pastOrTodayNudges.length > 0) {
-        console.log('[useEffect Initial Topic] ✓ Selected most recent past/today topic:', 
-          new Date(pastOrTodayNudges[0].apiTopic.scheduledDate).toDateString());
         setSelectedApiTopic(pastOrTodayNudges[0].apiTopic);
       } else if (topicData?.apiTopics?.[0]) {
-        console.log('[useEffect Initial Topic] No past/today topics, using topicData');
         setSelectedApiTopic(topicData.apiTopics[0]);
       }
     }
-  }, [allNudges, topicData]);
+  }, [allNudges, topicData, initialTopicId]);
 
   // Update selected topic when date changes
   useEffect(() => {
@@ -170,8 +165,8 @@ const TopicDetailScreen = ({
   const fixUrl = url =>
     url
       ? url.replace(
-          'http://192.168.1.22:5000',
-          'http://192.168.1.22:5000',
+          'https://nudgebackend.onrender.com',
+          'https://nudgebackend.onrender.com',
         )
       : url;
 

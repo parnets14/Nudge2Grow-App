@@ -4,10 +4,10 @@
  */
 
 // For local testing, replace with your PC's local IP
-// export const BASE_URL = 'http://192.168.1.22:5000/api';
+// export const BASE_URL = 'https://nudgebackend.onrender.com/api'
 
 // For production
-export const BASE_URL = 'http://192.168.1.22:5000/api';
+export const BASE_URL = 'https://nudgebackend.onrender.com/api'
 
 export const fetchIntroSlides = async () => {
   const controller = new AbortController();

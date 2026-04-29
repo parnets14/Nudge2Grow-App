@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "175097697087",
+    "project_id": "nudge2grow-64251",
+    "storage_bucket": "nudge2grow-64251.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:175097697087:android:604dfece45f1869ac1b98a",
+        "android_client_info": {
+          "package_name": "com.nudge2grow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDX37jaA6m4_pBhh8_r9fSjEt1_PeJG2hQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -21,12 +21,16 @@ import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
 import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent } from '../api';
+import { createTopicUploadNotification } from '../services/notificationService';
+import { Storage } from '../utils/storage';
+
+
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
+const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkTopicComplete }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnimation] = useState(new Animated.Value(-width * 0.75));
   const [refreshing, setRefreshing] = useState(false);
@@ -46,6 +50,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
   const [apiSubjects, setApiSubjects] = useState([]);
   const [allTopicsFromApi, setAllTopicsFromApi] = useState([]);
   const [featuredContent, setFeaturedContent] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const toggleMenu = () => {
     const toValue = menuVisible ? -width * 0.75 : 0;
@@ -66,6 +71,31 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Load unread notification count — fetch directly from backend
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const token = await Storage.getItem('authToken');
+        if (!token) { setUnreadNotificationCount(0); return; }
+        const res = await fetch(`${BASE_URL}/notifications/unread/count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadNotificationCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('[HomeScreen] Error loading unread count:', error);
+        setUnreadNotificationCount(0);
+      }
+    };
+
+    loadUnreadCount();
+    // Refresh every 30 seconds so badge stays current
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [userData]);
 
   // Fetch admin avatars to resolve _id → base64 image
   useEffect(() => {
@@ -140,74 +170,92 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
       });
   }, [userData]);
 
-  // Fetch topics and filter by scheduled date
+  // Fetch topics and filter by scheduled date, student's enrolled subjects, and levels
   useEffect(() => {
     const loadTodaysTopics = async () => {
       try {
-        // Fetch all topics
-        const allTopics = await fetchTopicsBySubject();
-        console.log('[HomeScreen] Fetched topics:', allTopics.length);
-        console.log('[HomeScreen] First topic:', allTopics[0]);
-        
-        // Store all topics for later use
-        setAllTopicsFromApi(allTopics);
-        
-        // Filter topics with scheduled dates
-        const topicsWithDates = allTopics.filter(t => t.scheduledDate);
-        console.log('[HomeScreen] Topics with dates:', topicsWithDates.length);
-        
-        // Get today's date (start and end of day)
-        const today = new Date();
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-        
-        // Find topics scheduled for today
-        const todaysScheduled = topicsWithDates.filter(t => {
-          const scheduledDate = new Date(t.scheduledDate);
-          return scheduledDate >= todayStart && scheduledDate <= todayEnd;
-        });
-        
-        console.log('[HomeScreen] Today\'s scheduled:', todaysScheduled.length);
-        
-        // If no topics for today, get the 2 most recent topics
-        if (todaysScheduled.length === 0) {
-          const sortedByDate = topicsWithDates.sort((a, b) => 
-            new Date(b.scheduledDate) - new Date(a.scheduledDate)
-          );
-          console.log('[HomeScreen] Using recent topics:', sortedByDate.slice(0, 2));
-          setTodaysTopics(sortedByDate.slice(0, 2));
-        } else {
-          // Show only 2 topics maximum
-          console.log('[HomeScreen] Using today\'s topics:', todaysScheduled.slice(0, 2));
-          setTodaysTopics(todaysScheduled.slice(0, 2));
+        const child = userData?.children?.[0];
+        const studentSubjectLevels = child?.subjectLevels || {};
+        const enrolledSubjectIds = Object.keys(studentSubjectLevels);
+        const studentGrade = child?.grade;
+
+        if (enrolledSubjectIds.length === 0) {
+          setTodaysTopics([]);
+          setUpcomingTopics([]);
+          setAllTopicsFromApi([]);
+          return;
         }
 
-        // Get topics scheduled for upcoming dates (tomorrow onwards)
+        // Fetch all topics
+        const allTopics = await fetchTopicsBySubject();
+
+        // Filter topics by student's enrolled subjects, grade, and level
+        const studentTopics = allTopics.filter(topic => {
+          const isEnrolledSubject = enrolledSubjectIds.includes(String(topic.subjectId));
+          if (!isEnrolledSubject) return false;
+          const gradeMatch = !topic.grade || !studentGrade || topic.grade === studentGrade;
+          if (!gradeMatch) return false;
+          const studentLevel = studentSubjectLevels[String(topic.subjectId)];
+          const levelMatch = !topic.level || !studentLevel || topic.level === studentLevel;
+          return levelMatch;
+        });
+
+        setAllTopicsFromApi(studentTopics);
+
+        const topicsWithDates = studentTopics.filter(t => t.scheduledDate);
+
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+        // --- Per-subject: pick the best available topic (today → yesterday → day before) ---
+        const nudgeCards = [];
+
+        for (const subjectId of enrolledSubjectIds) {
+          const subjectTopics = topicsWithDates.filter(t => String(t.subjectId) === subjectId);
+
+          // 1. Try today
+          const todayTopic = subjectTopics.find(t => {
+            const d = new Date(t.scheduledDate);
+            return d >= todayStart && d <= todayEnd;
+          });
+          if (todayTopic) { nudgeCards.push(todayTopic); continue; }
+
+          // 2. Try yesterday
+          const yesterdayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+          const yesterdayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23, 59, 59);
+          const yesterdayTopic = subjectTopics.find(t => {
+            const d = new Date(t.scheduledDate);
+            return d >= yesterdayStart && d <= yesterdayEnd;
+          });
+          if (yesterdayTopic) { nudgeCards.push(yesterdayTopic); continue; }
+
+          // 3. Try day before yesterday
+          const dbYStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
+          const dbYEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 23, 59, 59);
+          const dbYTopic = subjectTopics.find(t => {
+            const d = new Date(t.scheduledDate);
+            return d >= dbYStart && d <= dbYEnd;
+          });
+          if (dbYTopic) { nudgeCards.push(dbYTopic); }
+        }
+
+        // Max 2 cards
+        setTodaysTopics(nudgeCards.slice(0, 2));
+
+        // Upcoming topics (tomorrow onwards) — 1 per day, max 3 days
         const tomorrowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-        const upcomingScheduled = topicsWithDates.filter(t => {
-          const scheduledDate = new Date(t.scheduledDate);
-          return scheduledDate >= tomorrowStart;
-        });
+        const upcomingScheduled = topicsWithDates
+          .filter(t => new Date(t.scheduledDate) >= tomorrowStart)
+          .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate));
 
-        // Sort by date (earliest first)
-        const sortedUpcoming = upcomingScheduled.sort((a, b) => 
-          new Date(a.scheduledDate) - new Date(b.scheduledDate)
-        );
-
-        // Group by date and take only one topic per day, max 3 days
         const topicsByDate = {};
-        sortedUpcoming.forEach(topic => {
+        upcomingScheduled.forEach(topic => {
           const dateKey = new Date(topic.scheduledDate).toDateString();
-          if (!topicsByDate[dateKey]) {
-            topicsByDate[dateKey] = topic;
-          }
+          if (!topicsByDate[dateKey]) topicsByDate[dateKey] = topic;
         });
+        setUpcomingTopics(Object.values(topicsByDate).slice(0, 3));
 
-        // Get first 3 unique dates
-        const uniqueUpcoming = Object.values(topicsByDate).slice(0, 3);
-
-        console.log('[HomeScreen] Upcoming topics (1 per day, max 3):', uniqueUpcoming.length);
-        setUpcomingTopics(uniqueUpcoming);
       } catch (error) {
         console.error('[HomeScreen] Error loading topics:', error);
         setTodaysTopics([]);
@@ -215,16 +263,29 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
         setAllTopicsFromApi([]);
       }
     };
-    
-    loadTodaysTopics();
-  }, []);
 
-  const onRefresh = () => {
+    if (userData?.children?.[0]) {
+      loadTodaysTopics();
+    }
+  }, [userData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    try {
+      const token = await Storage.getItem('authToken');
+      if (token) {
+        const res = await fetch(`${BASE_URL}/notifications/unread/count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadNotificationCount(data.count || 0);
+        }
+      }
+    } catch (error) {
+      console.error('[HomeScreen] Error refreshing unread count:', error);
+    }
+    setTimeout(() => setRefreshing(false), 1500);
   };
 
   // Calculate weekly impact data based on completed topics
@@ -590,9 +651,13 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
             onPress={() => onNavigate('notifications')}
           >
             <Icon name="notifications-outline" size={24} color="#333333" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {unreadNotificationCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           {/* Always show avatar — child data or placeholder */}
           <TouchableOpacity style={styles.avatarContainer}>
@@ -699,9 +764,11 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
           {todaysTopics.length === 0 ? (
             <View style={styles.emptyNudgesCard}>
               <MaterialIcon name="book-clock-outline" size={36} color="#9CA3AF" />
-              <Text style={styles.emptyNudgesTitle}>No topics scheduled</Text>
+              <Text style={styles.emptyNudgesTitle}>No topics available</Text>
               <Text style={styles.emptyNudgesText}>
-                Check the admin panel to schedule topics for today!
+                {Object.keys(child?.subjectLevels || {}).length === 0 
+                  ? 'Please select subjects in Settings to see scheduled topics.'
+                  : 'No topics scheduled for today or the past 2 days for your enrolled subjects.'}
               </Text>
             </View>
           ) : (
@@ -716,13 +783,13 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
                   style={styles.card}
                   onPress={async () => {
                     if (onNavigate) {
-                      // Fetch all topics for this subject to show all scheduled dates in calendar
                       try {
                         const allTopicsForSubject = await fetchTopicsBySubject(topic.subjectId);
                         const topicsWithDates = allTopicsForSubject.filter(t => t.scheduledDate);
-                        
-                        onNavigate('topicDetail', { 
+
+                        onNavigate('topicDetail', {
                           subjectName: subjectName,
+                          initialTopicId: topic._id,
                           topicData: {
                             subject: subjectName,
                             topic: topic.topic || topic.title,
@@ -736,9 +803,9 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
                         });
                       } catch (error) {
                         console.error('[HomeScreen] Error fetching topics:', error);
-                        // Fallback to single topic
-                        onNavigate('topicDetail', { 
+                        onNavigate('topicDetail', {
                           subjectName: subjectName,
+                          initialTopicId: topic._id,
                           topicData: {
                             subject: subjectName,
                             topic: topic.topic || topic.title,
@@ -1060,69 +1127,99 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
           </View>
 
           <View style={styles.subjectsGrid}>
-            {apiSubjects.slice(0, 4).map((subject, index) => {
-              // Get the student's selected level for this subject
-              const studentLevel = Array.isArray(child?.subjectLevels) 
-                ? child.subjectLevels.find(sl => sl.subject === subject.name)?.level 
-                : null;
+            {(() => {
+              // Filter API subjects to show only those the student enrolled in
+              const studentSubjectLevels = child?.subjectLevels || {};
+              const enrolledSubjectIds = Object.keys(studentSubjectLevels);
               
-              // Count topics for this subject from allTopicsFromApi
-              const subjectTopics = allTopicsFromApi.filter(topic => 
-                String(topic.subjectId) === String(subject._id)
+              console.log('[HomeScreen] Student subject levels:', studentSubjectLevels);
+              console.log('[HomeScreen] Enrolled subject IDs:', enrolledSubjectIds);
+              
+              // Filter subjects by enrollment
+              const enrolledSubjects = apiSubjects.filter(subject => 
+                enrolledSubjectIds.includes(subject._id)
               );
               
-              // Count topics that match the student's level for this subject
-              let activityCount = 0;
-              if (studentLevel && subjectTopics.length > 0) {
-                const topicsForLevel = subjectTopics.filter(topic => 
-                  topic.level === studentLevel
-                );
-                activityCount = topicsForLevel.length;
-              } else {
-                // If no level selected, show total count for this subject
-                activityCount = subjectTopics.length;
-              }
-
-              // Use API image if available, otherwise use default icon
-              const hasApiImage = subject.imageUrl && subject.imageUrl.trim() !== '';
+              console.log('[HomeScreen] Enrolled subjects to display:', enrolledSubjects.map(s => s.name));
               
-              const imageSource = hasApiImage 
-                ? { uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }
-                : null;
-
-              return (
-                <TouchableOpacity 
-                  key={subject._id}
-                  style={styles.subjectImageCard}
-                  onPress={() => {
-                    onNavigate && onNavigate('subjectsList');
-                  }}
-                >
-                  <View style={[styles.subjectImageGradient, { backgroundColor: '#FFFFFF' }]}>
-                    <View style={styles.subjectIconBox}>
-                      {imageSource ? (
-                        <Image 
-                          source={imageSource}
-                          style={styles.subjectImage}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <MaterialIcon 
-                          name="book-outline"
-                          size={28}
-                          color="#666666"
-                        />
-                      )}
-                    </View>
-                    
-                    <View style={styles.subjectImageCardContent}>
-                      <Text style={styles.subjectImageCardTitle}>{subject.name}</Text>
-                      <Text style={styles.subjectImageCardActivityCount}>{activityCount} activities</Text>
-                    </View>
+              // If no enrolled subjects, show empty state
+              if (enrolledSubjects.length === 0) {
+                return (
+                  <View style={styles.emptySubjectsCard}>
+                    <MaterialIcon name="book-open-variant" size={40} color="#9CA3AF" />
+                    <Text style={styles.emptySubjectsTitle}>No subjects enrolled</Text>
+                    <Text style={styles.emptySubjectsText}>
+                      Visit Settings to select subjects for {child?.name || 'your child'}.
+                    </Text>
                   </View>
-                </TouchableOpacity>
-              );
-            })}
+                );
+              }
+              
+              // Show up to 4 enrolled subjects
+              return enrolledSubjects.slice(0, 4).map((subject, index) => {
+                // Get the student's selected level for this subject
+                const studentLevel = child?.subjectLevels?.[subject._id] || null;
+                
+                console.log(`[HomeScreen] Subject: ${subject.name}, Level: ${studentLevel}`);
+                
+                // Count topics for this subject from allTopicsFromApi
+                const subjectTopics = allTopicsFromApi.filter(topic => 
+                  String(topic.subjectId) === String(subject._id)
+                );
+                
+                // Count topics that match the student's grade and level
+                const childGrade = child?.grade;
+                const topicsForStudent = subjectTopics.filter(topic => {
+                  const gradeMatch = !topic.grade || !childGrade || topic.grade === childGrade;
+                  const levelMatch = !topic.level || !studentLevel || topic.level === studentLevel;
+                  return gradeMatch && levelMatch;
+                });
+                
+                const activityCount = topicsForStudent.length;
+
+                // Use API image if available, otherwise use default icon
+                const hasApiImage = subject.imageUrl && subject.imageUrl.trim() !== '';
+                
+                const imageSource = hasApiImage 
+                  ? { uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }
+                  : null;
+
+                return (
+                  <TouchableOpacity 
+                    key={subject._id}
+                    style={styles.subjectImageCard}
+                    onPress={() => {
+                      onNavigate && onNavigate('subjectsList');
+                    }}
+                  >
+                    <View style={[styles.subjectImageGradient, { backgroundColor: '#FFFFFF' }]}>
+                      <View style={styles.subjectIconBox}>
+                        {imageSource ? (
+                          <Image 
+                            source={imageSource}
+                            style={styles.subjectImage}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <MaterialIcon 
+                            name="book-outline"
+                            size={28}
+                            color="#666666"
+                          />
+                        )}
+                      </View>
+                      
+                      <View style={styles.subjectImageCardContent}>
+                        <Text style={styles.subjectImageCardTitle}>{subject.name}</Text>
+                        <Text style={styles.subjectImageCardActivityCount}>
+                          {activityCount} {activityCount === 1 ? 'activity' : 'activities'}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              });
+            })()}
           </View>
 
           {/* Unlock Premium Subjects Banner
@@ -1205,13 +1302,13 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
           );
         })()}
 
-        {/* Coming Up - Dynamic from scheduled topics */}
+        {/* Coming Up - Dynamic from scheduled topics (filtered by student's enrolled subjects and levels) */}
         {upcomingTopics.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={styles.sectionTitle}>Coming Up</Text>
-                <Text style={styles.sectionSubtitle}>Upcoming scheduled topics</Text>
+                <Text style={styles.sectionSubtitle}>Upcoming scheduled topics for your enrolled subjects</Text>
               </View>
             </View>
 
@@ -1242,6 +1339,8 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate }) => {
             </View>
           </View>
         )}
+
+      
 
         {/* Bottom Padding */}
         <View style={styles.bottomPadding} />
@@ -1745,6 +1844,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyNudgesText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  emptySubjectsCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  emptySubjectsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 4,
+  },
+  emptySubjectsText: {
     fontSize: 13,
     color: '#9CA3AF',
     textAlign: 'center',

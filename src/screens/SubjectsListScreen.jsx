@@ -106,7 +106,7 @@ const SubjectsListScreen = ({
           imageUrl: s.imageUrl
             ? s.imageUrl.replace(
                 'http://192.168.1.22:5000',
-                'http://192.168.1.22:5000',
+                'http://192.168.1.22:5000'
               )
             : s.imageUrl,
         }));
@@ -121,7 +121,7 @@ const SubjectsListScreen = ({
                 imageUrl: t.imageUrl
                   ? t.imageUrl.replace(
                       'http://192.168.1.22:5000',
-                      'http://192.168.1.22:5000',
+                      'http://192.168.1.22:5000'
                     )
                   : t.imageUrl,
               })),
@@ -152,11 +152,25 @@ const SubjectsListScreen = ({
     availableSubjectNames.includes(s.name),
   );
 
-  // If API returned subjects, show ONLY those. Otherwise fall back to local.
+  // Filter API subjects based on student's enrolled subjects and levels
+  const studentSubjectLevels = child?.subjectLevels || {};
+  const enrolledSubjectIds = Object.keys(studentSubjectLevels);
+  
+  console.log('[SubjectsListScreen] Student subject levels:', studentSubjectLevels);
+  console.log('[SubjectsListScreen] Enrolled subject IDs:', enrolledSubjectIds);
+  console.log('[SubjectsListScreen] All API subjects:', apiSubjects.map(s => ({ id: s._id, name: s.name })));
+  
+  // If API returned subjects, filter to show ONLY subjects the student enrolled in
   const allSubjects =
     apiSubjects.length > 0
-      ? apiSubjects
+      ? apiSubjects.filter(subject => {
+          const isEnrolled = enrolledSubjectIds.includes(subject._id);
+          console.log(`[SubjectsListScreen] Subject ${subject.name} (${subject._id}): enrolled=${isEnrolled}`);
+          return isEnrolled;
+        })
       : localSubjects.map(s => ({ name: s.name, isFromApi: false }));
+  
+  console.log('[SubjectsListScreen] Filtered subjects to show:', allSubjects.map(s => s.name));
 
   const subjectConfig = {
     Math: {
@@ -330,10 +344,11 @@ const SubjectsListScreen = ({
                 size={40}
                 color="#9CA3AF"
               />
-              <Text style={styles.emptyStateTitle}>Content coming soon</Text>
+              <Text style={styles.emptyStateTitle}>No subjects available</Text>
               <Text style={styles.emptyStateText}>
-                We're preparing topics for {child?.grade || 'this grade'}. Check
-                back soon!
+                {apiSubjects.length > 0 
+                  ? `No subjects found for ${child?.name || 'this student'}'s selected level. Please check your subject preferences in Settings.`
+                  : `We're preparing topics for ${child?.grade || 'this grade'}. Check back soon!`}
               </Text>
             </View>
           ) : null}
@@ -369,8 +384,12 @@ const SubjectsListScreen = ({
                 const levelKey =
                   subjectLevelKeyMap[subject.name] ||
                   subject.name?.toLowerCase().replace(/ /g, '-');
-                const childLevel = child?.subjectLevels?.[levelKey] || null;
+                
+                // Get the student's selected level for this subject from subjectLevels
+                // subjectLevels is an object like: { "subjectId1": "Beginner", "subjectId2": "Intermediate" }
+                const childLevel = child?.subjectLevels?.[subject._id] || null;
 
+                // Filter topics by BOTH grade AND level to show only what matches the student's enrollment
                 const gradeFilteredTopics = topicsLoaded
                   ? allTopicsForSubject.filter(t => {
                       const gradeMatch =
@@ -408,23 +427,11 @@ const SubjectsListScreen = ({
                     onPress={() => {
                       const allApiTopics = subjectTopicsMap[subject._id] || [];
                       const childGradeNav = child?.grade;
-                      const subjectLevelKeyMapNav = {
-                        Math: 'mathematics',
-                        Mathematics: 'mathematics',
-                        'Science / EVS': 'science',
-                        'Science/EVS': 'science',
-                        English: 'english',
-                        'Social Studies': 'social-studies',
-                        'Artificial Intelligence': 'artificial-intelligence',
-                        'Financial Literacy': 'financial',
-                        'Sex & Safety': 'safety',
-                      };
-                      const levelKeyNav =
-                        subjectLevelKeyMapNav[subject.name] ||
-                        subject.name?.toLowerCase().replace(/ /g, '-');
-                      const childLevelNav =
-                        child?.subjectLevels?.[levelKeyNav] || null;
+                      
+                      // Get the student's selected level for this subject
+                      const childLevelNav = child?.subjectLevels?.[subject._id] || null;
 
+                      // Filter topics by BOTH grade AND level
                       let apiTopics = allApiTopics.filter(t => {
                         const gradeMatch =
                           !t.grade ||
@@ -436,7 +443,8 @@ const SubjectsListScreen = ({
                           t.level === childLevelNav;
                         return gradeMatch && levelMatch;
                       });
-                      // Don't fall back to all topics — only show what matches grade+level
+                      
+                      // Only navigate if there are matching topics for the student's grade and level
                       if (apiTopics.length > 0) {
                         onNavigate &&
                           onNavigate('topicDetail', {
@@ -454,7 +462,7 @@ const SubjectsListScreen = ({
                             apiSubject: subject,
                           });
                       }
-                      // No matching topics — don't navigate, don't show static data
+                      // No matching topics — don't navigate
                     }}
                   >
                     <View style={styles.subjectHeader}>

@@ -1,0 +1,119 @@
+{
+    "notifications": [
+        {
+            "_id": "sample_1",
+            "title": "New Daily Nudge Available!",
+            "message": "Explore \"Solar System\" in Science. Perfect for today's learning!",
+            "type": "new_nudge",
+            "isRead": false,
+            "createdAt": "2 hours ago",
+            "icon": "bulb",
+            "iconColor": "#F59E0B",
+            "iconBackground": "#FEF3C7"
+        },
+        {
+            "_id": "sample_2",
+            "title": "Milestone Achieved!",
+            "message": "Congratulations! You've completed 50 nudges this month.",
+            "type": "milestone",
+            "isRead": false,
+            "createdAt": "5 hours ago",
+            "icon": "trophy",
+            "iconColor": "#F59E0B",
+            "iconBackground": "#FEF3C7"
+        },
+        {
+            "_id": "sample_3",
+            "title": "Daily Learning Reminder",
+            "message": "Don't forget your daily learning session with your child!",
+            "type": "reminder",
+            "isRead": false,
+            "createdAt": "1 day ago",
+            "icon": "time",
+            "iconColor": "#3B82F6",
+            "iconBackground": "#DBEAFE"
+        },
+        {
+            "_id": "sample_4",
+            "title": "Topic Completed!",
+            "message": "Great job! You completed \"Water Cycle\" in Environmental Studies.",
+            "type": "completed",
+            "isRead": true,
+            "createdAt": "2 days ago",
+            "icon": "checkmark-circle",
+            "iconColor": "#10B981",
+            "iconBackground": "#D1FAE5"
+        },
+        {
+            "_id": "sample_5",
+            "title": "New Achievement Unlocked",
+            "message": "You've earned the \"Consistent Learner\" badge!",
+            "type": "achievement",
+            "isRead": true,
+            "createdAt": "3 days ago",
+            "icon": "star",
+            "iconColor": "#6366F1",
+            "iconBackground": "#E0E7FF"
+        },
+        {
+            "_id": "sample_6",
+            "title": "Weekly Progress Report",
+            "message": "Your child completed 7 topics this week. Keep up the great work!",
+            "type": "report",
+            "isRead": true,
+            "createdAt": "5 days ago",
+            "icon": "heart",
+            "iconColor": "#EC4899",
+            "iconBackground": "#FCE7F3"
+        }
+    ],
+    "summary": {
+        "total": 6,
+        "unread": 3,
+        "read": 3
+    },
+    "notificationTypes": {
+        "new_nudge": {
+            "name": "New Daily Nudge",
+            "icon": "bulb",
+            "iconColor": "#F59E0B",
+            "iconBackground": "#FEF3C7",
+            "description": "When a new daily nudge is available"
+        },
+        "milestone": {
+            "name": "Achievement Milestone",
+            "icon": "trophy",
+            "iconColor": "#F59E0B",
+            "iconBackground": "#FEF3C7",
+            "description": "When user reaches a milestone"
+        },
+        "reminder": {
+            "name": "Daily Reminder",
+            "icon": "time",
+            "iconColor": "#3B82F6",
+            "iconBackground": "#DBEAFE",
+            "description": "Daily learning reminders"
+        },
+        "completed": {
+            "name": "Topic Completed",
+            "icon": "checkmark-circle",
+            "iconColor": "#10B981",
+            "iconBackground": "#D1FAE5",
+            "description": "When a topic is completed"
+        },
+        "achievement": {
+            "name": "New Achievement",
+            "icon": "star",
+            "iconColor": "#6366F1",
+            "iconBackground": "#E0E7FF",
+            "description": "When user unlocks a badge"
+        },
+        "report": {
+            "name": "Progress Report",
+            "icon": "heart",
+            "iconColor": "#EC4899",
+            "iconBackground": "#FCE7F3",
+            "description": "Weekly/monthly progress reports"
+        }
+    }
+}
