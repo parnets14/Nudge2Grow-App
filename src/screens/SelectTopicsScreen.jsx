@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { fetchTopicsBySubject, fetchSubjects } from '../api';
+import { fetchTopicsBySubject, fetchSubjects, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -26,7 +26,8 @@ const SelectTopicsScreen = ({
   onNavigate, 
   knownTopics, 
   practiceTopics, 
-  childSubjects, 
+  childSubjects,
+  childTopics,
   previouslySelectedTopics,
   previouslySelectedTypes,
   previouslySelectedDuration,
@@ -50,90 +51,89 @@ const SelectTopicsScreen = ({
   const loadTopics = async () => {
     try {
       setLoading(true);
-      
-      // Fetch all subjects to get subject details
-      const allSubjects = await fetchSubjects();
-      
-      // Find the selected subject
-      const selectedSubject = allSubjects.find(s => 
+
+      // Check if the selected subject is a beyond school subject
+      // by looking it up in both regular and beyond school subject lists
+      const [allRegularSubjects, allBeyondSubjects] = await Promise.all([
+        fetchSubjects(),
+        fetchBeyondSchool().catch(() => []),
+      ]);
+
+      // Try regular subjects first
+      let selectedSubject = allRegularSubjects.find(s =>
         selectedSubjects.includes(s.name || s.title)
       );
-      
+      const isBeyondSchool = !selectedSubject;
+
+      // If not found in regular, look in beyond school
+      if (!selectedSubject) {
+        selectedSubject = allBeyondSubjects.find(s =>
+          selectedSubjects.includes(s.name || s.title)
+        );
+      }
+
       if (selectedSubject) {
-        // Get the student's level for this subject
-        const studentLevel = childSubjects ? childSubjects[selectedSubject._id] : null;
-        
-        console.log('[SelectTopics] Selected subject:', selectedSubject.name);
-        console.log('[SelectTopics] Student level:', studentLevel);
-        
-        // Store subject details for display
+        const studentLevel = !isBeyondSchool && childSubjects
+          ? childSubjects[selectedSubject._id]
+          : null;
+
         setSubjectDetails({
           name: selectedSubject.name || selectedSubject.title,
           grade: selectedSubject.grade || 'N/A',
-          level: studentLevel || 'Intermediate',
+          level: studentLevel || (isBeyondSchool ? 'Beyond School' : 'Intermediate'),
           imageUrl: selectedSubject.imageUrl,
+          isBeyondSchool,
         });
-        
-        // Fetch topics for this subject
-        const fetchedTopics = await fetchTopicsBySubject(selectedSubject._id);
-        
-        console.log('[SelectTopics] Fetched topics:', fetchedTopics.length);
-        
-        // Get today's date (start of day for comparison)
+
+        // Fetch topics from the correct endpoint
+        const fetchedTopics = isBeyondSchool
+          ? await fetchBeyondSchoolTopicsBySubject(selectedSubject._id)
+          : await fetchTopicsBySubject(selectedSubject._id);
+
+        console.log('[SelectTopics] Fetched topics:', fetchedTopics.length, '| Beyond School:', isBeyondSchool);
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
-        // Filter topics by the student's exact level AND scheduled date
-        let filteredTopics = fetchedTopics;
-        
-        if (studentLevel) {
-          const studentLevelLower = studentLevel.toLowerCase();
-          
-          console.log('[SelectTopics] Filtering for exact level:', studentLevel);
-          
-          // Filter topics that match ONLY the student's exact level AND are scheduled for today or earlier
-          filteredTopics = fetchedTopics.filter(topic => {
-            // Check if topic has a level field
-            if (topic.level) {
-              const topicLevel = topic.level.toLowerCase();
-              const isLevelMatch = topicLevel === studentLevelLower;
-              
-              // Check scheduled date - only show if today or earlier
-              let isDateValid = true;
-              if (topic.scheduledDate) {
-                const scheduledDate = new Date(topic.scheduledDate);
-                scheduledDate.setHours(0, 0, 0, 0);
-                isDateValid = scheduledDate <= today;
-                
-                console.log('[SelectTopics] Topic:', topic.topic || topic.name, 
-                  '| Level:', topicLevel, 
-                  '| Scheduled:', scheduledDate.toDateString(),
-                  '| Today:', today.toDateString(),
-                  '| Date Valid:', isDateValid);
-              }
-              
-              const isMatch = isLevelMatch && isDateValid;
-              
-              console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| Level Match:', isLevelMatch, '| Date Valid:', isDateValid, '| Final Match:', isMatch);
-              
-              return isMatch;
-            }
-            // If topic doesn't have a level, exclude it for strict matching
-            console.log('[SelectTopics] Topic:', topic.topic || topic.name, '| No level - excluding');
-            return false;
-          });
-        } else {
-          // If no student level, still filter by date
+
+        let filteredTopics;
+
+        if (isBeyondSchool) {
+          // Beyond school topics — only filter by scheduled date (no level filter)
           filteredTopics = fetchedTopics.filter(topic => {
             if (topic.scheduledDate) {
               const scheduledDate = new Date(topic.scheduledDate);
               scheduledDate.setHours(0, 0, 0, 0);
               return scheduledDate <= today;
             }
-            return true; // Show topics without scheduled date
+            return true;
+          });
+        } else if (studentLevel) {
+          const studentLevelLower = studentLevel.toLowerCase();
+          filteredTopics = fetchedTopics.filter(topic => {
+            if (topic.level) {
+              const topicLevel = topic.level.toLowerCase();
+              const isLevelMatch = topicLevel === studentLevelLower;
+              let isDateValid = true;
+              if (topic.scheduledDate) {
+                const scheduledDate = new Date(topic.scheduledDate);
+                scheduledDate.setHours(0, 0, 0, 0);
+                isDateValid = scheduledDate <= today;
+              }
+              return isLevelMatch && isDateValid;
+            }
+            return false;
+          });
+        } else {
+          filteredTopics = fetchedTopics.filter(topic => {
+            if (topic.scheduledDate) {
+              const scheduledDate = new Date(topic.scheduledDate);
+              scheduledDate.setHours(0, 0, 0, 0);
+              return scheduledDate <= today;
+            }
+            return true;
           });
         }
-        
+
         console.log('[SelectTopics] Filtered topics:', filteredTopics.length);
         setTopics(filteredTopics);
       } else {

@@ -691,15 +691,23 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
           <View style={styles.bottomSection}>
             <TouchableOpacity
               onPress={handleTopicsComplete}
-              activeOpacity={0.8}
+              activeOpacity={selectedTopics.length > 0 ? 0.8 : 1}
+              disabled={selectedTopics.length === 0}
             >
               <LinearGradient
-                colors={['#00CED1', '#45a578', '#90EE90']}
+                colors={selectedTopics.length > 0
+                  ? ['#00CED1', '#45a578', '#90EE90']
+                  : ['#D1D5DB', '#D1D5DB', '#D1D5DB']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.nextButton}
               >
-                <Text style={styles.nextButtonTextActive}>Complete Setup</Text>
+                <Text style={[
+                  styles.nextButtonTextActive,
+                  selectedTopics.length === 0 && { color: '#9CA3AF' },
+                ]}>
+                  {selectedTopics.length > 0 ? 'Complete Setup' : 'Select at least one interest'}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
 

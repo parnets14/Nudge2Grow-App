@@ -14,12 +14,13 @@ import {
   Image,
   Dimensions,
   Alert,
+  Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getFlashcards, getQACards, getPrompts } from '../data/nudgesData';
-import { fetchContentSetByTopic, fetchLearnDetailByTopic } from '../api';
+import { fetchContentSetByTopic, fetchLearnDetailByTopic, fetchBeyondSchoolContentSetByTopic, fetchBeyondSchoolLearnDetailByTopic } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -32,6 +33,7 @@ const TopicDetailScreen = ({
   onBack,
   onNavigate,
   initialTopicId,
+  isBeyondSchool,
 }) => {
   // Initialize selectedDate to most recent scheduled date
   const getInitialDate = () => {
@@ -152,14 +154,22 @@ const TopicDetailScreen = ({
   // Fetch content set and learn detail when an API topic is selected
   useEffect(() => {
     if (selectedApiTopic?._id) {
-      fetchContentSetByTopic(selectedApiTopic._id)
+      // Use beyond-school endpoints if this is a beyond school topic
+      const contentSetFetch = isBeyondSchool
+        ? fetchBeyondSchoolContentSetByTopic(selectedApiTopic._id)
+        : fetchContentSetByTopic(selectedApiTopic._id);
+      const learnDetailFetch = isBeyondSchool
+        ? fetchBeyondSchoolLearnDetailByTopic(selectedApiTopic._id)
+        : fetchLearnDetailByTopic(selectedApiTopic._id);
+
+      contentSetFetch
         .then(set => setApiContentSet(set))
         .catch(() => setApiContentSet(null));
-      fetchLearnDetailByTopic(selectedApiTopic._id)
+      learnDetailFetch
         .then(detail => setApiLearnDetail(detail))
         .catch(() => setApiLearnDetail(null));
     }
-  }, [selectedApiTopic?._id]);
+  }, [selectedApiTopic?._id, isBeyondSchool]);
 
   // Fix localhost URLs in content
   const fixUrl = url =>
@@ -1062,10 +1072,23 @@ const TopicDetailScreen = ({
 
   const createArticleContent = () => {
     if (apiLearnDetail) {
-      return {
-        title: selectedApiTopic?.topic || selectedApiTopic?.title || displayTopic?.topic || 'Topic',
-        subtitle: selectedApiTopic?.description || '',
-        sections: [
+      // Support both new structured sections and legacy flat fields
+      let sections = [];
+      if (apiLearnDetail.sections && apiLearnDetail.sections.length > 0) {
+        sections = apiLearnDetail.sections
+          .filter(s => s.title || s.subtitle || s.description || (s.points && s.points.some(p => p)))
+          .map(s => ({
+            heading: s.title || '',
+            content: [
+              s.subtitle,
+              s.description,
+              ...(s.points || []).filter(Boolean).map(p => `• ${p}`),
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          }));
+      } else {
+        sections = [
           apiLearnDetail.overview && {
             heading: 'Overview',
             content: apiLearnDetail.overview,
@@ -1082,11 +1105,22 @@ const TopicDetailScreen = ({
             heading: 'Supporting Learning',
             content: apiLearnDetail.supportingLearning,
           },
-        ].filter(Boolean),
+        ].filter(Boolean);
+      }
+      return {
+        title: selectedApiTopic?.topic || selectedApiTopic?.title || displayTopic?.topic || 'Topic',
+        subtitle: selectedApiTopic?.description || '',
+        sections,
         videoUrl: apiLearnDetail.videoUrl || null,
+        // Support multiple YouTube URLs — fall back to single videoUrl for old records
+        videoUrls: apiLearnDetail.videoUrls?.length
+          ? apiLearnDetail.videoUrls
+          : apiLearnDetail.videoUrl
+          ? [apiLearnDetail.videoUrl]
+          : [],
       };
     }
-    return null; // No admin data — don't show article
+    return null;
   };
 
   const articleContent = createArticleContent();
@@ -1324,7 +1358,15 @@ const TopicDetailScreen = ({
           {/* ── TOPIC CARD ── */}
           <View style={styles.topicCard}>
             <View style={styles.topicImageContainer}>
-              {displayTopic?.subject === 'Science / EVS' ? (
+              {displayTopic?.imageUrl ? (
+                <View style={styles.topicImagePlaceholder}>
+                  <Image
+                    source={{ uri: displayTopic.imageUrl }}
+                    style={styles.subjectImage}
+                    resizeMode="stretch"
+                  />
+                </View>
+              ) : displayTopic?.subject === 'Science / EVS' ? (
                 <View style={styles.topicImagePlaceholder}>
                   <Image
                     source={require('../assets/images/Science.png')}
@@ -1602,7 +1644,17 @@ const TopicDetailScreen = ({
           <View style={styles.relevanceSection}>
             <TouchableOpacity
               style={styles.learnInDetailButton}
-              onPress={() => setShowArticleModal(true)}
+              onPress={() => {
+                if (articleContent) {
+                  setShowArticleModal(true);
+                } else {
+                  Alert.alert(
+                    'No Details Available',
+                    'Learn details have not been added for this topic yet.',
+                    [{ text: 'OK' }],
+                  );
+                }
+              }}
             >
               <MaterialIcon
                 name="book-open-page-variant"
@@ -1707,15 +1759,42 @@ const TopicDetailScreen = ({
                   </Text>
                 </View>
 
-                <View style={styles.modalVideoCard}>
-                  <View style={styles.modalVideoThumbnail}>
-                    <MaterialIcon
-                      name="play-circle"
-                      size={48}
-                      color="#FFFFFF"
-                    />
-                  </View>
-                </View>
+                {articleContent.videoUrls && articleContent.videoUrls.length > 0 ? (
+                  articleContent.videoUrls.map((url, idx) => {
+                    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1];
+                    const thumbnail = videoId
+                      ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+                      : null;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.modalVideoCard}
+                        onPress={() => Linking.openURL(url)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.modalVideoThumbnail}>
+                          {thumbnail ? (
+                            <Image
+                              source={{ uri: thumbnail }}
+                              style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                              resizeMode="cover"
+                            />
+                          ) : null}
+                          <View style={styles.modalVideoPlayOverlay}>
+                            <MaterialIcon name="play-circle" size={48} color="#FFFFFF" />
+                          </View>
+                        </View>
+                        <Text style={styles.modalVideosSectionSubtitle} numberOfLines={1}>
+                          {url}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.modalVideosSectionSubtitle}>
+                    No videos available for this topic yet.
+                  </Text>
+                )}
               </View>
               <View style={{ height: 40 }} />
             </ScrollView>
@@ -2064,12 +2143,13 @@ const styles = StyleSheet.create({
   },
   topicImagePlaceholder: {
     width: '100%',
-    height: 240,
+    height: 280,
     borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#F9FAFB',
   },
   imageOverlay: {
     position: 'absolute',
@@ -2585,6 +2665,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalVideoPlayOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   modalVideoThumbnailText: {
     position: 'absolute',

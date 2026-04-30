@@ -898,38 +898,77 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Subject Levels</Text>
                     <View style={styles.subjectLevelsEditGrid}>
-                      {coreAreas.map((area) => {
-                        const active = editSubjectLevels[area.id] || 'Intermediate';
-                        return (
-                          <View key={area.id} style={styles.subjectLevelCard}>
-                            <View style={styles.subjectLevelCardHeader}>
-                              {area.imageUrl ? (
-                                <Image 
-                                  source={{ uri: area.imageUrl }} 
-                                  style={styles.subjectCardImage}
-                                  resizeMode="cover"
-                                />
-                              ) : (
-                                <MaterialIcon name={area.rnIcon || 'star-outline'} size={18} color="#45a578" />
-                              )}
-                              <Text style={styles.subjectLevelCardName}>{area.name}</Text>
-                            </View>
-                            <View style={styles.levelPillRow}>
-                              {levels.map((lvl) => (
+                      {coreAreas
+                        .filter(area => editSubjectLevels[area.id] !== undefined)
+                        .map((area) => {
+                          const active = editSubjectLevels[area.id] || 'Intermediate';
+                          return (
+                            <View key={area.id} style={styles.subjectLevelCard}>
+                              <View style={styles.subjectLevelCardHeader}>
+                                {area.imageUrl ? (
+                                  <Image 
+                                    source={{ uri: area.imageUrl }} 
+                                    style={styles.subjectCardImage}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <MaterialIcon name={area.rnIcon || 'star-outline'} size={18} color="#45a578" />
+                                )}
+                                <Text style={[styles.subjectLevelCardName, { flex: 1 }]}>{area.name}</Text>
+                                {/* Remove subject button */}
                                 <TouchableOpacity
-                                  key={lvl}
-                                  style={[styles.levelPill, active === lvl && styles.levelPillActive]}
-                                  onPress={() => setEditSubjectLevels(prev => ({ ...prev, [area.id]: lvl }))}
+                                  onPress={() => {
+                                    setEditSubjectLevels(prev => {
+                                      const updated = { ...prev };
+                                      delete updated[area.id];
+                                      return updated;
+                                    });
+                                  }}
+                                  style={styles.removeSubjectBtn}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                 >
-                                  <Text style={[styles.levelPillText, active === lvl && styles.levelPillTextActive]}>
-                                    {lvl}
-                                  </Text>
+                                  <Icon name="close-circle" size={18} color="#EF4444" />
+                                </TouchableOpacity>
+                              </View>
+                              <View style={styles.levelPillRow}>
+                                {levels.map((lvl) => (
+                                  <TouchableOpacity
+                                    key={lvl}
+                                    style={[styles.levelPill, active === lvl && styles.levelPillActive]}
+                                    onPress={() => setEditSubjectLevels(prev => ({ ...prev, [area.id]: lvl }))}
+                                  >
+                                    <Text style={[styles.levelPillText, active === lvl && styles.levelPillTextActive]}>
+                                      {lvl}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          );
+                        })}
+
+                      {/* Add Subject button — shows subjects not yet enrolled */}
+                      {coreAreas.filter(area => editSubjectLevels[area.id] === undefined).length > 0 && (
+                        <View style={styles.addSubjectRow}>
+                          <Text style={styles.addSubjectLabel}>Add subject:</Text>
+                          <View style={styles.addSubjectChips}>
+                            {coreAreas
+                              .filter(area => editSubjectLevels[area.id] === undefined)
+                              .map(area => (
+                                <TouchableOpacity
+                                  key={area.id}
+                                  style={styles.addSubjectChip}
+                                  onPress={() =>
+                                    setEditSubjectLevels(prev => ({ ...prev, [area.id]: 'Intermediate' }))
+                                  }
+                                >
+                                  <Icon name="add-circle-outline" size={13} color="#45a578" />
+                                  <Text style={styles.addSubjectChipText}>{area.name}</Text>
                                 </TouchableOpacity>
                               ))}
-                            </View>
                           </View>
-                        );
-                      })}
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -1639,6 +1678,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  removeSubjectBtn: {
+    marginLeft: 'auto',
+  },
+  addSubjectRow: {
+    marginTop: 4,
+  },
+  addSubjectLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  addSubjectChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  addSubjectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1.5,
+    borderColor: '#45a578',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: '#F0FDF4',
+  },
+  addSubjectChipText: {
+    fontSize: 12,
+    color: '#45a578',
+    fontWeight: '600',
   },
   subjectCardImage: {
     width: 18,

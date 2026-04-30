@@ -21,7 +21,7 @@ import {
   getNudgesBySubject,
   getNudgesByGradeAndLevel,
 } from '../data/nudgesData';
-import { BASE_URL, fetchSubjects, fetchTopicsBySubject } from '../api';
+import { BASE_URL, fetchSubjects, fetchTopicsBySubject, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -96,6 +96,11 @@ const SubjectsListScreen = ({
   const [topicsLoaded, setTopicsLoaded] = useState(false);
   const child = userData?.children?.[0];
 
+  // Beyond School state
+  const [beyondSchoolSubjects, setBeyondSchoolSubjects] = useState([]);
+  const [beyondSchoolTopicsMap, setBeyondSchoolTopicsMap] = useState({});
+  const [beyondSchoolLoaded, setBeyondSchoolLoaded] = useState(false);
+
   // Fetch subjects from backend
   useEffect(() => {
     fetchSubjects()
@@ -139,6 +144,36 @@ const SubjectsListScreen = ({
       })
       .catch(() => {});
   }, []);
+
+  // Fetch Beyond School subjects the child selected
+  useEffect(() => {
+    const childTopics = child?.topics || []; // array of CustomizeLearning IDs
+    if (childTopics.length === 0) {
+      setBeyondSchoolLoaded(true);
+      return;
+    }
+    fetchBeyondSchool()
+      .then(allBeyondSubjects => {
+        // Only show subjects the child selected
+        const enrolled = allBeyondSubjects.filter(s =>
+          childTopics.includes(String(s._id)),
+        );
+        setBeyondSchoolSubjects(enrolled);
+        // Fetch topics for each enrolled beyond school subject
+        const promises = enrolled.map(s =>
+          fetchBeyondSchoolTopicsBySubject(s._id)
+            .then(topics => ({ id: s._id, topics }))
+            .catch(() => ({ id: s._id, topics: [] })),
+        );
+        Promise.all(promises).then(results => {
+          const map = {};
+          results.forEach(r => { map[r.id] = r.topics; });
+          setBeyondSchoolTopicsMap(map);
+          setBeyondSchoolLoaded(true);
+        });
+      })
+      .catch(() => setBeyondSchoolLoaded(true));
+  }, [child?.topics]);
 
   // Only show subjects that have at least 1 nudge for this child's grade/level
   const filteredNudges = getNudgesByGradeAndLevel(
@@ -217,19 +252,27 @@ const SubjectsListScreen = ({
     },
   };
 
-  // Calculate overall progress based on actual topic counts
-  const totalTopics =
+  // Calculate overall progress including Beyond School topics
+  const regularTopicsTotal =
     apiSubjects.length > 0
       ? apiSubjects.reduce(
           (sum, s) => sum + (subjectTopicsMap[s._id]?.length || 0),
           0,
         )
       : allSubjects.length * 12;
+  const beyondTopicsTotal = beyondSchoolLoaded
+    ? beyondSchoolSubjects.reduce(
+        (sum, s) => sum + (beyondSchoolTopicsMap[s._id]?.length || 0),
+        0,
+      )
+    : 0;
+  const totalTopics = regularTopicsTotal + beyondTopicsTotal;
   const completedNudges = completedTopics.size;
   const overallProgress =
     totalTopics > 0 ? Math.round((completedNudges / totalTopics) * 100) : 0;
   const activeSubjects =
-    apiSubjects.filter(s => s.type !== 'premium').length || allSubjects.length;
+    (apiSubjects.filter(s => s.type !== 'premium').length || allSubjects.length) +
+    beyondSchoolSubjects.length;
 
   return (
     <View style={styles.container}>
@@ -248,7 +291,7 @@ const SubjectsListScreen = ({
           <Text style={styles.headerTitle}>Learning Subjects</Text>
           <Text style={styles.headerSubtitle}>
             {child?.name || 'Child'} · {child?.grade || 'Grade 1'} ·{' '}
-            {allSubjects.length} subjects
+            {allSubjects.length + beyondSchoolSubjects.length} subjects
           </Text>
         </View>
       </View>
@@ -320,17 +363,17 @@ const SubjectsListScreen = ({
           <TouchableOpacity
             style={[
               styles.filterTab,
-              selectedFilter === 'premium' && styles.filterTabActive,
+              selectedFilter === 'beyondSchool' && styles.filterTabActive,
             ]}
-            onPress={() => setSelectedFilter('premium')}
+            onPress={() => setSelectedFilter('beyondSchool')}
           >
             <Text
               style={[
                 styles.filterTabText,
-                selectedFilter === 'premium' && styles.filterTabTextActive,
+                selectedFilter === 'beyondSchool' && styles.filterTabTextActive,
               ]}
             >
-              Premium
+              Beyond School
             </Text>
           </TouchableOpacity>
         </View>
@@ -606,87 +649,110 @@ const SubjectsListScreen = ({
                 );
               })}
 
-          {/* Premium Subjects Section */}
-          {(selectedFilter === 'all' || selectedFilter === 'premium') && (
+          {/* Beyond School Section */}
+          {(selectedFilter === 'all' || selectedFilter === 'beyondSchool') && (
             <>
-              {allSubjects
-                .filter(s => s.type === 'premium')
-                .map((subject, index) => {
-                  const config = subjectConfig[subject.name] || {
-                    color: '#F59E0B',
-                    bgColor: '#FFFBEB',
-                  };
+              {/* Section header — only show in "All" tab */}
+              {selectedFilter === 'all' && beyondSchoolSubjects.length > 0 && (
+                <View style={styles.sectionHeader}>
+                  <MaterialIcon name="star-circle-outline" size={18} color="#8B5CF6" />
+                  <Text style={styles.sectionHeaderText}>Beyond School</Text>
+                </View>
+              )}
+
+              {beyondSchoolLoaded && beyondSchoolSubjects.length === 0 ? (
+                selectedFilter === 'beyondSchool' ? (
+                  <View style={styles.emptyStateCard}>
+                    <MaterialIcon name="star-circle-outline" size={40} color="#9CA3AF" />
+                    <Text style={styles.emptyStateTitle}>No Beyond School subjects</Text>
+                    <Text style={styles.emptyStateText}>
+                      Go to Settings to select your child's interests.
+                    </Text>
+                  </View>
+                ) : null
+              ) : (
+                beyondSchoolSubjects.map((subject, index) => {
+                  const topics = beyondSchoolTopicsMap[subject._id] || [];
+                  const topicCount = beyondSchoolLoaded ? topics.length : 0;
+                  const completedCount = topics.filter(t =>
+                    completedTopics.has(`${subject.name}::${t.topic || t.title}`),
+                  ).length;
+                  const progress =
+                    topicCount > 0 ? Math.floor((completedCount / topicCount) * 100) : 0;
+
                   return (
                     <TouchableOpacity
                       key={subject._id || index}
                       style={styles.subjectCard}
+                      onPress={() => {
+                        if (topics.length > 0) {
+                          onNavigate &&
+                            onNavigate('topicDetail', {
+                              subjectName: subject.name,
+                              isBeyondSchool: true,
+                              topicData: {
+                                subject: subject.name,
+                                topic: topics[0].topic || topics[0].title,
+                                apiTopics: topics,
+                              },
+                              allNudges: topics.map(t => ({
+                                subject: subject.name,
+                                topic: t.topic || t.title,
+                                apiTopic: t,
+                              })),
+                              apiSubject: subject,
+                            });
+                        }
+                      }}
                     >
                       <View style={styles.subjectHeader}>
                         <View style={styles.subjectLeft}>
-                          <View
-                            style={[
-                              styles.subjectIconContainer,
-                              { backgroundColor: 'transparent' },
-                            ]}
-                          >
+                          <View style={[styles.subjectIconContainer, { backgroundColor: '#F5F3FF' }]}>
                             {subject.imageUrl ? (
                               <Image
                                 source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
                                 style={styles.subjectIconImage}
                                 resizeMode="contain"
                               />
-                            ) : config.image ? (
-                              <Image
-                                source={config.image}
-                                style={styles.subjectIconImage}
-                                resizeMode="contain"
-                              />
                             ) : (
                               <MaterialIcon
-                                name="lock"
+                                name={subject.rnIcon || subject.icon || 'star-circle-outline'}
                                 size={isSmallDevice ? 22 : 24}
-                                color="#F59E0B"
+                                color="#8B5CF6"
                               />
                             )}
                           </View>
                           <View style={styles.subjectInfo}>
                             <View style={styles.subjectTitleRow}>
-                              <Text style={styles.subjectName}>
-                                {subject.name}
-                              </Text>
-                              <View style={styles.premiumBadge}>
-                                <Icon
-                                  name="lock-closed"
-                                  size={isSmallDevice ? 10 : 12}
-                                  color="#F59E0B"
-                                />
-                                <Text style={styles.premiumBadgeText}>
-                                  Premium
-                                </Text>
-                              </View>
+                              <Text style={styles.subjectName}>{subject.name}</Text>
+                              
                             </View>
                             <Text style={styles.subjectDescription}>
-                              {subject.description || 'Premium content'}
+                              {subject.description || 'Exploratory learning beyond the classroom'}
                             </Text>
                           </View>
                         </View>
                         <CircularProgress
-                          percentage={0}
-                          color="#10B981"
+                          percentage={progress}
+                          color="#8B5CF6"
                           size={isSmallDevice ? 32 : 36}
                         />
                       </View>
+
+                      {/* Progress Bar */}
                       <View style={styles.progressBarContainer}>
                         <View style={styles.progressBarBackground}>
                           <View
                             style={[
                               styles.progressBarFill,
-                              { width: '0%', backgroundColor: '#10B981' },
+                              { width: `${progress}%`, backgroundColor: '#8B5CF6' },
                             ]}
                           />
                         </View>
                         <View style={styles.progressTextContainer}>
-                          <Text style={styles.progressText}>0/0</Text>
+                          <Text style={styles.progressText}>
+                            {completedCount}/{topicCount}
+                          </Text>
                           <TouchableOpacity style={styles.progressArrowButton}>
                             <Icon
                               name="chevron-forward"
@@ -696,137 +762,31 @@ const SubjectsListScreen = ({
                           </TouchableOpacity>
                         </View>
                       </View>
+
+                      {/* Footer */}
                       <View style={styles.subjectFooter}>
                         <View style={styles.subjectStats}>
                           <View style={styles.statItem}>
-                            <Icon
-                              name="book-outline"
-                              size={isSmallDevice ? 14 : 16}
-                              color="#9CA3AF"
-                            />
-                            <Text style={styles.statText}>Premium topics</Text>
+                            <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                            <Text style={styles.statText}>
+                              {topicCount} {topicCount === 1 ? 'topic' : 'topics'}
+                            </Text>
                           </View>
                         </View>
-                        <View style={styles.lockedBadge}>
-                          <Icon
-                            name="lock-closed"
-                            size={isSmallDevice ? 12 : 14}
-                            color="#F59E0B"
-                          />
-                          <Text style={styles.lockedText}>Locked</Text>
+                        <View style={[styles.statusBadge, progress >= 80 && { backgroundColor: '#EDE9FE' }]}>
+                          <Text style={[styles.statusText, progress >= 80 && { color: '#8B5CF6' }]}>
+                            {progress >= 80 ? 'On Track ✓' : progress >= 50 ? 'In Progress ✓' : 'Started ✓'}
+                          </Text>
                         </View>
                       </View>
                     </TouchableOpacity>
                   );
-                })}
+                })
+              )}
             </>
           )}
 
-          {/* Unlock Premium Subjects Card */}
-          {(selectedFilter === 'all' || selectedFilter === 'premium') && (
-            <View style={styles.premiumCard}>
-              <View style={styles.premiumHeader}>
-                <View style={styles.premiumIconContainer}>
-                  <Icon
-                    name="flash"
-                    size={isSmallDevice ? 24 : 28}
-                    color="#FFFFFF"
-                  />
-                </View>
-                <View style={styles.premiumHeaderText}>
-                  <Text style={styles.premiumTitle}>
-                    Unlock Premium Subjects
-                  </Text>
-                  <Text style={styles.premiumSubtitle}>
-                    Full access to{' '}
-                    <Text style={styles.premiumHighlight}>
-                      Financial Literacy
-                    </Text>{' '}
-                    and{' '}
-                    <Text style={styles.premiumHighlight}>Sex & Safety</Text> —
-                    designed for children aged 6-12.
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.premiumSubjects}>
-                <View style={styles.premiumSubjectItem}>
-                  <View style={styles.premiumSubjectIcon}>
-                    <MaterialIcon
-                      name="wallet"
-                      size={isSmallDevice ? 20 : 22}
-                      color="#10B981"
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.premiumSubjectName}>
-                      Financial Literacy
-                    </Text>
-                    <Text style={styles.premiumSubjectActivities}>
-                      12 activities
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.premiumSubjectItem}>
-                  <View style={styles.premiumSubjectIcon}>
-                    <MaterialIcon
-                      name="heart-check"
-                      size={isSmallDevice ? 20 : 22}
-                      color="#EF4444"
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.premiumSubjectName}>Sex & Safety</Text>
-                    <Text style={styles.premiumSubjectActivities}>
-                      12 activities
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.premiumFeatures}>
-                <View style={styles.premiumFeature}>
-                  <Icon
-                    name="checkmark-circle"
-                    size={isSmallDevice ? 16 : 18}
-                    color="#10B981"
-                  />
-                  <Text style={styles.premiumFeatureText}>No ads</Text>
-                </View>
-                <View style={styles.premiumFeature}>
-                  <Icon
-                    name="checkmark-circle"
-                    size={isSmallDevice ? 16 : 18}
-                    color="#10B981"
-                  />
-                  <Text style={styles.premiumFeatureText}>All subjects</Text>
-                </View>
-                <View style={styles.premiumFeature}>
-                  <Icon
-                    name="checkmark-circle"
-                    size={isSmallDevice ? 16 : 18}
-                    color="#10B981"
-                  />
-                  <Text style={styles.premiumFeatureText}>
-                    Priority support
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.premiumButton}
-                onPress={() => onNavigate && onNavigate('subscription')}
-              >
-                <Icon
-                  name="star"
-                  size={isSmallDevice ? 18 : 20}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Beyond School section ends above */}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -1148,149 +1108,37 @@ const styles = StyleSheet.create({
     height: 30,
   },
 
-  // Premium Card
-  premiumCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: isSmallDevice ? 14 : 16,
-    padding: isSmallDevice ? 16 : 18,
-    marginTop: isSmallDevice ? 12 : 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  premiumHeader: {
-    flexDirection: 'row',
-    marginBottom: isSmallDevice ? 14 : 16,
-    gap: isSmallDevice ? 10 : 12,
-  },
-  premiumIconContainer: {
-    width: isSmallDevice ? 48 : 52,
-    height: isSmallDevice ? 48 : 52,
-    borderRadius: isSmallDevice ? 12 : 14,
-    backgroundColor: '#2C3E50',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  premiumHeaderText: {
-    flex: 1,
-  },
-  premiumTitle: {
-    fontSize: isTablet ? 17 : isSmallDevice ? 14 : 15,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 4,
-    fontFamily: 'Montserrat-Bold',
-  },
-  premiumSubtitle: {
-    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
-    color: '#6B7280',
-    lineHeight: isSmallDevice ? 16 : 18,
-    fontFamily: 'Montserrat-Regular',
-  },
-  premiumHighlight: {
-    fontWeight: '600',
-    color: '#1A1A1A',
-    fontFamily: 'Montserrat-SemiBold',
-  },
-  premiumSubjects: {
-    flexDirection: 'row',
-    gap: isSmallDevice ? 12 : 16,
-    marginBottom: isSmallDevice ? 14 : 16,
-  },
-  premiumSubjectItem: {
-    flex: 1,
+  // Beyond School Badge
+  beyondBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: isSmallDevice ? 10 : 12,
-    padding: isSmallDevice ? 10 : 12,
-    gap: isSmallDevice ? 8 : 10,
-  },
-  premiumSubjectIcon: {
-    width: isSmallDevice ? 36 : 40,
-    height: isSmallDevice ? 36 : 40,
-    borderRadius: isSmallDevice ? 10 : 12,
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  premiumSubjectName: {
-    fontSize: isTablet ? 13 : isSmallDevice ? 11 : 12,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-    fontFamily: 'Montserrat-Bold',
-  },
-  premiumSubjectActivities: {
-    fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
-    color: '#9CA3AF',
-    fontFamily: 'Montserrat-Regular',
-  },
-  premiumFeatures: {
-    flexDirection: 'row',
-    gap: isSmallDevice ? 12 : 16,
-    marginBottom: isSmallDevice ? 14 : 16,
-  },
-  premiumFeature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  premiumFeatureText: {
-    fontSize: isTablet ? 12 : isSmallDevice ? 10 : 11,
-    color: '#6B7280',
-    fontFamily: 'Montserrat-Medium',
-  },
-  premiumButton: {
-    backgroundColor: '#2C3E50',
-    borderRadius: isSmallDevice ? 10 : 12,
-    paddingVertical: isSmallDevice ? 12 : 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: isSmallDevice ? 6 : 8,
-  },
-  premiumButtonText: {
-    fontSize: isTablet ? 15 : isSmallDevice ? 13 : 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'Montserrat-Bold',
-  },
-
-  // Premium Badge
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#EDE9FE',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     gap: 3,
   },
-  premiumBadgeText: {
+  beyondBadgeText: {
     fontSize: isSmallDevice ? 9 : 10,
     fontWeight: '600',
-    color: '#F59E0B',
+    color: '#8B5CF6',
     fontFamily: 'Montserrat-SemiBold',
   },
 
-  // Locked Badge
-  lockedBadge: {
+  // Section Header (divider between All Subjects and Beyond School)
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: isSmallDevice ? 8 : 10,
-    paddingVertical: isSmallDevice ? 4 : 5,
-    borderRadius: isSmallDevice ? 8 : 10,
-    gap: 4,
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
-  lockedText: {
-    fontSize: isTablet ? 11 : isSmallDevice ? 9 : 10,
-    fontWeight: '600',
-    color: '#F59E0B',
-    fontFamily: 'Montserrat-SemiBold',
+  sectionHeaderText: {
+    fontSize: isTablet ? 14 : isSmallDevice ? 12 : 13,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    fontFamily: 'Montserrat-Bold',
   },
 });
 

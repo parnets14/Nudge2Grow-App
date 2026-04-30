@@ -94,7 +94,9 @@ const FeaturedContentDetailScreen = ({ route, navigation }) => {
             />
           </View>
           <Text style={styles.title}>{content.title}</Text>
-          <Text style={styles.subtitle}>{content.subtitle}</Text>
+          {content.subtitle ? (
+            <Text style={styles.subtitle}>{content.subtitle}</Text>
+          ) : null}
           
           {/* Meta Chips */}
           <View style={styles.metaRow}>

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { BASE_URL, fetchSubjects, getRecentQuizzes, fetchTopicsBySubject, fetchQuestionTypes } from '../api';
+import { BASE_URL, fetchSubjects, getRecentQuizzes, fetchTopicsBySubject, fetchQuestionTypes, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -43,11 +43,21 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
 
   const loadSubjects = async () => {
     try {
-      const data = await fetchSubjects();
-      // Filter to show only subjects the child has selected
+      const [regularData, beyondData] = await Promise.all([
+        fetchSubjects(),
+        fetchBeyondSchool().catch(() => []),
+      ]);
+      // Regular subjects — filter by enrolled subjectLevels
       const childSubjectIds = Object.keys(childSubjects);
-      const filteredSubjects = data.filter(s => childSubjectIds.includes(s._id));
-      setSubjects(filteredSubjects);
+      const filteredRegular = regularData.filter(s => childSubjectIds.includes(s._id));
+
+      // Beyond school subjects — filter by child.topics
+      const childTopicIds = child?.topics || [];
+      const filteredBeyond = beyondData
+        .filter(s => childTopicIds.includes(String(s._id)))
+        .map(s => ({ ...s, _isBeyondSchool: true }));
+
+      setSubjects([...filteredRegular, ...filteredBeyond]);
     } catch (err) {
       console.error('[AssessmentHub] Failed to load subjects:', err);
       setSubjects([]);
@@ -58,33 +68,33 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
 
   const loadStats = async () => {
     try {
-      // Fetch all topics
-      const allTopics = await fetchTopicsBySubject();
-      
-      // Filter topics for child's subjects, grade, and level
+      // Fetch regular topics and beyond school topics in parallel
+      const [allTopics, allBeyondTopics] = await Promise.all([
+        fetchTopicsBySubject(),
+        fetchBeyondSchoolTopicsBySubject().catch(() => []),
+      ]);
+
+      // Filter regular topics for child's subjects, grade, and level
       const childSubjectIds = Object.keys(childSubjects);
       const relevantTopics = allTopics.filter(topic => {
-        // Check if topic belongs to child's subjects
         const subjectMatch = childSubjectIds.includes(String(topic.subjectId));
         if (!subjectMatch) return false;
-        
-        // Check if topic matches child's grade (if grade is specified on topic)
         const gradeMatch = !topic.grade || !childGrade || topic.grade === childGrade;
-        
-        // Check if topic matches child's level for this subject
         const childLevelForSubject = childSubjects[topic.subjectId];
         const levelMatch = !topic.level || !childLevelForSubject || topic.level === childLevelForSubject;
-        
         return subjectMatch && gradeMatch && levelMatch;
       });
-      
-      console.log('[AssessmentHub] Total topics:', allTopics.length);
-      console.log('[AssessmentHub] Child grade:', childGrade);
-      console.log('[AssessmentHub] Child subjects:', childSubjectIds);
-      console.log('[AssessmentHub] Child subject levels:', childSubjects);
-      console.log('[AssessmentHub] Filtered topics:', relevantTopics.length);
-      
-      setTotalTopics(relevantTopics.length);
+
+      // Filter beyond school topics for child's enrolled beyond school subjects
+      const childTopicIds = child?.topics || [];
+      const relevantBeyondTopics = allBeyondTopics.filter(topic =>
+        childTopicIds.includes(String(topic.subjectId))
+      );
+
+      console.log('[AssessmentHub] Regular topics:', relevantTopics.length);
+      console.log('[AssessmentHub] Beyond school topics:', relevantBeyondTopics.length);
+
+      setTotalTopics(relevantTopics.length + relevantBeyondTopics.length);
 
       // Fetch question types
       const questionTypes = await fetchQuestionTypes();
@@ -195,6 +205,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
       knownTopics: [],
       practiceTopics: [],
       childSubjects: childSubjects,
+      childTopics: child?.topics || [],
     });
   };
 

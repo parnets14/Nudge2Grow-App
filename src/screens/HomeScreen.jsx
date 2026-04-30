@@ -20,7 +20,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
-import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent } from '../api';
+import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 import { createTopicUploadNotification } from '../services/notificationService';
 import { Storage } from '../utils/storage';
 
@@ -46,6 +46,8 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
   const [riddleHints, setRiddleHints] = useState({});    // { [id]: bool }
   const [showAllRiddles, setShowAllRiddles] = useState(false);
   const [todaysTopics, setTodaysTopics] = useState([]);
+  const [todaysBeyondSchoolNudge, setTodaysBeyondSchoolNudge] = useState(null);
+  const [beyondSchoolSubjectInfo, setBeyondSchoolSubjectInfo] = useState(null);
   const [upcomingTopics, setUpcomingTopics] = useState([]);
   const [apiSubjects, setApiSubjects] = useState([]);
   const [allTopicsFromApi, setAllTopicsFromApi] = useState([]);
@@ -136,38 +138,18 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
       .catch(() => {});
   }, []);
 
-  // Fetch featured content based on student's grade
+  // Fetch featured content — only show items matching the student's grade or "All Grades"
   useEffect(() => {
-    const child = userData?.children?.[0];
-    const studentGrade = child?.grade; // e.g., "Grade 1", "Grade 2", etc.
-    
-    console.log('[HomeScreen] Fetching featured content for student grade:', studentGrade);
-    
+    const studentGrade = userData?.children?.[0]?.grade || '';
     fetchFeaturedContent()
       .then(data => {
-        console.log('[HomeScreen] Featured content API response:', data);
-        if (Array.isArray(data)) {
-          console.log('[HomeScreen] Total featured content items:', data.length);
-          
-          // Filter by student's grade or "All Grades"
-          const filtered = data.filter(item => {
-            const matches = item.grade === 'All Grades' || item.grade === studentGrade;
-            console.log('[HomeScreen] Item:', item.title, '| Grade:', item.grade, '| Matches:', matches);
-            return matches;
-          });
-          
-          console.log('[HomeScreen] Filtered featured content for', studentGrade, ':', filtered.length);
-          console.log('[HomeScreen] Filtered items:', filtered);
-          setFeaturedContent(filtered);
-        } else {
-          console.log('[HomeScreen] Featured content response is not an array:', typeof data);
-          setFeaturedContent([]);
-        }
+        if (!Array.isArray(data)) { setFeaturedContent([]); return; }
+        const filtered = data.filter(item =>
+          item.grade === 'All Grades' || item.grade === studentGrade
+        );
+        setFeaturedContent(filtered);
       })
-      .catch(err => {
-        console.error('[HomeScreen] Error fetching featured content:', err);
-        setFeaturedContent([]);
-      });
+      .catch(() => setFeaturedContent([]));
   }, [userData]);
 
   // Fetch topics and filter by scheduled date, student's enrolled subjects, and levels
@@ -266,6 +248,71 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
 
     if (userData?.children?.[0]) {
       loadTodaysTopics();
+    }
+  }, [userData]);
+
+  // Fetch today's Beyond School nudge
+  useEffect(() => {
+    const loadBeyondSchoolNudge = async () => {
+      try {
+        const child = userData?.children?.[0];
+        const childTopics = child?.topics || []; // array of CustomizeLearning IDs
+        if (childTopics.length === 0) return;
+
+        const allBeyondSubjects = await fetchBeyondSchool();
+        const enrolledSubjects = allBeyondSubjects.filter(s =>
+          childTopics.includes(String(s._id)),
+        );
+        if (enrolledSubjects.length === 0) return;
+
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+        // Try each enrolled beyond school subject until we find a topic
+        for (const subject of enrolledSubjects) {
+          const topics = await fetchBeyondSchoolTopicsBySubject(subject._id);
+          const topicsWithDates = topics.filter(t => t.scheduledDate);
+
+          // 1. Try today
+          let pick = topicsWithDates.find(t => {
+            const d = new Date(t.scheduledDate);
+            return d >= todayStart && d <= todayEnd;
+          });
+
+          // 2. Try yesterday
+          if (!pick) {
+            const yStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+            const yEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23, 59, 59);
+            pick = topicsWithDates.find(t => {
+              const d = new Date(t.scheduledDate);
+              return d >= yStart && d <= yEnd;
+            });
+          }
+
+          // 3. Try day before yesterday
+          if (!pick) {
+            const dbYStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
+            const dbYEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 23, 59, 59);
+            pick = topicsWithDates.find(t => {
+              const d = new Date(t.scheduledDate);
+              return d >= dbYStart && d <= dbYEnd;
+            });
+          }
+
+          if (pick) {
+            setTodaysBeyondSchoolNudge(pick);
+            setBeyondSchoolSubjectInfo(subject);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('[HomeScreen] Error loading beyond school nudge:', error);
+      }
+    };
+
+    if (userData?.children?.[0]) {
+      loadBeyondSchoolNudge();
     }
   }, [userData]);
 
@@ -716,7 +763,9 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                   </View>
                   <View style={styles.featuredInfo}>
                     <Text style={styles.featuredTitle}>{featuredContent[0].title}</Text>
-                    <Text style={styles.featuredSubtitle}>{featuredContent[0].subtitle}</Text>
+                    {featuredContent[0].subtitle ? (
+                      <Text style={styles.featuredSubtitle}>{featuredContent[0].subtitle}</Text>
+                    ) : null}
                   </View>
                 </View>
                 <Text style={styles.featuredDescription}>
@@ -725,7 +774,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                 <View style={styles.featuredMeta}>
                   <View style={styles.metaChip}>
                     <Icon name="people-outline" size={14} color="#666666" />
-                    <Text style={styles.metaChipText}>{featuredContent[0].grade}</Text>
+                    <Text style={styles.metaChipText}>{child?.grade || 'All Grades'}</Text>
                   </View>
                   <View style={styles.metaChip}>
                     <MaterialIcon name="star" size={14} color="#FFB84D" />
@@ -761,7 +810,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
             <Text style={styles.sectionTitle}>Today's Nudges</Text>
           </View>
 
-          {todaysTopics.length === 0 ? (
+          {todaysTopics.length === 0 && !todaysBeyondSchoolNudge ? (
             <View style={styles.emptyNudgesCard}>
               <MaterialIcon name="book-clock-outline" size={36} color="#9CA3AF" />
               <Text style={styles.emptyNudgesTitle}>No topics available</Text>
@@ -772,49 +821,140 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
               </Text>
             </View>
           ) : (
-            todaysTopics.map((topic) => {
-              // Find the subject for this topic
-              const subject = apiSubjects.find(s => String(s._id) === String(topic.subjectId));
-              const subjectName = subject?.name || topic.subjectName || 'Learning';
-              
-              return (
-                <TouchableOpacity 
-                  key={topic._id}
+            <>
+              {/* Normal school subject card — first enrolled subject topic */}
+              {todaysTopics.slice(0, 1).map((topic) => {
+                const subject = apiSubjects.find(s => String(s._id) === String(topic.subjectId));
+                const subjectName = subject?.name || topic.subjectName || 'Learning';
+
+                // Pick a good icon: use admin-set rnIcon, else derive from subject name
+                const getSubjectIcon = (name = '') => {
+                  const n = name.toLowerCase();
+                  if (n.includes('math'))           return 'calculator-variant';
+                  if (n.includes('science') || n.includes('evs') || n.includes('biology')) return 'flask-outline';
+                  if (n.includes('english') || n.includes('language') || n.includes('grammar')) return 'book-alphabet';
+                  if (n.includes('social') || n.includes('history') || n.includes('geography')) return 'earth';
+                  if (n.includes('computer') || n.includes('coding') || n.includes('ai') || n.includes('artificial')) return 'code-braces';
+                  if (n.includes('art') || n.includes('drawing') || n.includes('craft')) return 'palette-outline';
+                  if (n.includes('music'))          return 'music-note-outline';
+                  if (n.includes('physical') || n.includes('sport') || n.includes('yoga')) return 'run-fast';
+                  if (n.includes('financial') || n.includes('economics')) return 'cash-multiple';
+                  if (n.includes('moral') || n.includes('value') || n.includes('character')) return 'heart-outline';
+                  if (n.includes('environment'))    return 'leaf-circle-outline';
+                  if (n.includes('health') || n.includes('nutrition')) return 'medical-bag';
+                  if (n.includes('general') || n.includes('knowledge')) return 'lightbulb-outline';
+                  return 'book-open-variant';
+                };
+                const subjectIcon = subject?.rnIcon || subject?.icon || getSubjectIcon(subjectName);
+
+                return (
+                  <TouchableOpacity
+                    key={topic._id}
+                    style={styles.card}
+                    onPress={async () => {
+                      if (onNavigate) {
+                        try {
+                          const allTopicsForSubject = await fetchTopicsBySubject(topic.subjectId);
+                          const topicsWithDates = allTopicsForSubject.filter(t => t.scheduledDate);
+                          onNavigate('topicDetail', {
+                            subjectName: subjectName,
+                            initialTopicId: topic._id,
+                            topicData: {
+                              subject: subjectName,
+                              topic: topic.topic || topic.title,
+                              apiTopics: topicsWithDates,
+                            },
+                            allNudges: topicsWithDates.map(t => ({
+                              subject: subjectName,
+                              topic: t.topic || t.title,
+                              apiTopic: t,
+                            })),
+                          });
+                        } catch (error) {
+                          console.error('[HomeScreen] Error fetching topics:', error);
+                          onNavigate('topicDetail', {
+                            subjectName: subjectName,
+                            initialTopicId: topic._id,
+                            topicData: {
+                              subject: subjectName,
+                              topic: topic.topic || topic.title,
+                              apiTopics: [topic],
+                            },
+                            allNudges: [{
+                              subject: subjectName,
+                              topic: topic.topic || topic.title,
+                              apiTopic: topic,
+                            }],
+                          });
+                        }
+                      }
+                    }}
+                  >
+                    <View style={styles.cardLeftSection}>
+                      <View style={styles.cardIcon}>
+                        <MaterialIcon name={subjectIcon} size={24} color="#45a578" />
+                      </View>
+                    </View>
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardTitle}>{topic.topic || topic.title}</Text>
+                      <Text style={styles.cardDescription}>
+                        {topic.description || 'Explore this topic together'}
+                      </Text>
+                      <View style={styles.cardMeta}>
+                        <Text style={styles.cardCategory}>{subjectName}  </Text>
+                        {topic.title && (
+                          <>
+                            <Text style={styles.cardDot}>• </Text>
+                            <Text style={styles.cardCategory}>{topic.title}</Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                    <Icon name="chevron-forward" size={24} color="#45a578" />
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Beyond School subject card */}
+              {todaysBeyondSchoolNudge && beyondSchoolSubjectInfo && (
+                <TouchableOpacity
+                  key={todaysBeyondSchoolNudge._id}
                   style={styles.card}
                   onPress={async () => {
                     if (onNavigate) {
                       try {
-                        const allTopicsForSubject = await fetchTopicsBySubject(topic.subjectId);
+                        const allTopicsForSubject = await fetchBeyondSchoolTopicsBySubject(beyondSchoolSubjectInfo._id);
                         const topicsWithDates = allTopicsForSubject.filter(t => t.scheduledDate);
-
                         onNavigate('topicDetail', {
-                          subjectName: subjectName,
-                          initialTopicId: topic._id,
+                          subjectName: beyondSchoolSubjectInfo.name,
+                          isBeyondSchool: true,
+                          initialTopicId: todaysBeyondSchoolNudge._id,
                           topicData: {
-                            subject: subjectName,
-                            topic: topic.topic || topic.title,
+                            subject: beyondSchoolSubjectInfo.name,
+                            topic: todaysBeyondSchoolNudge.topic || todaysBeyondSchoolNudge.title,
                             apiTopics: topicsWithDates,
                           },
                           allNudges: topicsWithDates.map(t => ({
-                            subject: subjectName,
+                            subject: beyondSchoolSubjectInfo.name,
                             topic: t.topic || t.title,
                             apiTopic: t,
                           })),
                         });
                       } catch (error) {
-                        console.error('[HomeScreen] Error fetching topics:', error);
+                        console.error('[HomeScreen] Error fetching beyond school topics:', error);
                         onNavigate('topicDetail', {
-                          subjectName: subjectName,
-                          initialTopicId: topic._id,
+                          subjectName: beyondSchoolSubjectInfo.name,
+                          isBeyondSchool: true,
+                          initialTopicId: todaysBeyondSchoolNudge._id,
                           topicData: {
-                            subject: subjectName,
-                            topic: topic.topic || topic.title,
-                            apiTopics: [topic],
+                            subject: beyondSchoolSubjectInfo.name,
+                            topic: todaysBeyondSchoolNudge.topic || todaysBeyondSchoolNudge.title,
+                            apiTopics: [todaysBeyondSchoolNudge],
                           },
                           allNudges: [{
-                            subject: subjectName,
-                            topic: topic.topic || topic.title,
-                            apiTopic: topic,
+                            subject: beyondSchoolSubjectInfo.name,
+                            topic: todaysBeyondSchoolNudge.topic || todaysBeyondSchoolNudge.title,
+                            apiTopic: todaysBeyondSchoolNudge,
                           }],
                         });
                       }
@@ -823,28 +963,32 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                 >
                   <View style={styles.cardLeftSection}>
                     <View style={styles.cardIcon}>
-                      <MaterialIcon name="book-open-variant" size={24} color="#45a578" />
+                      <MaterialIcon
+                        name={beyondSchoolSubjectInfo.rnIcon || beyondSchoolSubjectInfo.icon || 'star-circle-outline'}
+                        size={24}
+                        color="#45a578"
+                      />
                     </View>
                   </View>
                   <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>{topic.topic || topic.title}</Text>
+                    <Text style={styles.cardTitle}>{todaysBeyondSchoolNudge.topic || todaysBeyondSchoolNudge.title}</Text>
                     <Text style={styles.cardDescription}>
-                      {topic.description || 'Explore this topic together'}
+                      {todaysBeyondSchoolNudge.description || 'Explore this life skill together'}
                     </Text>
                     <View style={styles.cardMeta}>
-                      <Text style={styles.cardCategory}>{subjectName}  </Text>
-                      {topic.title && (
+                      <Text style={styles.cardCategory}>{beyondSchoolSubjectInfo.name}  </Text>
+                      {todaysBeyondSchoolNudge.title && (
                         <>
                           <Text style={styles.cardDot}>• </Text>
-                          <Text style={styles.cardCategory}>{topic.title}</Text>
+                          <Text style={styles.cardCategory}>{todaysBeyondSchoolNudge.title}</Text>
                         </>
                       )}
                     </View>
                   </View>
                   <Icon name="chevron-forward" size={24} color="#45a578" />
                 </TouchableOpacity>
-              );
-            })
+              )}
+            </>
           )}
         </View>
 
@@ -862,7 +1006,9 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                   <MaterialIcon name="arrow-right" size={16} color="#2563EB" />
                   <Text style={styles.didYouKnowPrompt}>{item.prompt}</Text>
                 </View>
-                <Text style={styles.didYouKnowSource}>Source: {item.source}</Text>
+                {item.source ? (
+                  <Text style={styles.didYouKnowSource}>Source: {item.source}</Text>
+                ) : null}
               </View>
             ))}
           </View>
@@ -1906,6 +2052,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  // Beyond School card styles (no extra styling — matches normal card)
   cardChapterLine: {
     flexDirection: 'row',
     alignItems: 'center',

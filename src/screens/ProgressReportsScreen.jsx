@@ -1,8 +1,8 @@
 /**
- * Progress Reports Screen
+ * Progress Reports Screen — dynamic, includes normal + Beyond School subjects
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,16 +11,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  fetchSubjects,
+  fetchTopicsBySubject,
+  fetchBeyondSchool,
+  fetchBeyondSchoolTopicsBySubject,
+} from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
-const ProgressReportsScreen = ({ onBack }) => {
+const ProgressReportsScreen = ({ onBack, userData, completedTopics = new Set() }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('week');
+  const [loading, setLoading] = useState(true);
+
+  // All subjects with their topics
+  const [subjectData, setSubjectData] = useState([]); // { name, icon, color, topics[], isBeyondSchool }
 
   const periods = [
     { id: 'week', label: 'This Week' },
@@ -28,122 +39,184 @@ const ProgressReportsScreen = ({ onBack }) => {
     { id: 'all', label: 'All Time' },
   ];
 
-  const weeklyData = {
-    nudgesCompleted: 24,
-    totalTime: '3.5 hours',
-    streak: 7,
-    topicsExplored: 8,
-    weeklyGrowth: 25,
-  };
+  const child = userData?.children?.[0];
 
-  const subjectProgress = [
-    { 
-      name: 'Environmental Studies', 
-      completed: 8, 
-      total: 12, 
-      color: '#27AE60', 
-      percentage: 67,
-      icon: 'leaf',
-      recentActivity: '2 nudges this week'
-    },
-    { 
-      name: 'Mathematics', 
-      completed: 6, 
-      total: 10, 
-      color: '#27AE60', 
-      percentage: 60,
-      icon: 'calculator-variant',
-      recentActivity: '3 nudges this week'
-    },
-    { 
-      name: 'Science', 
-      completed: 5, 
-      total: 8, 
-      color: '#9B59B6', 
-      percentage: 62,
-      icon: 'flask-outline',
-      recentActivity: '1 nudge this week'
-    },
-    { 
-      name: 'Language Arts', 
-      completed: 3, 
-      total: 6, 
-      color: '#E74C3C', 
-      percentage: 50,
-      icon: 'book-alphabet',
-      recentActivity: '1 nudge this week'
-    },
-    { 
-      name: 'Values & Character', 
-      completed: 2, 
-      total: 5, 
-      color: '#FF9800', 
-      percentage: 40,
-      icon: 'heart-multiple-outline',
-      recentActivity: 'Start learning'
-    },
-  ];
+  // ── Load all subjects + topics ──────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const studentSubjectLevels = child?.subjectLevels || {};
+        const enrolledSubjectIds = Object.keys(studentSubjectLevels);
+        const childBeyondTopics = child?.topics || [];
 
-  const recentAchievements = [
-    {
-      id: 1,
-      title: '7-Day Streak Champion!',
-      description: 'Completed nudges for 7 consecutive days',
-      icon: 'fire',
-      color: '#FF6B35',
-      date: 'Today',
-      points: '+50 points'
-    },
-    {
-      id: 2,
-      title: 'Environmental Explorer',
-      description: 'Completed 8 environmental studies nudges',
-      icon: 'leaf',
-      color: '#27AE60',
-      date: '2 days ago',
-      points: '+30 points'
-    },
-    {
-      id: 3,
-      title: 'Math Wizard',
-      description: 'Solved 20 math challenges successfully',
-      icon: 'calculator-variant',
-      color: '#27AE60',
-      date: '4 days ago',
-      points: '+40 points'
-    },
-  ];
+        const results = [];
 
-  const weeklyActivity = [
-    { day: 'Mon', nudges: 3, active: true },
-    { day: 'Tue', nudges: 4, active: true },
-    { day: 'Wed', nudges: 3, active: true },
-    { day: 'Thu', nudges: 4, active: true },
-    { day: 'Fri', nudges: 5, active: true },
-    { day: 'Sat', nudges: 3, active: true },
-    { day: 'Sun', nudges: 2, active: true },
-  ];
+        // 1. Normal school subjects
+        if (enrolledSubjectIds.length > 0) {
+          const [allSubjects, allTopics] = await Promise.all([
+            fetchSubjects().catch(() => []),
+            fetchTopicsBySubject().catch(() => []),
+          ]);
 
-  const insights = [
-    {
-      icon: 'trending-up',
-      color: '#45a578',
-      title: 'Amazing Progress!',
-      description: 'You\'re 25% more active this week compared to last week. Keep up the great work!'
-    },
-    {
-      icon: 'star',
-      color: '#FFB84D',
-      title: 'Consistency is Key',
-      description: 'You\'ve maintained a 7-day streak! Daily learning builds strong habits.'
-    },
-    {
-      icon: 'lightbulb-on',
-      color: '#2196F3',
-      title: 'Try Something New',
-      description: 'Explore "Values & Character" topics to add variety to your learning journey.'
-    },
-  ];
+          for (const subjectId of enrolledSubjectIds) {
+            const subject = allSubjects.find(s => String(s._id) === subjectId);
+            if (!subject) continue;
+
+            const topics = allTopics.filter(t => String(t.subjectId) === subjectId);
+            results.push({
+              _id: subjectId,
+              name: subject.name,
+              icon: subject.rnIcon || subject.icon || 'book-open-variant',
+              color: '#45a578',
+              topics,
+              isBeyondSchool: false,
+            });
+          }
+        }
+
+        // 2. Beyond School subjects
+        if (childBeyondTopics.length > 0) {
+          const allBeyond = await fetchBeyondSchool().catch(() => []);
+          const enrolledBeyond = allBeyond.filter(s =>
+            childBeyondTopics.includes(String(s._id)),
+          );
+
+          for (const subject of enrolledBeyond) {
+            const topics = await fetchBeyondSchoolTopicsBySubject(subject._id).catch(() => []);
+            results.push({
+              _id: String(subject._id),
+              name: subject.name,
+              icon: subject.rnIcon || subject.icon || 'star-circle-outline',
+              color: '#45a578',
+              topics,
+              isBeyondSchool: true,
+            });
+          }
+        }
+
+        setSubjectData(results);
+      } catch (err) {
+        console.error('[ProgressReports] load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [child?.subjectLevels, child?.topics]);
+
+  // ── Compute period boundaries ───────────────────────────────────────────────
+  const periodBounds = useMemo(() => {
+    const now = new Date();
+    if (selectedPeriod === 'week') {
+      const day = now.getDay();
+      const daysFromMon = day === 0 ? 6 : day - 1;
+      const start = new Date(now);
+      start.setDate(now.getDate() - daysFromMon);
+      start.setHours(0, 0, 0, 0);
+      return { start, end: now };
+    }
+    if (selectedPeriod === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start, end: now };
+    }
+    return { start: new Date(0), end: now };
+  }, [selectedPeriod]);
+
+  // ── Build per-subject progress ──────────────────────────────────────────────
+  const subjectProgress = useMemo(() => {
+    return subjectData.map(subject => {
+      const total = subject.topics.length;
+
+      // Count completed topics for this subject within the period
+      let completed = 0;
+      let recentCount = 0;
+
+      completedTopics.forEach(key => {
+        // key format: "SubjectName::topicTitle" or "SubjectName::topicTitle::timestamp"
+        const parts = key.split('::');
+        if (parts[0] !== subject.name) return;
+
+        const timestamp = parts.length >= 3 && !isNaN(parts[2])
+          ? new Date(parseInt(parts[2]))
+          : null;
+
+        const inPeriod = !timestamp || (timestamp >= periodBounds.start && timestamp <= periodBounds.end);
+        if (inPeriod) completed++;
+
+        // "recent" = this week regardless of period selector
+        const weekStart = (() => {
+          const d = new Date();
+          const diff = d.getDay() === 0 ? 6 : d.getDay() - 1;
+          const s = new Date(d);
+          s.setDate(d.getDate() - diff);
+          s.setHours(0, 0, 0, 0);
+          return s;
+        })();
+        if (timestamp && timestamp >= weekStart) recentCount++;
+      });
+
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const recentActivity = recentCount > 0
+        ? `${recentCount} nudge${recentCount !== 1 ? 's' : ''} this week`
+        : completed > 0 ? 'Keep going!' : 'Start learning';
+
+      return {
+        ...subject,
+        completed,
+        total,
+        percentage,
+        recentActivity,
+      };
+    });
+  }, [subjectData, completedTopics, periodBounds]);
+
+  // ── Overview stats ──────────────────────────────────────────────────────────
+  const overviewStats = useMemo(() => {
+    let totalCompleted = 0;
+    const daysWithActivity = new Set();
+
+    completedTopics.forEach(key => {
+      const parts = key.split('::');
+      const timestamp = parts.length >= 3 && !isNaN(parts[2])
+        ? new Date(parseInt(parts[2]))
+        : null;
+      const inPeriod = !timestamp || (timestamp >= periodBounds.start && timestamp <= periodBounds.end);
+      if (inPeriod) {
+        totalCompleted++;
+        if (timestamp) daysWithActivity.add(timestamp.toDateString());
+      }
+    });
+
+    // Weekly activity bars (Mon–Sun of current week)
+    const now = new Date();
+    const day = now.getDay();
+    const daysFromMon = day === 0 ? 6 : day - 1;
+    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - daysFromMon + i);
+      d.setHours(0, 0, 0, 0);
+      const dEnd = new Date(d);
+      dEnd.setHours(23, 59, 59, 999);
+
+      let count = 0;
+      completedTopics.forEach(key => {
+        const parts = key.split('::');
+        const ts = parts.length >= 3 && !isNaN(parts[2]) ? new Date(parseInt(parts[2])) : null;
+        if (ts && ts >= d && ts <= dEnd) count++;
+      });
+      return { day: label, nudges: count, active: count > 0 };
+    });
+
+    const streak = daysWithActivity.size;
+    const topicsExplored = subjectData.reduce((sum, s) => sum + s.topics.length, 0);
+
+    return { totalCompleted, streak, topicsExplored, weekDays };
+  }, [completedTopics, periodBounds, subjectData]);
+
+  const periodLabel = selectedPeriod === 'week' ? 'Weekly' : selectedPeriod === 'month' ? 'Monthly' : 'All-Time';
+  const maxBar = Math.max(...overviewStats.weekDays.map(d => d.nudges), 1);
 
   return (
     <View style={styles.container}>
@@ -155,9 +228,7 @@ const ProgressReportsScreen = ({ onBack }) => {
           <Icon name="chevron-back" size={28} color="#333333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Progress Reports</Text>
-        <TouchableOpacity style={styles.shareButton}>
-          <Icon name="share-social-outline" size={24} color="#45a578" />
-        </TouchableOpacity>
+        <View style={styles.shareButton} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -166,189 +237,204 @@ const ProgressReportsScreen = ({ onBack }) => {
           {periods.map((period) => (
             <TouchableOpacity
               key={period.id}
-              style={[
-                styles.periodButton,
-                selectedPeriod === period.id && styles.periodButtonActive,
-              ]}
+              style={[styles.periodButton, selectedPeriod === period.id && styles.periodButtonActive]}
               onPress={() => setSelectedPeriod(period.id)}
             >
-              <Text
-                style={[
-                  styles.periodText,
-                  selectedPeriod === period.id && styles.periodTextActive,
-                ]}
-              >
+              <Text style={[styles.periodText, selectedPeriod === period.id && styles.periodTextActive]}>
                 {period.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Overview Stats */}
-        <View style={styles.overviewCard}>
-          <View style={styles.overviewHeader}>
-            <MaterialIcon name="chart-box" size={24} color="#45a578" />
-            <Text style={styles.overviewTitle}>Weekly Overview</Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#45a578" />
+            <Text style={styles.loadingText}>Loading your progress...</Text>
           </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <View style={[styles.statIconCircle, { backgroundColor: '#E8F5E9' }]}>
-                <MaterialIcon name="check-circle" size={28} color="#45a578" />
+        ) : (
+          <>
+            {/* Overview Stats */}
+            <View style={styles.overviewCard}>
+              <View style={styles.overviewHeader}>
+                <MaterialIcon name="chart-box" size={24} color="#45a578" />
+                <Text style={styles.overviewTitle}>{periodLabel} Overview</Text>
               </View>
-              <Text style={styles.statBoxNumber}>{weeklyData.nudgesCompleted}</Text>
-              <Text style={styles.statBoxLabel}>Completed</Text>
-            </View>
 
-            <View style={styles.statBox}>
-              <View style={[styles.statIconCircle, { backgroundColor: '#FFF3E0' }]}>
-                <MaterialIcon name="clock-outline" size={28} color="#FF9800" />
-              </View>
-              <Text style={styles.statBoxNumber}>{weeklyData.totalTime}</Text>
-              <Text style={styles.statBoxLabel}>Time Spent</Text>
-            </View>
-
-            <View style={styles.statBox}>
-              <View style={[styles.statIconCircle, { backgroundColor: '#FFEBEE' }]}>
-                <MaterialIcon name="fire" size={28} color="#FF6B35" />
-              </View>
-              <Text style={styles.statBoxNumber}>{weeklyData.streak} days</Text>
-              <Text style={styles.statBoxLabel}>Streak</Text>
-            </View>
-
-            <View style={styles.statBox}>
-              <View style={[styles.statIconCircle, { backgroundColor: '#E3F2FD' }]}>
-                <MaterialIcon name="book-open-variant" size={28} color="#2196F3" />
-              </View>
-              <Text style={styles.statBoxNumber}>{weeklyData.topicsExplored}</Text>
-              <Text style={styles.statBoxLabel}>Topics</Text>
-            </View>
-          </View>
-
-          <View style={styles.growthBanner}>
-            <Icon name="trending-up" size={20} color="#45a578" />
-            <Text style={styles.growthText}>
-              <Text style={styles.growthPercent}>+{weeklyData.weeklyGrowth}%</Text> growth from last week
-            </Text>
-          </View>
-        </View>
-
-        {/* Weekly Activity Chart */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcon name="calendar-week" size={22} color="#333333" />
-            <Text style={styles.sectionTitle}>Weekly Activity</Text>
-          </View>
-          
-          <View style={styles.activityChart}>
-            {weeklyActivity.map((day, index) => (
-              <View key={index} style={styles.activityDay}>
-                <View style={styles.activityBarContainer}>
-                  <View
-                    style={[
-                      styles.activityBar,
-                      { height: `${(day.nudges / 5) * 100}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.activityDayLabel}>{day.day}</Text>
-                <Text style={styles.activityDayCount}>{day.nudges}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.chartNote}>Daily nudges completed this week</Text>
-        </View>
-
-        {/* Subject Progress */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcon name="school" size={22} color="#333333" />
-            <Text style={styles.sectionTitle}>Progress by Subject</Text>
-          </View>
-          
-          {subjectProgress.map((subject, index) => (
-            <View key={index} style={styles.subjectCard}>
-              <View style={styles.subjectHeader}>
-                <View style={styles.subjectLeft}>
-                  <View style={[styles.subjectIcon, { backgroundColor: `${subject.color}20` }]}>
-                    <MaterialIcon name={subject.icon} size={24} color={subject.color} />
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconCircle, { backgroundColor: '#E8F5E9' }]}>
+                    <MaterialIcon name="check-circle" size={28} color="#45a578" />
                   </View>
-                  <View style={styles.subjectInfo}>
-                    <Text style={styles.subjectName}>{subject.name}</Text>
-                    <Text style={styles.subjectActivity}>{subject.recentActivity}</Text>
+                  <Text style={styles.statBoxNumber}>{overviewStats.totalCompleted}</Text>
+                  <Text style={styles.statBoxLabel}>Completed</Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconCircle, { backgroundColor: '#FFEBEE' }]}>
+                    <MaterialIcon name="fire" size={28} color="#FF6B35" />
                   </View>
+                  <Text style={styles.statBoxNumber}>{overviewStats.streak}</Text>
+                  <Text style={styles.statBoxLabel}>Active Days</Text>
                 </View>
-                <View style={styles.subjectRight}>
-                  <Text style={styles.subjectPercentage}>{subject.percentage}%</Text>
-                  <Text style={styles.subjectStats}>{subject.completed}/{subject.total}</Text>
+
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconCircle, { backgroundColor: '#E3F2FD' }]}>
+                    <MaterialIcon name="book-open-variant" size={28} color="#2196F3" />
+                  </View>
+                  <Text style={styles.statBoxNumber}>{overviewStats.topicsExplored}</Text>
+                  <Text style={styles.statBoxLabel}>Topics</Text>
                 </View>
-              </View>
-              <View style={styles.progressBarContainer}>
-                <View
-                  style={[
-                    styles.progressBar,
-                    { width: `${subject.percentage}%`, backgroundColor: subject.color },
-                  ]}
-                />
+
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconCircle, { backgroundColor: '#F3E5F5' }]}>
+                    <MaterialIcon name="school" size={28} color="#9C27B0" />
+                  </View>
+                  <Text style={styles.statBoxNumber}>{subjectData.length}</Text>
+                  <Text style={styles.statBoxLabel}>Subjects</Text>
+                </View>
               </View>
             </View>
-          ))}
-        </View>
 
-        {/* Achievements */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcon name="trophy" size={22} color="#333333" />
-            <Text style={styles.sectionTitle}>Recent Achievements</Text>
-          </View>
-          
-          {recentAchievements.map((achievement) => (
-            <View key={achievement.id} style={styles.achievementCard}>
-              <View
-                style={[
-                  styles.achievementIcon,
-                  { backgroundColor: `${achievement.color}20` },
-                ]}
-              >
-                <MaterialIcon
-                  name={achievement.icon}
-                  size={32}
-                  color={achievement.color}
-                />
+            {/* Weekly Activity Chart */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcon name="calendar-week" size={22} color="#333333" />
+                <Text style={styles.sectionTitle}>Weekly Activity</Text>
               </View>
-              <View style={styles.achievementContent}>
-                <View style={styles.achievementTop}>
-                  <Text style={styles.achievementTitle}>{achievement.title}</Text>
-                  <Text style={styles.achievementPoints}>{achievement.points}</Text>
+
+              <View style={styles.activityChart}>
+                {overviewStats.weekDays.map((day, index) => (
+                  <View key={index} style={styles.activityDay}>
+                    <View style={styles.activityBarContainer}>
+                      <View
+                        style={[
+                          styles.activityBar,
+                          { height: `${(day.nudges / maxBar) * 100}%` },
+                          day.nudges === 0 && { height: 4, opacity: 0.3 },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.activityDayLabel}>{day.day}</Text>
+                    <Text style={styles.activityDayCount}>{day.nudges}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.chartNote}>Daily nudges completed this week</Text>
+            </View>
+
+            {/* Subject Progress — normal + beyond school */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcon name="school" size={22} color="#333333" />
+                <Text style={styles.sectionTitle}>Progress by Subject</Text>
+              </View>
+
+              {subjectProgress.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MaterialIcon name="book-clock-outline" size={36} color="#9CA3AF" />
+                  <Text style={styles.emptyStateText}>No subjects enrolled yet.</Text>
+                  <Text style={styles.emptyStateSubText}>Add subjects in Settings to track progress.</Text>
                 </View>
-                <Text style={styles.achievementDescription}>
-                  {achievement.description}
-                </Text>
-                <Text style={styles.achievementDate}>{achievement.date}</Text>
-              </View>
+              ) : (
+                subjectProgress.map((subject, index) => (
+                  <View key={subject._id || index} style={styles.subjectCard}>
+                    <View style={styles.subjectHeader}>
+                      <View style={styles.subjectLeft}>
+                        <View style={[styles.subjectIcon, { backgroundColor: `${subject.color}20` }]}>
+                          <MaterialIcon name={subject.icon} size={24} color={subject.color} />
+                        </View>
+                        <View style={styles.subjectInfo}>
+                          <Text style={styles.subjectName}>{subject.name}</Text>
+                          <Text style={styles.subjectActivity}>{subject.recentActivity}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.subjectRight}>
+                        <Text style={styles.subjectPercentage}>{subject.percentage}%</Text>
+                        <Text style={styles.subjectStats}>{subject.completed}/{subject.total}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.progressBarContainer}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          { width: `${subject.percentage}%`, backgroundColor: subject.color },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
-          ))}
-        </View>
 
-        {/* Insights */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcon name="lightbulb-on-outline" size={22} color="#333333" />
-            <Text style={styles.sectionTitle}>Insights & Tips</Text>
-          </View>
+            {/* Insights */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcon name="lightbulb-on-outline" size={22} color="#333333" />
+                <Text style={styles.sectionTitle}>Insights</Text>
+              </View>
 
-          {insights.map((insight, index) => (
-            <View key={index} style={styles.insightCard}>
-              <View style={[styles.insightIcon, { backgroundColor: `${insight.color}20` }]}>
-                <MaterialIcon name={insight.icon} size={24} color={insight.color} />
-              </View>
-              <View style={styles.insightContent}>
-                <Text style={styles.insightTitle}>{insight.title}</Text>
-                <Text style={styles.insightText}>{insight.description}</Text>
-              </View>
+              {(() => {
+                const insights = [];
+                const best = [...subjectProgress].sort((a, b) => b.percentage - a.percentage)[0];
+                const needsWork = [...subjectProgress].sort((a, b) => a.percentage - b.percentage)[0];
+
+                if (overviewStats.streak >= 5) {
+                  insights.push({
+                    icon: 'fire',
+                    color: '#FF6B35',
+                    title: `${overviewStats.streak}-Day Streak!`,
+                    description: 'Amazing consistency! Daily learning builds strong habits.',
+                  });
+                } else if (overviewStats.streak > 0) {
+                  insights.push({
+                    icon: 'trending-up',
+                    color: '#45a578',
+                    title: 'Keep the momentum!',
+                    description: `You've been active ${overviewStats.streak} day${overviewStats.streak !== 1 ? 's' : ''} this week. Keep going!`,
+                  });
+                } else {
+                  insights.push({
+                    icon: 'lightbulb-on',
+                    color: '#2196F3',
+                    title: 'Start your streak today!',
+                    description: 'Complete a nudge today to begin building your learning habit.',
+                  });
+                }
+
+                if (best && best.percentage > 0) {
+                  insights.push({
+                    icon: best.icon,
+                    color: '#45a578',
+                    title: `Top subject: ${best.name}`,
+                    description: `You've completed ${best.percentage}% of topics in ${best.name}. Great work!`,
+                  });
+                }
+
+                if (needsWork && needsWork.percentage < 30 && needsWork.total > 0) {
+                  insights.push({
+                    icon: 'star-outline',
+                    color: '#FF9800',
+                    title: `Explore ${needsWork.name}`,
+                    description: `Only ${needsWork.percentage}% done. Try a nudge in ${needsWork.name} today!`,
+                  });
+                }
+
+                return insights.map((insight, i) => (
+                  <View key={i} style={styles.insightCard}>
+                    <View style={[styles.insightIcon, { backgroundColor: `${insight.color}20` }]}>
+                      <MaterialIcon name={insight.icon} size={24} color={insight.color} />
+                    </View>
+                    <View style={styles.insightContent}>
+                      <Text style={styles.insightTitle}>{insight.title}</Text>
+                      <Text style={styles.insightText}>{insight.description}</Text>
+                    </View>
+                  </View>
+                ));
+              })()}
             </View>
-          ))}
-        </View>
+          </>
+        )}
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -395,8 +481,6 @@ const styles = StyleSheet.create({
   shareButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   content: {
@@ -437,6 +521,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+    fontFamily: 'Montserrat-Regular',
+  },
+
   overviewCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
@@ -464,7 +560,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
 
   statBox: {
@@ -494,27 +589,6 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     fontFamily: 'Montserrat-Regular',
-  },
-
-  growthBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    padding: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-
-  growthText: {
-    fontSize: 14,
-    color: '#666666',
-    fontFamily: 'Montserrat-Regular',
-  },
-
-  growthPercent: {
-    fontWeight: '700',
-    color: '#45a578',
-    fontFamily: 'Montserrat-Bold',
   },
 
   section: {
@@ -588,6 +662,26 @@ const styles = StyleSheet.create({
     color: '#999999',
     textAlign: 'center',
     fontStyle: 'italic',
+    fontFamily: 'Montserrat-Regular',
+  },
+
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+
+  emptyStateText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666666',
+    fontFamily: 'Montserrat-SemiBold',
+  },
+
+  emptyStateSubText: {
+    fontSize: 13,
+    color: '#999999',
+    textAlign: 'center',
     fontFamily: 'Montserrat-Regular',
   },
 
@@ -666,66 +760,6 @@ const styles = StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 4,
-  },
-
-  achievementCard: {
-    flexDirection: 'row',
-    backgroundColor: '#F9F9F9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-
-  achievementIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-
-  achievementContent: {
-    flex: 1,
-  },
-
-  achievementTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-
-  achievementTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#333333',
-    flex: 1,
-    fontFamily: 'Montserrat-Bold',
-  },
-
-  achievementPoints: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#45a578',
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    fontFamily: 'Montserrat-Bold',
-  },
-
-  achievementDescription: {
-    fontSize: 13,
-    color: '#666666',
-    marginBottom: 6,
-    fontFamily: 'Montserrat-Regular',
-  },
-
-  achievementDate: {
-    fontSize: 11,
-    color: '#999999',
-    fontFamily: 'Montserrat-Regular',
   },
 
   insightCard: {

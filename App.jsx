@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Storage } from './src/utils/storage';
 import { initializeFCM, subscribeToUserTopics, registerFCMOnLogin, requestNotificationPermission } from './src/services/firebaseNotificationService';
-import { sendTopicCompletionNotification, addNotificationToStorage } from './src/services/notificationService';
+import { sendTopicCompletionNotification, addNotificationToStorage, checkAndNotifyNewFlashcards } from './src/services/notificationService';
 import SplashScreen from './src/screens/SplashScreen';
 import IntroScreen from './src/screens/IntroScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -141,6 +141,11 @@ const App = () => {
             // Re-register FCM token on every app start so it's always fresh in DB
             registerFCMOnLogin(storedToken).catch(err =>
               console.error('[App] FCM re-registration failed:', err.message)
+            );
+
+            // Check for new flashcards matching the student's subject/grade/level
+            checkAndNotifyNewFlashcards(resolvedUserData, storedToken).catch(err =>
+              console.error('[App] New flashcard check failed:', err.message)
             );
           } catch (err) {
             console.error('[App] Auto-login failed, token may be expired:', err.message);
@@ -306,6 +311,11 @@ const App = () => {
         setUserData(fullUserData);
         await Storage.setItem('userData', fullUserData);
         
+        // Check for new flashcards matching the student's subject/grade/level
+        checkAndNotifyNewFlashcards(fullUserData, data.token).catch(err =>
+          console.error('[App] New flashcard check failed:', err.message)
+        );
+
         setCurrentScreen('home');
         return;
       } catch (err) {
@@ -759,6 +769,7 @@ const App = () => {
             subjectName={navigationParams.subjectName}
             allNudges={navigationParams.allNudges}
             initialTopicId={navigationParams.initialTopicId}
+            isBeyondSchool={navigationParams.isBeyondSchool || false}
             userData={userData}
             onBack={handleTopicDetailBack}
             onNavigate={handleTopicDetailNavigate}
@@ -807,7 +818,7 @@ const App = () => {
       case 'myChildren':
         return <MyChildrenScreen onBack={handleMyChildrenBack} />;
       case 'progressReports':
-        return <ProgressReportsScreen onBack={handleProgressReportsBack} />;
+        return <ProgressReportsScreen onBack={handleProgressReportsBack} userData={userData} completedTopics={completedTopics} />;
       case 'learningProgress':
         return <LearningProgressScreen userData={userData} completedTopics={completedTopics} onBack={handleLearningProgressBack} onNavigate={handleLearningProgressNavigate} />;
       case 'milestones':
@@ -826,6 +837,7 @@ const App = () => {
             knownTopics={navigationParams.knownTopics} 
             practiceTopics={navigationParams.practiceTopics}
             childSubjects={navigationParams.childSubjects}
+            childTopics={navigationParams.childTopics || userData?.children?.[0]?.topics || []}
             previouslySelectedSubjects={navigationParams.previouslySelectedSubjects}
             onBack={handleAssessmentBack}
             onNavigate={handleAssessmentNavigate}
@@ -838,6 +850,7 @@ const App = () => {
             knownTopics={navigationParams.knownTopics}
             practiceTopics={navigationParams.practiceTopics}
             childSubjects={navigationParams.childSubjects}
+            childTopics={navigationParams.childTopics || userData?.children?.[0]?.topics || []}
             previouslySelectedTopics={navigationParams.previouslySelectedTopics || navigationParams.selectedTopicIds}
             previouslySelectedTypes={navigationParams.previouslySelectedTypes}
             previouslySelectedDuration={navigationParams.previouslySelectedDuration}

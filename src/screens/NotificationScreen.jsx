@@ -50,12 +50,18 @@ const NotificationScreen = ({ onBack, userData }) => {
   useEffect(() => {
     const init = async () => {
       try {
-        // Always wipe ALL notification caches when screen loads for a user
-        // This ensures switching accounts never shows stale data
-        const allKeys = await AsyncStorage.getAllKeys();
-        const notifKeys = allKeys.filter(k => k.startsWith('@nudge2grow:notifications'));
-        const fetchKeys = allKeys.filter(k => k.startsWith('@nudge2grow:lastNotificationFetch'));
-        await Promise.all([...notifKeys, ...fetchKeys].map(k => AsyncStorage.removeItem(k)));
+        // Only wipe notification caches that belong to OTHER users,
+        // never wipe the current user's cache — that destroys unread state.
+        if (userId) {
+          const allKeys = await AsyncStorage.getAllKeys();
+          const otherNotifKeys = allKeys.filter(
+            k => k.startsWith('@nudge2grow:notifications') && !k.includes(userId)
+          );
+          const otherFetchKeys = allKeys.filter(
+            k => k.startsWith('@nudge2grow:lastNotificationFetch') && !k.includes(userId)
+          );
+          await Promise.all([...otherNotifKeys, ...otherFetchKeys].map(k => AsyncStorage.removeItem(k)));
+        }
       } catch (_) {}
       loadNotifications();
     };
@@ -102,11 +108,22 @@ const NotificationScreen = ({ onBack, userData }) => {
     setRefreshing(false);
   }, [userId]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  const allCount = notifications.length;
+  // Only show notifications whose scheduled date has arrived (hide future ones).
+  // Use scheduledDate if present (backend flashcard notifications), else createdAt.
+  const now = new Date();
+  now.setHours(23, 59, 59, 999); // include all of today
+  const visibleNotifications = notifications.filter(n => {
+    const dateToCheck = n.scheduledDate
+      ? new Date(n.scheduledDate)
+      : new Date(n.createdAt || n.time || 0);
+    return dateToCheck <= now;
+  });
+
+  const unreadCount = visibleNotifications.filter(n => !n.isRead).length;
+  const allCount = visibleNotifications.length;
 
   const displayedNotifications =
-    selectedTab === 'all' ? notifications : notifications.filter(n => !n.isRead);
+    selectedTab === 'all' ? visibleNotifications : visibleNotifications.filter(n => !n.isRead);
 
   // FIX: helper to get a fresh token — uses the same Storage system as App.jsx
   const getToken = async () => {
@@ -201,6 +218,7 @@ const NotificationScreen = ({ onBack, userData }) => {
       achievement: { icon: 'star',                 iconBg: '#E0E7FF', iconColor: '#6366F1' },
       report:      { icon: 'heart',                iconBg: '#FCE7F3', iconColor: '#EC4899' },
       quiz:        { icon: 'mail',                 iconBg: '#EDE9FE', iconColor: '#7C3AED' },
+      welcome:     { icon: 'sparkles',             iconBg: '#DCFCE7', iconColor: '#16A34A' },
       info:        { icon: 'information-circle',   iconBg: '#DBEAFE', iconColor: '#3B82F6' },
     };
 
@@ -214,6 +232,10 @@ const NotificationScreen = ({ onBack, userData }) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
+
+    // Future date — show the actual date
+    if (diffMs < 0) return date.toLocaleDateString();
+
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -348,7 +370,7 @@ const NotificationScreen = ({ onBack, userData }) => {
                       {notification.message || notification.body}
                     </Text>
                     <Text style={styles.notificationTime}>
-                      {formatTimeAgo(notification.createdAt || notification.time)}
+                      {formatTimeAgo(notification.scheduledDate || notification.createdAt || notification.time)}
                     </Text>
                   </View>
 

@@ -8,10 +8,20 @@ import { BASE_URL } from '../api';
 
 const STORAGE_KEY = '@nudge2grow:notifications';
 const LAST_FETCH_KEY = '@nudge2grow:lastNotificationFetch';
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Per-user storage keys so different accounts never share cached data
 const getUserStorageKey  = (userId) => userId ? `${STORAGE_KEY}:${userId}` : STORAGE_KEY;
 const getUserFetchKey    = (userId) => userId ? `${LAST_FETCH_KEY}:${userId}` : LAST_FETCH_KEY;
+
+/**
+ * Returns true if a notification is older than 7 days
+ */
+const isExpired = (notification) => {
+  const dateStr = notification.createdAt || notification.time;
+  if (!dateStr) return false;
+  return (Date.now() - new Date(dateStr).getTime()) > SEVEN_DAYS_MS;
+};
 
 /**
  * Fetch notifications from backend
@@ -42,21 +52,32 @@ export const fetchNotifications = async (token, limit = 50, userId = null) => {
     const data = await response.json();
     console.log('[NotificationService] Fetched from backend:', data.length);
 
-    // Normalize backend notifications
-    const backendNotifications = data.map(n => ({
-      ...n,
-      _id: n._id || n.id,
-      title: n.title,
-      message: n.message || n.body,
-      type: n.type || 'info',
-      isRead: n.isRead || false,
-      createdAt: n.createdAt || new Date().toISOString(),
-    }));
-
     // Get local notifications for THIS user only
     const localNotifications = await getNotificationsFromStorage(userId);
 
-    // Find local-only notifications (ones not in backend, e.g. completion_ prefix)
+    // Build a map of local isRead state so we never lose it on re-fetch
+    const localReadState = {};
+    localNotifications.forEach(n => {
+      localReadState[String(n._id)] = n.isRead;
+    });
+
+    // Normalize backend notifications — preserve local isRead if user already acted on it
+    const backendNotifications = data.map(n => {
+      const id = String(n._id || n.id);
+      const localRead = localReadState[id];
+      return {
+        ...n,
+        _id: id,
+        title: n.title,
+        message: n.message || n.body,
+        type: n.type || 'info',
+        // If locally marked read, keep it read; otherwise trust backend
+        isRead: localRead === true ? true : (n.isRead || false),
+        createdAt: n.createdAt || new Date().toISOString(),
+      };
+    });
+
+    // Find local-only notifications (ones not in backend, e.g. new_flashcard_ prefix)
     const backendIds = new Set(backendNotifications.map(n => String(n._id)));
     const localOnly = localNotifications.filter(n =>
       !backendIds.has(String(n._id))
@@ -70,6 +91,11 @@ export const fetchNotifications = async (token, limit = 50, userId = null) => {
     const seenIds = new Set();
     let reminderSeen = false;
     const seenCompletedTopics = new Set();
+
+    // Today's end-of-day — notifications scheduled for today or earlier are visible,
+    // future ones are stored but hidden until their scheduledDate arrives
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
 
     const deduped = merged.filter(n => {
       const id = String(n._id);
@@ -91,10 +117,14 @@ export const fetchNotifications = async (token, limit = 50, userId = null) => {
 
     console.log('[NotificationService] Final count after dedup:', deduped.length);
 
-    await AsyncStorage.setItem(storageKey, JSON.stringify(deduped));
+    // Drop notifications older than 7 days
+    const fresh = deduped.filter(n => !isExpired(n));
+    console.log('[NotificationService] After 7-day purge:', fresh.length);
+
+    await AsyncStorage.setItem(storageKey, JSON.stringify(fresh));
     await AsyncStorage.setItem(fetchKey, new Date().toISOString());
 
-    return deduped;
+    return fresh;
   } catch (error) {
     console.error('[NotificationService] Error fetching notifications:', error);
     console.log('[NotificationService] Falling back to cached data');
@@ -136,8 +166,15 @@ export const getNotificationsFromStorage = async (userId = null) => {
     const data = await AsyncStorage.getItem(key);
     if (data) {
       const notifications = JSON.parse(data);
-      console.log('[NotificationService] Retrieved notifications from storage:', notifications.length);
-      return notifications;
+      // Purge any notifications older than 7 days
+      const fresh = notifications.filter(n => !isExpired(n));
+      if (fresh.length !== notifications.length) {
+        // Save the cleaned list back silently
+        await AsyncStorage.setItem(key, JSON.stringify(fresh));
+        console.log(`[NotificationService] Purged ${notifications.length - fresh.length} expired notification(s)`);
+      }
+      console.log('[NotificationService] Retrieved notifications from storage:', fresh.length);
+      return fresh;
     }
     return [];
   } catch (error) {
@@ -431,6 +468,157 @@ export const sendTopicCompletionNotification = async (completionData, token) => 
 };
 
 /**
+ * Check for new flashcard sets matching the student's subject, grade, and level,
+ * then create in-app notifications for any that were added since the last login check.
+ *
+ * @param {Object} userData - Logged-in user data (must have children[0] with grade/level/subjectLevels)
+ * @param {string} token    - Auth token for API calls
+ */
+export const checkAndNotifyNewFlashcards = async (userData, token) => {
+  try {
+    const child = userData?.children?.[0];
+    if (!child) {
+      console.log('[NotificationService] No child data, skipping flashcard check');
+      return;
+    }
+
+    const userId = userData?._id || userData?.id || null;
+    const grade = child.grade || '';
+    const subjectLevels = child.subjectLevels || {};
+
+    // Build a flat list of { subject, level } pairs the student is enrolled in
+    const enrollments = Object.entries(subjectLevels).map(([subject, level]) => ({
+      subject,
+      level,
+    }));
+
+    if (enrollments.length === 0) {
+      console.log('[NotificationService] No subject enrollments found, skipping flashcard check');
+      return;
+    }
+
+    // Per-user key to track when we last checked for new flashcards
+    const lastCheckKey = `@nudge2grow:lastFlashcardCheck:${userId || 'guest'}`;
+    let lastCheckTime = null;
+    try {
+      const stored = await AsyncStorage.getItem(lastCheckKey);
+      if (stored) lastCheckTime = new Date(stored);
+    } catch (_) {}
+
+    // Fetch all topics from backend
+    const topicsRes = await fetch(`${BASE_URL}/topics`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!topicsRes.ok) throw new Error(`Topics fetch failed: ${topicsRes.status}`);
+    const allTopics = await topicsRes.json();
+
+    // Fetch all content sets (flashcard sets) from backend
+    const setsRes = await fetch(`${BASE_URL}/content-sets`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!setsRes.ok) throw new Error(`Content sets fetch failed: ${setsRes.status}`);
+    const allContentSets = await setsRes.json();
+
+    // Build a map of topicId → contentSet for quick lookup
+    const contentSetByTopic = {};
+    (Array.isArray(allContentSets) ? allContentSets : []).forEach(cs => {
+      if (cs.topicId) contentSetByTopic[String(cs.topicId)] = cs;
+    });
+
+    // Filter topics that match the student's grade AND enrolled subject+level exactly
+    const matchingTopics = (Array.isArray(allTopics) ? allTopics : []).filter(topic => {
+      const topicGrade = (topic.grade || '').toLowerCase().trim();
+      const studentGrade = grade.toLowerCase().trim();
+
+      // Both must be present and equal — no grade means skip
+      if (!topicGrade || !studentGrade || topicGrade !== studentGrade) return false;
+
+      const topicSubject = (topic.subjectName || topic.subject || '').toLowerCase().trim();
+      const subjectMatch = enrollments.some(
+        e => e.subject.toLowerCase().trim() === topicSubject
+      );
+
+      return subjectMatch;
+    });
+
+    console.log(
+      `[NotificationService] Found ${matchingTopics.length} matching topics for grade="${grade}"`
+    );
+
+    // Find topics that have a content set matching the student's level,
+    // AND were added/updated after last check
+    const newFlashcardTopics = matchingTopics.filter(topic => {
+      const topicId = String(topic._id || topic.id);
+      const contentSet = contentSetByTopic[topicId];
+      if (!contentSet) return false;
+
+      // Check content set level matches the student's enrolled level for this subject
+      const topicSubject = (topic.subjectName || topic.subject || '').toLowerCase().trim();
+      const enrolledLevel = enrollments.find(
+        e => e.subject.toLowerCase().trim() === topicSubject
+      )?.level || '';
+
+      if (enrolledLevel && contentSet.level) {
+        if (contentSet.level.toLowerCase() !== enrolledLevel.toLowerCase()) return false;
+      }
+
+      if (!lastCheckTime) return true; // First login — show all
+
+      // Use the content set's createdAt (when flashcards were actually added)
+      const setDate = new Date(contentSet.createdAt || contentSet.updatedAt || 0);
+      return setDate > lastCheckTime;
+    });
+
+    console.log(
+      `[NotificationService] ${newFlashcardTopics.length} new flashcard set(s) to notify about`
+    );
+
+    // Create a notification for each new flashcard set
+    for (const topic of newFlashcardTopics) {
+      const topicId = String(topic._id || topic.id);
+      const topicSubject = topic.subject || topic.subjectName || 'your subject';
+      const topicLevel = enrollments.find(
+        e => e.subject.toLowerCase().trim() === topicSubject.toLowerCase().trim()
+      )?.level || '';
+
+      const notifId = `new_flashcard_${topicId}`;
+
+      // Skip if we already stored this notification
+      const existing = await getNotificationsFromStorage(userId);
+      if (existing.some(n => String(n._id) === notifId)) continue;
+
+      // Use the topic's scheduledDate as the notification date so it appears
+      // on the correct day — fall back to the content set's createdAt
+      const contentSet = contentSetByTopic[topicId];
+      const notifDate = topic.scheduledDate
+        ? new Date(topic.scheduledDate).toISOString()
+        : new Date(contentSet.createdAt || contentSet.updatedAt || Date.now()).toISOString();
+
+      const notification = {
+        _id: notifId,
+        title: `New Flashcards Added — ${topicSubject}`,
+        message: `New flashcards for "${topic.title || topic.topic}" in ${topicSubject}${topicLevel ? ` (${topicLevel})` : ''}${grade ? ` · ${grade}` : ''} are ready. Start learning now!`,
+        type: 'new_nudge',
+        isRead: false,
+        createdAt: notifDate,
+        topicId,
+        subject: topicSubject,
+        grade,
+        level: topicLevel,
+      };
+
+      await addNotificationToStorage(notification);
+      console.log(`[NotificationService] Created flashcard notification for "${topic.title || topic.topic}" — date: ${notifDate}`);
+    }
+
+    // Update the last check timestamp
+    await AsyncStorage.setItem(lastCheckKey, new Date().toISOString());
+  } catch (error) {
+    console.error('[NotificationService] Error in checkAndNotifyNewFlashcards:', error.message);
+  }
+};
+
+/**
  * Clear all notification data (for logout)
  */
 export const clearNotificationData = async (userId = null) => {
@@ -464,4 +652,5 @@ export default {
   sendTopicCompletionNotification,
   shouldRefreshNotifications,
   clearNotificationData,
+  checkAndNotifyNewFlashcards,
 };

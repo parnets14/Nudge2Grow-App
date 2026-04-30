@@ -27,7 +27,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Svg, { Circle, Polyline } from 'react-native-svg';
-import { fetchAvatars, fetchSubjects, fetchTopicsBySubject } from '../api';
+import { fetchAvatars, fetchSubjects, fetchTopicsBySubject, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -98,6 +98,8 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
   const [subjectTopicsMap, setSubjectTopicsMap] = useState({}); // Store actual topic counts
   const [topicsLoaded, setTopicsLoaded] = useState(false);
   const [apiSubjects, setApiSubjects] = useState([]); // Store subjects from API
+  const [beyondSchoolSubjects, setBeyondSchoolSubjects] = useState([]); // Beyond school subjects
+  const [beyondSchoolTopicsMap, setBeyondSchoolTopicsMap] = useState({}); // Beyond school topics by subject name
 
   useEffect(() => {
     fetchAvatars()
@@ -146,6 +148,33 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
     
     loadTopics();
   }, []);
+
+  // Fetch Beyond School subjects + topics for the enrolled child
+  useEffect(() => {
+    const loadBeyondSchool = async () => {
+      try {
+        const childTopics = child?.topics || [];
+        if (childTopics.length === 0) return;
+
+        const allBeyond = await fetchBeyondSchool().catch(() => []);
+        const enrolled = allBeyond.filter(s => childTopics.includes(String(s._id)));
+        setBeyondSchoolSubjects(enrolled);
+
+        const topicsMap = {};
+        await Promise.all(
+          enrolled.map(async s => {
+            const topics = await fetchBeyondSchoolTopicsBySubject(s._id).catch(() => []);
+            topicsMap[s.name] = topics;
+          })
+        );
+        setBeyondSchoolTopicsMap(topicsMap);
+      } catch (err) {
+        console.error('[LearningProgress] Error loading beyond school:', err);
+      }
+    };
+
+    loadBeyondSchool();
+  }, [child?.topics]);
 
   // Calculate subject-wise performance based on completed topics with weekly tracking
   const calculateSubjectPerformance = () => {
@@ -364,7 +393,9 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
       completed: weeklyCompleted,
       timeSpent: timeSpentFormatted,
       streak: `${streak} day${streak !== 1 ? 's' : ''}`,
-      topics: weeklySubjects.size,
+      topics: weeklySubjects.size + beyondSchoolSubjects.filter(s =>
+        !weeklySubjects.has(s.name) // avoid double-counting if already in completedTopics
+      ).length,
     };
   };
   
@@ -506,6 +537,31 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
         });
       }
     });
+
+    // Beyond School subjects — add their incomplete topics to Needs Practice
+    beyondSchoolSubjects.forEach(bsSubject => {
+      const subjectName = bsSubject.name;
+      const allTopicsForSubject = beyondSchoolTopicsMap[subjectName] || [];
+
+      allTopicsForSubject.forEach(topic => {
+        const topicTitle = topic.topic || topic.title;
+        if (!topicTitle) return;
+        const topicKey = `${subjectName}::${topicTitle}`;
+        const attempts = topicAttempts[topicKey] || 0;
+        const isFullyCompleted = processedTopics.has(topicKey);
+
+        if (!isFullyCompleted && topicsNeedsPractice.length < 10) {
+          const progress = attempts > 0 ? Math.min(65, 20 + (attempts * 15)) : 0;
+          topicsNeedsPractice.push({
+            name: topicTitle,
+            subject: subjectName,
+            progress,
+            attempts,
+            priority: topicsNeedsPractice.length < 2 ? 'High' : '',
+          });
+        }
+      });
+    });
     
     return {
       knownTopicsDetailed: topicsKnown.slice(0, 6),
@@ -609,7 +665,9 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
       completed: monthlyCompleted,
       timeSpent: timeSpentFormatted,
       streak: `${monthlyStreak} day${monthlyStreak !== 1 ? 's' : ''}`,
-      topics: monthlySubjects.size,
+      topics: monthlySubjects.size + beyondSchoolSubjects.filter(s =>
+        !monthlySubjects.has(s.name)
+      ).length,
     };
   };
   
@@ -945,7 +1003,59 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
     });
     
     console.log('[LearningProgress] Generated subjects (sorted by order with row-based colors):', subjectsWithOrder);
-    
+
+    // ── Beyond School subjects ──────────────────────────────────────────────
+    beyondSchoolSubjects.forEach((bsSubject, bsIndex) => {
+      const subjectName = bsSubject.name;
+      const allTopicsForSubject = beyondSchoolTopicsMap[subjectName] || [];
+
+      const perfData = subjectPerformance[subjectName] || {
+        completed: 0,
+        completedThisWeek: 0,
+        total: 0,
+        topics: new Set(),
+        weeklyTopics: new Set(),
+      };
+
+      const isWeekly = selectedPeriod === 'weekly';
+      const completedCount = isWeekly ? perfData.completedThisWeek : perfData.completed;
+      const topicsSet = isWeekly ? (perfData.weeklyTopics || new Set()) : (perfData.topics || new Set());
+
+      const actualTotalTopics = topicsLoaded ? allTopicsForSubject.length : 0;
+      let totalTopics = actualTotalTopics > 0 ? actualTotalTopics : 10;
+
+      if (isWeekly && actualTotalTopics > 0) {
+        totalTopics = Math.max(Math.ceil(actualTotalTopics * 0.2), 3);
+      } else if (isWeekly) {
+        totalTopics = 3;
+      }
+
+      if (completedCount === 0 && actualTotalTopics > 0) {
+        totalTopics = actualTotalTopics;
+      }
+
+      const progress = totalTopics > 0 ? Math.round((completedCount / totalTopics) * 100) : 0;
+      const growthPercentage = progress > 0 ? Math.min(Math.round(progress * 0.3), 30) : 0;
+      const growth = growthPercentage > 0 ? `+${growthPercentage}%` : '+0%';
+      const positionIndex = subjectsWithOrder.length + bsIndex;
+
+      subjectsWithOrder.push({
+        name: subjectName,
+        fullName: subjectName,
+        icon: bsSubject.rnIcon || bsSubject.icon || 'star-circle-outline',
+        progress,
+        completed: completedCount,
+        total: totalTopics,
+        actualTotal: actualTotalTopics,
+        growth,
+        color: getColorByPosition(positionIndex),
+        level: null,
+        topicsCompleted: Array.from(topicsSet),
+        orderIndex: positionIndex,
+        isBeyondSchool: true,
+      });
+    });
+
     // If no subjects found, return empty array
     if (subjectsWithOrder.length === 0) {
       return [];
@@ -1731,8 +1841,8 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
         </View>
         )}
 
-        {/* Subject Breakdown - Weekly View Only */}
-        {selectedPeriod === 'weekly' && (
+        {/* Subject Breakdown - Weekly and Monthly */}
+        {(selectedPeriod === 'weekly' || selectedPeriod === 'monthly') && (
           <View style={styles.subjectBreakdownCard}>
           <View style={styles.subjectBreakdownHeader}>
             <Icon name="pie-chart" size={isSmallDevice ? 18 : 20} color="#8B5CF6" />
@@ -1741,7 +1851,7 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
           <Text style={styles.subjectBreakdownSubtitle}>
             {selectedPeriod === 'weekly' 
               ? 'Weekly progress across all subjects' 
-              : 'Overall progress across all subjects'}
+              : 'Monthly progress across all subjects'}
           </Text>
           
           {currentData.subjects.length === 0 ? (
@@ -1757,7 +1867,11 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
               {currentData.subjects.map((subject, index) => (
                 <View key={index} style={styles.subjectCard}>
                   <View style={styles.subjectHeader}>
-                    <Icon name={subject.icon} size={isSmallDevice ? 18 : 20} color={subject.color} />
+                    {subject.isBeyondSchool ? (
+                      <MaterialIcon name={subject.icon} size={isSmallDevice ? 18 : 20} color={subject.color} />
+                    ) : (
+                      <Icon name={subject.icon} size={isSmallDevice ? 18 : 20} color={subject.color} />
+                    )}
                     <View style={styles.subjectGrowth}>
                       <Icon name="trending-up" size={isSmallDevice ? 10 : 11} color="#10B981" />
                       <Text style={styles.subjectGrowthText}>{subject.growth}</Text>

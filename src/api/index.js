@@ -378,6 +378,65 @@ export const fetchTopicsBySubject = async subjectId => {
   }
 };
 
+export const fetchBeyondSchoolTopicsBySubject = async subjectId => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/beyond-school-topics`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const topics = Array.isArray(data) ? data : [];
+    return subjectId
+      ? topics.filter(t => String(t.subjectId) === String(subjectId))
+      : topics;
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[BeyondSchoolTopics] fetch error:', err.message);
+    return [];
+  }
+};
+
+export const fetchBeyondSchoolContentSetByTopic = async topicId => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/beyond-school-content-sets`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const sets = Array.isArray(data) ? data : [];
+    return sets.find(s => String(s.topicId) === String(topicId)) || null;
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[BeyondSchoolContentSet] fetch error:', err.message);
+    return null;
+  }
+};
+
+export const fetchBeyondSchoolLearnDetailByTopic = async topicId => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${BASE_URL}/beyond-school-learn-details`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : [];
+    return items.find(i => String(i.topicId) === String(topicId)) || null;
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error('[BeyondSchoolLearnDetail] fetch error:', err.message);
+    return null;
+  }
+};
+
 export const fetchContentSetByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -438,12 +497,17 @@ export const fetchLearnDetailByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/learn-details`, {
+    // Try the direct topic endpoint first
+    const res = await fetch(`${BASE_URL}/learn-details/topic/${topicId}`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    if (res.status === 404) return null;
+    if (res.ok) return await res.json();
+    // Fall back to fetching all and filtering (for older backend versions)
+    const fallback = await fetch(`${BASE_URL}/learn-details`);
+    if (!fallback.ok) throw new Error(`HTTP ${fallback.status}`);
+    const data = await fallback.json();
     const items = Array.isArray(data) ? data : [];
     return items.find(i => String(i.topicId) === String(topicId)) || null;
   } catch (err) {

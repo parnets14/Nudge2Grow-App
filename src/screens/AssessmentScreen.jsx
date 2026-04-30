@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { BASE_URL, fetchSubjects } from '../api';
+import { BASE_URL, fetchSubjects, fetchBeyondSchool } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -27,7 +27,8 @@ const AssessmentScreen = ({
   knownTopics, 
   practiceTopics, 
   childSubjects,
-  previouslySelectedSubjects // Add this prop
+  childTopics,
+  previouslySelectedSubjects
 }) => {
   const [selectedSubjects, setSelectedSubjects] = useState(previouslySelectedSubjects || []);
   const [subjects, setSubjects] = useState([]);
@@ -39,15 +40,23 @@ const AssessmentScreen = ({
 
   const loadSubjects = async () => {
     try {
-      const data = await fetchSubjects();
-      // Filter to show only subjects the child has selected
-      if (childSubjects) {
-        const childSubjectIds = Object.keys(childSubjects);
-        const filteredSubjects = data.filter(s => childSubjectIds.includes(s._id));
-        setSubjects(filteredSubjects);
-      } else {
-        setSubjects(data);
-      }
+      const [regularData, beyondData] = await Promise.all([
+        fetchSubjects(),
+        fetchBeyondSchool().catch(() => []),
+      ]);
+      // Regular subjects — filter by enrolled subjectLevels
+      const childSubjectIds = childSubjects ? Object.keys(childSubjects) : [];
+      const filteredRegular = childSubjectIds.length > 0
+        ? regularData.filter(s => childSubjectIds.includes(s._id))
+        : regularData;
+
+      // Beyond school subjects — filter by childTopics IDs
+      const childTopicIds = childTopics || [];
+      const filteredBeyond = beyondData
+        .filter(s => childTopicIds.includes(String(s._id)))
+        .map(s => ({ ...s, _isBeyondSchool: true }));
+
+      setSubjects([...filteredRegular, ...filteredBeyond]);
     } catch (err) {
       console.error('[Assessment] Failed to load subjects:', err);
       setSubjects([]);
@@ -77,7 +86,7 @@ const AssessmentScreen = ({
 
   const handleNext = () => {
     if (selectedSubjects.length > 0 && onNavigate) {
-      onNavigate('selectTopics', { selectedSubjects, knownTopics, practiceTopics, childSubjects });
+      onNavigate('selectTopics', { selectedSubjects, knownTopics, practiceTopics, childSubjects, childTopics });
     }
   };
 
