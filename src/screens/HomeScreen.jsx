@@ -48,6 +48,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
   const [todaysTopics, setTodaysTopics] = useState([]);
   const [todaysBeyondSchoolNudge, setTodaysBeyondSchoolNudge] = useState(null);
   const [beyondSchoolSubjectInfo, setBeyondSchoolSubjectInfo] = useState(null);
+  const [allBeyondSchoolSubjects, setAllBeyondSchoolSubjects] = useState([]); // all enrolled beyond school subjects
   const [upcomingTopics, setUpcomingTopics] = useState([]);
   const [apiSubjects, setApiSubjects] = useState([]);
   const [allTopicsFromApi, setAllTopicsFromApi] = useState([]);
@@ -265,6 +266,9 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
         );
         if (enrolledSubjects.length === 0) return;
 
+        // Store all enrolled beyond school subjects for weekly impact calculation
+        setAllBeyondSchoolSubjects(enrolledSubjects);
+
         const today = new Date();
         const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const todayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
@@ -410,7 +414,10 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
       const estimatedTotal = levelMultiplier[level] || 10;
       totalTopicsThisWeek += Math.max(Math.ceil(estimatedTotal * 0.2), 3);
     });
-    
+
+    // Add beyond school subjects to weekly total (estimate 3 topics/week each)
+    totalTopicsThisWeek += allBeyondSchoolSubjects.length * 3;
+
     // If no subjects, use a default
     if (totalTopicsThisWeek === 0) {
       totalTopicsThisWeek = 10;
@@ -464,22 +471,25 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
       }
     });
     
-    // If no subjects completed, use first enrolled subject
-    if (Object.keys(subjectScores).length === 0 && child?.subjectLevels) {
-      const firstSubjectKey = Object.keys(child.subjectLevels)[0];
+    // If no subjects completed, use first enrolled subject (normal or beyond school)
+    if (Object.keys(subjectScores).length === 0) {
+      const subjectLevels = child?.subjectLevels || {};
+      const firstSubjectKey = Object.keys(subjectLevels)[0];
       if (firstSubjectKey) {
-        // Try to get friendly name
         const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(str);
         if (isObjectId(firstSubjectKey)) {
           const apiSubject = apiSubjects.find(s => s._id === firstSubjectKey);
           bestSubject = apiSubject?.name || 'Math';
         } else {
-          bestSubject = 
+          bestSubject =
             firstSubjectKey === 'mathematics' ? 'Math' :
             firstSubjectKey === 'science' ? 'Science' :
             firstSubjectKey === 'english' ? 'English' :
             'Math';
         }
+      } else if (allBeyondSchoolSubjects.length > 0) {
+        // Fall back to first beyond school subject
+        bestSubject = allBeyondSchoolSubjects[0].name;
       }
     }
     
@@ -496,7 +506,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
     };
   };
   
-  const weeklyImpact = useMemo(() => calculateWeeklyImpact(), [completedTopics, userData, apiSubjects]);
+  const weeklyImpact = useMemo(() => calculateWeeklyImpact(), [completedTopics, userData, apiSubjects, allBeyondSchoolSubjects]);
 
   const handleNudgeComplete = (nudgeId) => {
     if (!completedNudges.includes(nudgeId)) {
