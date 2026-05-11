@@ -23,6 +23,7 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -1259,6 +1260,14 @@ const LearningProgressScreen = ({ userData, onBack, onNavigate, completedTopics 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Loading overlay while topics data is being fetched */}
+      {!topicsLoaded && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.85)', zIndex: 99, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#45a578" />
+          <Text style={{ marginTop: 12, fontSize: 14, color: '#6B7280', fontFamily: 'Montserrat-Regular' }}>Loading progress...</Text>
+        </View>
+      )}
 
       {/* Header */}
       <View style={styles.header}>

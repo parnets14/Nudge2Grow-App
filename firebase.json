@@ -1,0 +1,8 @@
+{
+    "react-native": {
+        "messaging_android_notification_channel_id": "nudge2grow_notifications",
+        "messaging_android_notification_color": "#45a578",
+        "messaging_android_background_handler_timeout": 60000,
+        "messaging_ios_auto_register_for_remote_messages": true
+    }
+}

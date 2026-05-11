@@ -89,7 +89,8 @@ export const fetchNotifications = async (token, limit = 50, userId = null) => {
 
     // Deduplicate
     const seenIds = new Set();
-    let reminderSeen = false;
+    // Keep one reminder per calendar day (not just one ever)
+    const seenReminderDays = new Set();
     const seenCompletedTopics = new Set();
 
     // Today's end-of-day — notifications scheduled for today or earlier are visible,
@@ -103,8 +104,10 @@ export const fetchNotifications = async (token, limit = 50, userId = null) => {
       seenIds.add(id);
 
       if (n.type === 'reminder') {
-        if (reminderSeen) return false;
-        reminderSeen = true;
+        // Keep one reminder per calendar day — most recent first (list is sorted desc)
+        const dayKey = new Date(n.createdAt || n.time || 0).toDateString();
+        if (seenReminderDays.has(dayKey)) return false;
+        seenReminderDays.add(dayKey);
       }
 
       if (n.type === 'completed' && n.topicId) {

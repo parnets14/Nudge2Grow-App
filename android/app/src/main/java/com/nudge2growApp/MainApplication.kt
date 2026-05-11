@@ -1,4 +1,4 @@
-package com.nudge2grow
+package com.nudge2growApp
 
 import android.app.Application
 import android.app.NotificationChannel

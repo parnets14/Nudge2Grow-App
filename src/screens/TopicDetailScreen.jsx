@@ -111,7 +111,6 @@ const TopicDetailScreen = ({
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Fall back to most recent past/today topic
       const pastOrTodayNudges = allNudges
         .filter(nudge => {
           if (!nudge.apiTopic?.scheduledDate) return false;
@@ -125,9 +124,28 @@ const TopicDetailScreen = ({
         setSelectedApiTopic(pastOrTodayNudges[0].apiTopic);
       } else if (topicData?.apiTopics?.[0]) {
         setSelectedApiTopic(topicData.apiTopics[0]);
+      } else {
+        const firstWithId = allNudges.find(n => n.apiTopic?._id);
+        if (firstWithId?.apiTopic) setSelectedApiTopic(firstWithId.apiTopic);
       }
     }
   }, [allNudges, topicData, initialTopicId]);
+
+  // If initialTopicId is set but not found in allNudges (no scheduledDate),
+  // fetch the topic directly from the API
+  useEffect(() => {
+    if (initialTopicId && !selectedApiTopic) {
+      import('../api').then(({ fetchTopicsBySubject }) => {
+        fetchTopicsBySubject().then(allTopics => {
+          const topic = allTopics.find(t => String(t._id) === String(initialTopicId));
+          if (topic) {
+            console.log('[TopicDetail] Found topic by initialTopicId:', topic.topic || topic.title);
+            setSelectedApiTopic(topic);
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+  }, [initialTopicId]);
 
   // Update selected topic when date changes
   useEffect(() => {
@@ -154,17 +172,23 @@ const TopicDetailScreen = ({
   // Fetch content set and learn detail when an API topic is selected
   useEffect(() => {
     if (selectedApiTopic?._id) {
-      // Use beyond-school endpoints if this is a beyond school topic
+      console.log('[TopicDetail] Fetching content for topicId:', selectedApiTopic._id, '| topic:', selectedApiTopic.topic || selectedApiTopic.title);
+
       const contentSetFetch = isBeyondSchool
         ? fetchBeyondSchoolContentSetByTopic(selectedApiTopic._id)
         : fetchContentSetByTopic(selectedApiTopic._id);
+
       const learnDetailFetch = isBeyondSchool
         ? fetchBeyondSchoolLearnDetailByTopic(selectedApiTopic._id)
         : fetchLearnDetailByTopic(selectedApiTopic._id);
 
       contentSetFetch
-        .then(set => setApiContentSet(set))
+        .then(set => {
+          console.log('[TopicDetail] ContentSet result:', set ? `found (${set.flashcards?.length} flashcards)` : 'NOT FOUND');
+          setApiContentSet(set);
+        })
         .catch(() => setApiContentSet(null));
+
       learnDetailFetch
         .then(detail => setApiLearnDetail(detail))
         .catch(() => setApiLearnDetail(null));
@@ -175,8 +199,8 @@ const TopicDetailScreen = ({
   const fixUrl = url =>
     url
       ? url.replace(
-          'https://nudgebackend.onrender.com',
-          'https://nudgebackend.onrender.com',
+          'https://nudge2grow.com',
+          'https://nudge2grow.com',
         )
       : url;
 
@@ -822,11 +846,12 @@ const TopicDetailScreen = ({
     if (apiContentSet?.prompts?.length > 0) {
       return apiContentSet.prompts.map((p, i) => ({
         id: p._id || i,
+        badge: p.content || p.badge || null,  // null = no badge shown
         prompt: p.prompt,
         hint: p.hint,
       }));
     }
-    return []; // No admin data
+    return [];
   };
 
   const prompts = createPrompts();
@@ -1127,32 +1152,44 @@ const TopicDetailScreen = ({
 
   const createFlashcards = () => {
     if (apiContentSet?.flashcards?.length > 0) {
-      return apiContentSet.flashcards.map((fc, i) => ({
-        id: fc._id || i,
-        title: fc.title,
-        description: fc.description,
-        subtitle: fc.subtitle,
-        subdescription: fc.subdescription,
-        concept: fc.description,
-        parentOutcome: fc.subtitle,
-        section2: fc.subdescription,
-      }));
+      return apiContentSet.flashcards.map((fc, i) => {
+        // Clean up old "badge|title" separator format if present
+        let badge = fc.content || null;
+        let title = fc.title || '';
+        if (!badge && title.includes('|')) {
+          const parts = title.split('|');
+          badge = parts[0].trim() || null;
+          title = parts.slice(1).join('|').trim();
+        }
+        return {
+          id: fc._id || i,
+          badge: badge,
+          title: title,
+          description: fc.description,
+          subtitle: fc.subtitle,
+          subdescription: fc.subdescription,
+          concept: fc.description,
+          parentOutcome: fc.subtitle,
+          section2: fc.subdescription,
+        };
+      });
     }
-    return []; // No admin data — show nothing
+    return [];
   };
-
-  const flashcards = createFlashcards();
 
   const createQAFlashcards = () => {
     if (apiContentSet?.qaCards?.length > 0) {
       return apiContentSet.qaCards.map((qa, i) => ({
         id: qa._id || i,
+        badge: qa.content || null,
         question: qa.question,
         answer: qa.answer,
       }));
     }
-    return []; // No admin data
+    return [];
   };
+
+  const flashcards = createFlashcards();
 
   const qaFlashcards = createQAFlashcards();
 
@@ -1544,8 +1581,10 @@ const TopicDetailScreen = ({
               ]}
               onPress={() => {
                 const totalCards = flashcards.length + qaFlashcards.length + prompts.length;
+                console.log('[StartFlashcards] totalCards:', totalCards, '| apiContentSet:', apiContentSet ? 'SET' : 'NULL');
+                console.log('[StartFlashcards] flashcards[0]:', flashcards[0] ? JSON.stringify(flashcards[0]) : 'NONE');
                 if (totalCards === 0) {
-                  return; // Don't navigate if no cards
+                  return;
                 }
                 const allCards = [
                   ...flashcards.map(c => ({ ...c, type: 'about' })),
@@ -1553,6 +1592,7 @@ const TopicDetailScreen = ({
                   ...prompts.map(p => ({
                     id: `p-${p.id}`,
                     type: 'prompt',
+                    badge: p.badge,
                     question: p.prompt,
                     answer: p.hint,
                   })),

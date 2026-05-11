@@ -1,13 +1,24 @@
 ﻿/**
- * API Configuration - Local Development
- * Mobile app connects to PC's local IP
+ * API Configuration
+ * Switch BASE_URL based on environment:
+ *   - Local dev (physical device): use your PC's local IP e.g. https://nudge2grow.com/api
+ *   - Local dev (Android emulator): use http://10.0.2.2:5000/api
+ *   - Production: https://nudge2grow.com/api
  */
 
-// For local testing, replace with your PC's local IP
-// export const BASE_URL = 'https://nudgebackend.onrender.com/api'
+// ── Uncomment the one you need ──────────────────────────────────────────────
+// export const BASE_URL = 'https://nudge2grow.com/api';   // Physical device (your PC's IP)
+// export const BASE_URL = 'http://10.0.2.2:5000/api';       // Android emulator
+export const BASE_URL = 'https://nudge2grow.com/api';        // Production
 
-// For production
-export const BASE_URL = 'https://nudgebackend.onrender.com/api'
+// Safely build an image URI — handles full URLs, /uploads/ paths, and filenames
+export const getImageUri = (url) => {
+  if (!url) return null;
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+  const server = BASE_URL.replace('/api', '');
+  if (url.startsWith('/uploads/')) return `${server}${url}`;
+  return `${server}/uploads/${url}`;
+};
 
 export const fetchIntroSlides = async () => {
   const controller = new AbortController();
@@ -403,14 +414,13 @@ export const fetchBeyondSchoolContentSetByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/beyond-school-content-sets`, {
+    const res = await fetch(`${BASE_URL}/beyond-school-content-sets/by-topic/${topicId}`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);
+    if (res.status === 404) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const sets = Array.isArray(data) ? data : [];
-    return sets.find(s => String(s.topicId) === String(topicId)) || null;
+    return await res.json();
   } catch (err) {
     clearTimeout(timeout);
     console.error('[BeyondSchoolContentSet] fetch error:', err.message);
@@ -422,14 +432,13 @@ export const fetchBeyondSchoolLearnDetailByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/beyond-school-learn-details`, {
+    const res = await fetch(`${BASE_URL}/beyond-school-learn-details/by-topic/${topicId}`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);
+    if (res.status === 404) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const items = Array.isArray(data) ? data : [];
-    return items.find(i => String(i.topicId) === String(topicId)) || null;
+    return await res.json();
   } catch (err) {
     clearTimeout(timeout);
     console.error('[BeyondSchoolLearnDetail] fetch error:', err.message);
@@ -441,17 +450,44 @@ export const fetchContentSetByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/content-sets`, {
+    // Try direct by-topic endpoint first
+    const res = await fetch(`${BASE_URL}/content-sets/by-topic/${topicId}`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const sets = Array.isArray(data) ? data : [];
-    return sets.find(s => String(s.topicId) === String(topicId)) || null;
+
+    if (res.status === 404) return null;
+
+    // Only parse if response is actually JSON
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      return await res.json();
+    }
+
+    // Route not deployed yet — fall back to fetch all and filter
+    const controller2 = new AbortController();
+    const timeout2 = setTimeout(() => controller2.abort(), 15000);
+    try {
+      const fallback = await fetch(`${BASE_URL}/content-sets`, {
+        signal: controller2.signal,
+      });
+      clearTimeout(timeout2);
+      if (!fallback.ok) return null;
+      const ct2 = fallback.headers.get('content-type') || '';
+      if (!ct2.includes('application/json')) return null;
+      const data = await fallback.json();
+      const sets = Array.isArray(data) ? data : [];
+      console.log('[ContentSet] searching topicId:', topicId);
+      console.log('[ContentSet] available topicIds:', sets.map(s => s.topicId));
+      const found = sets.find(s => String(s.topicId) === String(topicId));
+      console.log('[ContentSet] found:', found ? found.topicTitle : 'NOT FOUND');
+      return found || null;
+    } catch (_) {
+      clearTimeout(timeout2);
+      return null;
+    }
   } catch (err) {
     clearTimeout(timeout);
-    console.error('[ContentSet] fetch error:', err.message);
     return null;
   }
 };
@@ -497,19 +533,29 @@ export const fetchLearnDetailByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    // Try the direct topic endpoint first
     const res = await fetch(`${BASE_URL}/learn-details/topic/${topicId}`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);
     if (res.status === 404) return null;
-    if (res.ok) return await res.json();
-    // Fall back to fetching all and filtering (for older backend versions)
-    const fallback = await fetch(`${BASE_URL}/learn-details`);
-    if (!fallback.ok) throw new Error(`HTTP ${fallback.status}`);
-    const data = await fallback.json();
-    const items = Array.isArray(data) ? data : [];
-    return items.find(i => String(i.topicId) === String(topicId)) || null;
+    const ct = res.headers.get('content-type') || '';
+    if (res.ok && ct.includes('application/json')) return await res.json();
+    // Fallback: fetch all and filter
+    const controller2 = new AbortController();
+    const timeout2 = setTimeout(() => controller2.abort(), 15000);
+    try {
+      const fallback = await fetch(`${BASE_URL}/learn-details`, { signal: controller2.signal });
+      clearTimeout(timeout2);
+      if (!fallback.ok) return null;
+      const ct2 = fallback.headers.get('content-type') || '';
+      if (!ct2.includes('application/json')) return null;
+      const data = await fallback.json();
+      const items = Array.isArray(data) ? data : [];
+      return items.find(i => String(i.topicId) === String(topicId)) || null;
+    } catch (_) {
+      clearTimeout(timeout2);
+      return null;
+    }
   } catch (err) {
     clearTimeout(timeout);
     console.error('[LearnDetail] fetch error:', err.message);

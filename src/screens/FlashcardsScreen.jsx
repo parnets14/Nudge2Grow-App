@@ -160,7 +160,7 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
           <View style={styles.cornerAccent} />
           <View style={styles.cardBody}>
             <Text style={[styles.contentText, { opacity: 0.4 }]}>
-              {item.question ?? item.answer ?? item.content}
+              {item.title ?? item.description ?? item.question ?? item.answer ?? item.content}
             </Text>
           </View>
         </View>
@@ -180,35 +180,38 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
         <View style={styles.cornerAccent} />
         
         <View style={styles.cardBody}>
-          {item.title ? (
+          {(item.badge || item.title || item.concept || item.description || item.parentOutcome || item.subtitle || item.section2 || item.subdescription) && item.type !== 'qa' && item.type !== 'prompt' ? (
             <ScrollView 
               style={{ flex: 1 }} 
               contentContainerStyle={{ paddingBottom: 20 }}
               showsVerticalScrollIndicator={true} 
               bounces={true}
             >
-              <View style={styles.aboutBadge}>
-                <Text style={styles.aboutBadgeText}>ABOUT</Text>
-              </View>
-
-              {/* Title — dark bold */}
-              <Text style={styles.cardTitle}>{item.title}</Text>
-
-              {/* Description — normal (was concept) */}
-              {(item.concept || item.description) ? (
-                <Text style={styles.sectionText}>{item.concept || item.description}</Text>
+              {/* 1. Badge — purple label at top */}
+              {item.badge ? (
+                <View style={styles.aboutBadge}>
+                  <Text style={styles.aboutBadgeText}>{item.badge}</Text>
+                </View>
               ) : null}
 
-              {/* Subtitle — bold (was parentOutcome) */}
-              {(item.parentOutcome || item.subtitle) ? (
-                <Text style={[styles.sectionText, { fontWeight: '700', color: '#1A1A1A', marginTop: 16 }]}>
-                  {item.parentOutcome || item.subtitle}
-                </Text>
+              {/* 2. Title — dark bold heading */}
+              {item.title ? (
+                <Text style={styles.cardTitle}>{item.title}</Text>
               ) : null}
 
-              {/* Sub Description — normal (was section2) */}
-              {(item.section2 || item.subdescription) ? (
-                <Text style={styles.sectionText}>{item.section2 || item.subdescription}</Text>
+              {/* 3. Description — body text below title */}
+              {(item.description || item.concept) ? (
+                <Text style={styles.sectionText}>{item.description || item.concept}</Text>
+              ) : null}
+
+              {/* 4. Subtitle — bold section heading */}
+              {(item.subtitle || item.parentOutcome) ? (
+                <Text style={styles.subtitleText}>{item.subtitle || item.parentOutcome}</Text>
+              ) : null}
+
+              {/* 5. Sub Description — body text below subtitle */}
+              {(item.subdescription || item.section2) ? (
+                <Text style={styles.sectionText}>{item.subdescription || item.section2}</Text>
               ) : null}
             </ScrollView>
           ) : item.type === 'qa' ? (
@@ -218,9 +221,11 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
               showsVerticalScrollIndicator={true} 
               bounces={true}
             >
-              <View style={styles.qaBadge}>
-                <Text style={styles.qaBadgeText}>QUESTION</Text>
-              </View>
+              {item.badge ? (
+                <View style={styles.qaBadge}>
+                  <Text style={styles.qaBadgeText}>{item.badge}</Text>
+                </View>
+              ) : null}
               <Text style={styles.qaQuestion}>{item.question}</Text>
               {showAnswer && (
                 <View style={styles.answerBox}>
@@ -236,9 +241,11 @@ const GlassCard = ({ item, index, total, onSwipeComplete, onSwipeBack, isNext, t
               showsVerticalScrollIndicator={true} 
               bounces={true}
             >
-              <View style={[styles.qaBadge, { backgroundColor: '#FEF3C7' }]}>
-                <Text style={[styles.qaBadgeText, { color: '#D97706' }]}>PROMPT</Text>
-              </View>
+              {item.badge ? (
+                <View style={[styles.qaBadge, { backgroundColor: '#FEF3C7' }]}>
+                  <Text style={[styles.qaBadgeText, { color: '#D97706' }]}>{item.badge}</Text>
+                </View>
+              ) : null}
               <Text style={styles.qaQuestion}>{item.question}</Text>
               {showAnswer && (
                 <View style={[styles.answerBox, { backgroundColor: '#FEF9EC' }]}>
@@ -817,8 +824,17 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 22 : 19,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 20,
+    marginBottom: 12,
     lineHeight: isTablet ? 30 : 26,
+  },
+
+  subtitleText: {
+    fontSize: isTablet ? 15 : 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginTop: 16,
+    marginBottom: 8,
+    lineHeight: isTablet ? 22 : 20,
   },
   
   sectionLabel: {

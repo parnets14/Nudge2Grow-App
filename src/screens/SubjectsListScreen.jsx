@@ -21,7 +21,7 @@ import {
   getNudgesBySubject,
   getNudgesByGradeAndLevel,
 } from '../data/nudgesData';
-import { BASE_URL, fetchSubjects, fetchTopicsBySubject, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
+import { BASE_URL, getImageUri, fetchSubjects, fetchTopicsBySubject, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -101,6 +101,17 @@ const SubjectsListScreen = ({
   const [beyondSchoolTopicsMap, setBeyondSchoolTopicsMap] = useState({});
   const [beyondSchoolLoaded, setBeyondSchoolLoaded] = useState(false);
 
+  // completedTopics stores keys as "SubjectName::TopicName::timestamp"
+  // This helper checks if a topic has been completed regardless of timestamp
+  const isTopicCompleted = (subjectName, topicName) => {
+    const prefix = `${subjectName}::${topicName}::`;
+    const exact  = `${subjectName}::${topicName}`;
+    for (const key of completedTopics) {
+      if (key === exact || key.startsWith(prefix)) return true;
+    }
+    return false;
+  };
+
   // Fetch subjects from backend
   useEffect(() => {
     fetchSubjects()
@@ -110,8 +121,8 @@ const SubjectsListScreen = ({
           ...s,
           imageUrl: s.imageUrl
             ? s.imageUrl.replace(
-                'http://192.168.1.22:5000',
-                'http://192.168.1.22:5000'
+                'https://nudge2grow.com',
+                'https://nudge2grow.com'
               )
             : s.imageUrl,
         }));
@@ -125,8 +136,8 @@ const SubjectsListScreen = ({
                 ...t,
                 imageUrl: t.imageUrl
                   ? t.imageUrl.replace(
-                      'http://192.168.1.22:5000',
-                      'http://192.168.1.22:5000'
+                      'https://nudge2grow.com',
+                      'https://nudge2grow.com'
                     )
                   : t.imageUrl,
               })),
@@ -267,7 +278,11 @@ const SubjectsListScreen = ({
       )
     : 0;
   const totalTopics = regularTopicsTotal + beyondTopicsTotal;
-  const completedNudges = completedTopics.size;
+  // Count unique completed topics (strip timestamp suffix for deduplication)
+  const uniqueCompletedKeys = new Set(
+    [...completedTopics].map(k => k.split('::').slice(0, 2).join('::'))
+  );
+  const completedNudges = uniqueCompletedKeys.size;
   const overallProgress =
     totalTopics > 0 ? Math.round((completedNudges / totalTopics) * 100) : 0;
   const activeSubjects =
@@ -447,7 +462,7 @@ const SubjectsListScreen = ({
                   : 12;
                 const completedCount = gradeFilteredTopics
                   ? gradeFilteredTopics.filter(t =>
-                      completedTopics.has(`${subject.name}::${t.topic || t.title}`),
+                      isTopicCompleted(subject.name, t.topic || t.title),
                     ).length
                   : 0;
                 const progress =
@@ -518,7 +533,7 @@ const SubjectsListScreen = ({
                         >
                           {subject.imageUrl ? (
                             <Image
-                              source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
+                              source={{ uri: getImageUri(subject.imageUrl) }}
                               style={styles.subjectIconImage}
                               resizeMode="contain"
                             />
@@ -675,7 +690,7 @@ const SubjectsListScreen = ({
                   const topics = beyondSchoolTopicsMap[subject._id] || [];
                   const topicCount = beyondSchoolLoaded ? topics.length : 0;
                   const completedCount = topics.filter(t =>
-                    completedTopics.has(`${subject.name}::${t.topic || t.title}`),
+                    isTopicCompleted(subject.name, t.topic || t.title),
                   ).length;
                   const progress =
                     topicCount > 0 ? Math.floor((completedCount / topicCount) * 100) : 0;
@@ -710,7 +725,7 @@ const SubjectsListScreen = ({
                           <View style={[styles.subjectIconContainer, { backgroundColor: '#F5F3FF' }]}>
                             {subject.imageUrl ? (
                               <Image
-                                source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
+                                source={{ uri: getImageUri(subject.imageUrl) }}
                                 style={styles.subjectIconImage}
                                 resizeMode="contain"
                               />

@@ -29,7 +29,7 @@ const isTablet = width >= 768;
 const isSmallDevice = width < 375;
 
 // Build a full URL from a relative /uploads/... path stored in the DB
-const SERVER_BASE = BASE_URL.replace('/api', ''); // e.g. https://nudgebackend.onrender.com
+const SERVER_BASE = BASE_URL.replace('/api', ''); // e.g. https://nudge2grow.com
 const getImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('http')) return url;

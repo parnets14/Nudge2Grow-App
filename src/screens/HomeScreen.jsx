@@ -15,12 +15,14 @@ import {
   Image,
   RefreshControl,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLevel } from '../data/nudgesData';
-import { BASE_URL, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
+import { BASE_URL, getImageUri, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject, fetchFeaturedContentDetail } from '../api';
 import { createTopicUploadNotification } from '../services/notificationService';
 import { Storage } from '../utils/storage';
 
@@ -54,6 +56,9 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
   const [allTopicsFromApi, setAllTopicsFromApi] = useState([]);
   const [featuredContent, setFeaturedContent] = useState([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [featuredModalVisible, setFeaturedModalVisible] = useState(false);
+  const [featuredDetailData, setFeaturedDetailData] = useState(null);
+  const [featuredDetailLoading, setFeaturedDetailLoading] = useState(false);
 
   const toggleMenu = () => {
     const toValue = menuVisible ? -width * 0.75 : 0;
@@ -78,18 +83,23 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
   // Load unread notification count — fetch directly from backend
   useEffect(() => {
     const loadUnreadCount = async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
       try {
         const token = await Storage.getItem('authToken');
         if (!token) { setUnreadNotificationCount(0); return; }
         const res = await fetch(`${BASE_URL}/notifications/unread/count`, {
           headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
         if (res.ok) {
           const data = await res.json();
           setUnreadNotificationCount(data.count || 0);
         }
       } catch (error) {
-        console.error('[HomeScreen] Error loading unread count:', error);
+        clearTimeout(timeout);
+        // Silently fail — badge just won't show, not a critical error
         setUnreadNotificationCount(0);
       }
     };
@@ -102,8 +112,10 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
 
   // Fetch admin avatars to resolve _id → base64 image
   useEffect(() => {
-    fetch(`${BASE_URL}/avatars`)
-      .then(r => r.json())
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    fetch(`${BASE_URL}/avatars`, { signal: controller.signal })
+      .then(r => { clearTimeout(timeout); return r.json(); })
       .then(data => {
         if (Array.isArray(data)) {
           const cache = {};
@@ -111,7 +123,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
           setAvatarCache(cache);
         }
       })
-      .catch(() => {});
+      .catch(() => { clearTimeout(timeout); });
 
     // Fetch Did You Know facts from admin panel
     fetchDidYouKnow()
@@ -191,7 +203,8 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
         const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const todayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-        // --- Per-subject: pick the best available topic (today → yesterday → day before) ---
+        // --- Per-subject: pick the best available topic ---
+        // Priority: today first, then the most recently scheduled past topic (no day limit)
         const nudgeCards = [];
 
         for (const subjectId of enrolledSubjectIds) {
@@ -204,23 +217,11 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
           });
           if (todayTopic) { nudgeCards.push(todayTopic); continue; }
 
-          // 2. Try yesterday
-          const yesterdayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-          const yesterdayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23, 59, 59);
-          const yesterdayTopic = subjectTopics.find(t => {
-            const d = new Date(t.scheduledDate);
-            return d >= yesterdayStart && d <= yesterdayEnd;
-          });
-          if (yesterdayTopic) { nudgeCards.push(yesterdayTopic); continue; }
-
-          // 3. Try day before yesterday
-          const dbYStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
-          const dbYEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 23, 59, 59);
-          const dbYTopic = subjectTopics.find(t => {
-            const d = new Date(t.scheduledDate);
-            return d >= dbYStart && d <= dbYEnd;
-          });
-          if (dbYTopic) { nudgeCards.push(dbYTopic); }
+          // 2. Fall back to the most recently scheduled past topic (any number of days ago)
+          const pastTopics = subjectTopics
+            .filter(t => new Date(t.scheduledDate) < todayStart)
+            .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate));
+          if (pastTopics.length > 0) { nudgeCards.push(pastTopics[0]); }
         }
 
         // Max 2 cards
@@ -284,24 +285,12 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
             return d >= todayStart && d <= todayEnd;
           });
 
-          // 2. Try yesterday
+          // 2. Fall back to the most recently scheduled past topic (any number of days ago)
           if (!pick) {
-            const yStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-            const yEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23, 59, 59);
-            pick = topicsWithDates.find(t => {
-              const d = new Date(t.scheduledDate);
-              return d >= yStart && d <= yEnd;
-            });
-          }
-
-          // 3. Try day before yesterday
-          if (!pick) {
-            const dbYStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2);
-            const dbYEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 23, 59, 59);
-            pick = topicsWithDates.find(t => {
-              const d = new Date(t.scheduledDate);
-              return d >= dbYStart && d <= dbYEnd;
-            });
+            const pastTopics = topicsWithDates
+              .filter(t => new Date(t.scheduledDate) < todayStart)
+              .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate));
+            pick = pastTopics[0] || null;
           }
 
           if (pick) {
@@ -325,16 +314,24 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
     try {
       const token = await Storage.getItem('authToken');
       if (token) {
-        const res = await fetch(`${BASE_URL}/notifications/unread/count`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUnreadNotificationCount(data.count || 0);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        try {
+          const res = await fetch(`${BASE_URL}/notifications/unread/count`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (res.ok) {
+            const data = await res.json();
+            setUnreadNotificationCount(data.count || 0);
+          }
+        } catch (_) {
+          clearTimeout(timeout);
         }
       }
     } catch (error) {
-      console.error('[HomeScreen] Error refreshing unread count:', error);
+      // silent
     }
     setTimeout(() => setRefreshing(false), 1500);
   };
@@ -759,16 +756,14 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
               <MaterialIcon name="star" size={16} color="#FFB84D" />
               <Text style={styles.featuredBadgeText}>Featured Today</Text>
             </View>
-            <View 
-              style={styles.featuredCard}
-            >
+            <View style={styles.featuredCard}>
               <View style={styles.featuredContent}>
                 <View style={styles.featuredHeader}>
                   <View style={[styles.featuredIconLarge, { backgroundColor: featuredContent[0].iconColor + '20' }]}>
-                    <MaterialIcon 
-                      name={featuredContent[0].icon || 'telescope'} 
-                      size={32} 
-                      color={featuredContent[0].iconColor || '#4A90E2'} 
+                    <MaterialIcon
+                      name={featuredContent[0].icon || 'telescope'}
+                      size={32}
+                      color={featuredContent[0].iconColor || '#4A90E2'}
                     />
                   </View>
                   <View style={styles.featuredInfo}>
@@ -791,11 +786,21 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                     <Text style={styles.metaChipText}>Popular</Text>
                   </View>
                 </View>
-                <TouchableOpacity 
+                {/* Button now opens modal instead of navigating directly */}
+                <TouchableOpacity
                   style={styles.featuredButton}
-                  onPress={() => {
-                    if (onNavigate) {
-                      onNavigate('featuredContentDetail', { content: featuredContent[0] });
+                  onPress={async () => {
+                    setFeaturedModalVisible(true);
+                    if (!featuredDetailData && featuredContent[0]?._id) {
+                      setFeaturedDetailLoading(true);
+                      try {
+                        const data = await fetchFeaturedContentDetail(featuredContent[0]._id);
+                        setFeaturedDetailData(data || null);
+                      } catch (e) {
+                        setFeaturedDetailData(null);
+                      } finally {
+                        setFeaturedDetailLoading(false);
+                      }
                     }
                   }}
                 >
@@ -811,6 +816,110 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* ── Popup Modal — full content, no navigation ── */}
+            <Modal
+              visible={featuredModalVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setFeaturedModalVisible(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalCard}>
+                  {/* Close */}
+                  <TouchableOpacity
+                    style={styles.modalCloseBtn}
+                    onPress={() => setFeaturedModalVisible(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Icon name="close" size={22} color="#555" />
+                  </TouchableOpacity>
+
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.modalScrollContent}
+                  >
+                    {/* Icon */}
+                    <View style={[styles.modalIconCircle, { backgroundColor: (featuredContent[0].iconColor || '#4A90E2') + '22' }]}>
+                      <MaterialIcon
+                        name={featuredContent[0].icon || 'telescope'}
+                        size={52}
+                        color={featuredContent[0].iconColor || '#4A90E2'}
+                      />
+                    </View>
+
+                    {/* Featured badge */}
+                    <View style={styles.modalBadge}>
+                      <MaterialIcon name="star" size={13} color="#FFB84D" />
+                      <Text style={styles.modalBadgeText}>Featured Today</Text>
+                    </View>
+
+                    {/* Title */}
+                    <Text style={styles.modalTitle}>{featuredContent[0].title}</Text>
+                    {featuredContent[0].subtitle ? (
+                      <Text style={styles.modalSubtitle}>{featuredContent[0].subtitle}</Text>
+                    ) : null}
+
+                    {/* Meta chips */}
+                    <View style={styles.modalMetaRow}>
+                      <View style={styles.modalMetaChip}>
+                        <Icon name="people-outline" size={13} color="#666" />
+                        <Text style={styles.modalMetaText}>{child?.grade || 'All Grades'}</Text>
+                      </View>
+                      {featuredContent[0].isPopular && (
+                        <View style={[styles.modalMetaChip, { backgroundColor: '#FEF3C7' }]}>
+                          <MaterialIcon name="fire" size={13} color="#F59E0B" />
+                          <Text style={[styles.modalMetaText, { color: '#F59E0B' }]}>Popular</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* About section */}
+                    <View style={styles.modalSection}>
+                      <View style={styles.modalSectionHeader}>
+                        <MaterialIcon name="text-box-outline" size={18} color="#45a578" />
+                        <Text style={styles.modalSectionTitle}>About This Nudge</Text>
+                      </View>
+                      <Text style={styles.modalDesc}>{featuredContent[0].description}</Text>
+                    </View>
+
+                    {/* Detail sections */}
+                    {featuredDetailLoading ? (
+                      <View style={styles.modalLoadingBox}>
+                        <ActivityIndicator size="small" color="#45a578" />
+                        <Text style={styles.modalLoadingText}>Loading details...</Text>
+                      </View>
+                    ) : featuredDetailData?.sections?.length > 0 ? (
+                      featuredDetailData.sections.map((section, idx) => (
+                        <View key={idx} style={styles.modalDetailSection}>
+                          {section.title ? (
+                            <Text style={styles.modalDetailTitle}>{section.title}</Text>
+                          ) : null}
+                          {section.subtitle ? (
+                            <Text style={styles.modalDetailSubtitle}>{section.subtitle}</Text>
+                          ) : null}
+                          {section.description ? (
+                            <Text style={styles.modalDetailDesc}>{section.description}</Text>
+                          ) : null}
+                          {section.heading ? (
+                            <Text style={styles.modalDetailHeading}>{section.heading}</Text>
+                          ) : null}
+                          {section.points?.length > 0 && (
+                            <View style={styles.modalPointsList}>
+                              {section.points.map((pt, pi) =>
+                                pt ? (
+                                  <Text key={pi} style={styles.modalPointItem}>• {pt}</Text>
+                                ) : null
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      ))
+                    ) : null}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
           </View>
         ) : null}
 
@@ -866,6 +975,12 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                         try {
                           const allTopicsForSubject = await fetchTopicsBySubject(topic.subjectId);
                           const topicsWithDates = allTopicsForSubject.filter(t => t.scheduledDate);
+                          // Include ALL topics in allNudges so initialTopicId is always found
+                          const allNudgesForSubject = allTopicsForSubject.map(t => ({
+                            subject: subjectName,
+                            topic: t.topic || t.title,
+                            apiTopic: t,
+                          }));
                           onNavigate('topicDetail', {
                             subjectName: subjectName,
                             initialTopicId: topic._id,
@@ -874,11 +989,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                               topic: topic.topic || topic.title,
                               apiTopics: topicsWithDates,
                             },
-                            allNudges: topicsWithDates.map(t => ({
-                              subject: subjectName,
-                              topic: t.topic || t.title,
-                              apiTopic: t,
-                            })),
+                            allNudges: allNudgesForSubject,
                           });
                         } catch (error) {
                           console.error('[HomeScreen] Error fetching topics:', error);
@@ -1337,7 +1448,7 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
                 const hasApiImage = subject.imageUrl && subject.imageUrl.trim() !== '';
                 
                 const imageSource = hasApiImage 
-                  ? { uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }
+                  ? { uri: getImageUri(subject.imageUrl) }
                   : null;
 
                 return (
@@ -1887,6 +1998,219 @@ const styles = StyleSheet.create({
 
   featuredButtonText: {
     fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // ── Featured Nudge Modal ────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '100%',
+    maxHeight: '55%',
+    paddingTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+
+  modalScrollContent: {
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 2,
+    paddingBottom: 20,
+  },
+
+  modalIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+
+  modalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    marginBottom: 6,
+  },
+
+  modalBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFB84D',
+  },
+
+  modalTitle: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 4,
+    fontFamily: 'Montserrat-Bold',
+  },
+
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+
+  modalMetaRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+
+  modalMetaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 3,
+  },
+
+  modalMetaText: {
+    fontSize: 11,
+    color: '#555',
+    fontWeight: '500',
+  },
+
+  modalSection: {
+    width: '100%',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+  },
+
+  modalSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+
+  modalSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+
+  modalDesc: {
+    fontSize: 13,
+    color: '#4B5563',
+    lineHeight: 20,
+  },
+
+  modalLoadingBox: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  modalLoadingText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+  },
+
+  modalDetailSection: {
+    width: '100%',
+    marginBottom: 16,
+  },
+
+  modalDetailTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 6,
+    lineHeight: 28,
+  },
+
+  modalDetailSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+
+  modalDetailDesc: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+
+  modalDetailHeading: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#45a578',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+
+  modalPointsList: {
+    gap: 6,
+  },
+
+  modalPointItem: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 22,
+    paddingLeft: 4,
+  },
+
+  modalGoBtn: {
+    width: '100%',
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+
+  modalGoBtnGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modalGoBtnText: {
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
   },

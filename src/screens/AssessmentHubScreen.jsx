@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { BASE_URL, fetchSubjects, getRecentQuizzes, fetchTopicsBySubject, fetchQuestionTypes, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
+import { BASE_URL, getImageUri, fetchSubjects, getRecentQuizzes, fetchTopicsBySubject, fetchQuestionTypes, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -283,7 +283,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
                     <View style={[styles.subjectIcon, { backgroundColor: 'transparent' }]}>
                       {subject.imageUrl ? (
                         <Image 
-                          source={{ uri: `${BASE_URL.replace('/api', '')}${subject.imageUrl}` }}
+                          source={{ uri: getImageUri(subject.imageUrl) }}
                           style={styles.subjectIconImage}
                           resizeMode="contain"
                         />
@@ -323,7 +323,7 @@ const AssessmentHubScreen = ({ onBack, onNavigate, userData }) => {
                   <View style={[styles.quizIcon, { backgroundColor: 'transparent' }]}>
                     {quiz.imageUrl ? (
                       <Image 
-                        source={{ uri: `${BASE_URL.replace('/api', '')}${quiz.imageUrl}` }}
+                        source={{ uri: getImageUri(quiz.imageUrl) }}
                         style={styles.quizIconImage}
                         resizeMode="contain"
                       />

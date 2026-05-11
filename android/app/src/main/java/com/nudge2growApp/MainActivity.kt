@@ -1,4 +1,4 @@
-package com.nudge2grow
+package com.nudge2growApp
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

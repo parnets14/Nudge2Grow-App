@@ -27,34 +27,60 @@ import { saveNotificationToken, getLoginCredentials } from '../utils/secureStora
 import { BASE_URL } from '../api';
 
 /**
- * Get the messaging instance using the modular API
+ * Get the messaging instance using the modular API.
+ * Wrapped in a try/catch so it never throws during headless JS boot.
  */
-const getMessagingInstance = () => getMessaging(getApp());
+const getMessagingInstance = () => {
+  try {
+    return getMessaging(getApp());
+  } catch (e) {
+    console.error('[FCM] getMessagingInstance error:', e.message);
+    return null;
+  }
+};
 
 /**
  * IMPORTANT: Background & killed-state handler must be registered at module level,
  * outside of any React component or async function. FCM calls this even when the
  * app is fully closed via a headless JS task.
  */
-setBackgroundMessageHandler(getMessagingInstance(), async (remoteMessage) => {
-  console.log('[FCM] Background/killed notification received:', remoteMessage);
+try {
+  const messagingInstance = getMessagingInstance();
+  if (messagingInstance) {
+    setBackgroundMessageHandler(messagingInstance, async (remoteMessage) => {
+      console.log('[FCM] Background/killed notification received:', remoteMessage);
 
-  const title = remoteMessage.notification?.title || remoteMessage.data?.title || 'New Notification';
-  const body  = remoteMessage.notification?.body  || remoteMessage.data?.body  || '';
+      const title = remoteMessage.notification?.title || remoteMessage.data?.title || 'New Notification';
+      const body  = remoteMessage.notification?.body  || remoteMessage.data?.body  || remoteMessage.data?.message || '';
 
-  const notification = {
-    _id: remoteMessage.messageId || `fcm_${Date.now()}`,
-    title,
-    message: body,
-    type: remoteMessage.data?.type || 'info',
-    isRead: false,
-    createdAt: new Date().toISOString(),
-    ...remoteMessage.data,
-  };
+      const notification = {
+        _id: remoteMessage.messageId || `fcm_${Date.now()}`,
+        title,
+        message: body,
+        type: remoteMessage.data?.type || 'info',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        // Spread data but avoid overwriting the fields we just set
+        ...(remoteMessage.data || {}),
+        // Re-apply to ensure correct values
+        title,
+        message: body,
+      };
 
-  await addNotificationToStorage(notification);
-  console.log('[FCM] Background notification saved to storage');
-});
+      try {
+        await addNotificationToStorage(notification);
+        console.log('[FCM] Background notification saved to storage');
+      } catch (storageErr) {
+        console.error('[FCM] Failed to save background notification:', storageErr.message);
+      }
+    });
+    console.log('[FCM] Background message handler registered successfully');
+  } else {
+    console.warn('[FCM] Could not register background handler — messaging instance unavailable');
+  }
+} catch (bgHandlerErr) {
+  console.error('[FCM] Error registering background message handler:', bgHandlerErr.message);
+}
 
 /**
  * Get authentication token from secure storage
@@ -202,11 +228,11 @@ export const initializeFCM = async (onNotificationReceived) => {
       const notification = {
         _id: remoteMessage.messageId || `fcm_${Date.now()}`,
         title: remoteMessage.notification?.title || remoteMessage.data?.title || 'New Notification',
-        message: remoteMessage.notification?.body || remoteMessage.data?.body || '',
+        message: remoteMessage.notification?.body || remoteMessage.data?.body || remoteMessage.data?.message || '',
         type: remoteMessage.data?.type || 'info',
         isRead: false,
         createdAt: new Date().toISOString(),
-        ...remoteMessage.data,
+        ...(remoteMessage.data || {}),
       };
 
       await addNotificationToStorage(notification);
