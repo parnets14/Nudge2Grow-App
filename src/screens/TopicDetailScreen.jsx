@@ -1,5 +1,4 @@
-﻿
-/**
+﻿/**
  * Topic Detail Screen - Shows daily nudge with calendar, units, and flashcards
  */
 
@@ -20,7 +19,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { getFlashcards, getQACards, getPrompts } from '../data/nudgesData';
-import { fetchContentSetByTopic, fetchLearnDetailByTopic, fetchBeyondSchoolContentSetByTopic, fetchBeyondSchoolLearnDetailByTopic } from '../api';
+import {
+  fetchContentSetByTopic,
+  fetchLearnDetailByTopic,
+  fetchBeyondSchoolContentSetByTopic,
+  fetchBeyondSchoolLearnDetailByTopic,
+} from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -39,40 +43,46 @@ const TopicDetailScreen = ({
   const getInitialDate = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     console.log('=== [getInitialDate] Finding most recent past/today date ===');
     console.log('[getInitialDate] Today is:', today.toDateString());
-    
+
     if (allNudges && allNudges.length > 0) {
       // Get all scheduled dates that are TODAY or in the PAST
       const pastOrTodayDates = allNudges
         .filter(nudge => {
           if (!nudge.apiTopic?.scheduledDate) return false;
-          
+
           const scheduledDate = new Date(nudge.apiTopic.scheduledDate);
           scheduledDate.setHours(0, 0, 0, 0);
-          
+
           // CRITICAL: Only include dates that are today or in the past
           const isPastOrToday = scheduledDate <= today;
-          
-          console.log('[getInitialDate] Checking:', scheduledDate.toDateString(), 
-            '| Is past/today?', isPastOrToday);
-          
+
+          console.log(
+            '[getInitialDate] Checking:',
+            scheduledDate.toDateString(),
+            '| Is past/today?',
+            isPastOrToday,
+          );
+
           return isPastOrToday;
         })
         .map(nudge => new Date(nudge.apiTopic.scheduledDate))
         .sort((a, b) => b - a); // Sort descending (most recent first)
-      
+
       if (pastOrTodayDates.length > 0) {
         const mostRecentDate = pastOrTodayDates[0];
-        console.log('[getInitialDate] ✓ Selected most recent past/today date:', 
-          mostRecentDate.toDateString());
+        console.log(
+          '[getInitialDate] ✓ Selected most recent past/today date:',
+          mostRecentDate.toDateString(),
+        );
         return mostRecentDate.getDate();
       } else {
         console.log('[getInitialDate] No past/today dates found, using today');
       }
     }
-    
+
     console.log('[getInitialDate] Defaulting to today:', today.getDate());
     return today.getDate();
   };
@@ -99,7 +109,9 @@ const TopicDetailScreen = ({
     if (allNudges && allNudges.length > 0 && !selectedApiTopic) {
       // If a specific topic was tapped, open directly on it
       if (initialTopicId) {
-        const targeted = allNudges.find(n => String(n.apiTopic?._id) === String(initialTopicId));
+        const targeted = allNudges.find(
+          n => String(n.apiTopic?._id) === String(initialTopicId),
+        );
         if (targeted?.apiTopic) {
           setSelectedApiTopic(targeted.apiTopic);
           const d = new Date(targeted.apiTopic.scheduledDate);
@@ -118,7 +130,11 @@ const TopicDetailScreen = ({
           scheduledDate.setHours(0, 0, 0, 0);
           return scheduledDate <= today;
         })
-        .sort((a, b) => new Date(b.apiTopic.scheduledDate) - new Date(a.apiTopic.scheduledDate));
+        .sort(
+          (a, b) =>
+            new Date(b.apiTopic.scheduledDate) -
+            new Date(a.apiTopic.scheduledDate),
+        );
 
       if (pastOrTodayNudges.length > 0) {
         setSelectedApiTopic(pastOrTodayNudges[0].apiTopic);
@@ -135,15 +151,24 @@ const TopicDetailScreen = ({
   // fetch the topic directly from the API
   useEffect(() => {
     if (initialTopicId && !selectedApiTopic) {
-      import('../api').then(({ fetchTopicsBySubject }) => {
-        fetchTopicsBySubject().then(allTopics => {
-          const topic = allTopics.find(t => String(t._id) === String(initialTopicId));
-          if (topic) {
-            console.log('[TopicDetail] Found topic by initialTopicId:', topic.topic || topic.title);
-            setSelectedApiTopic(topic);
-          }
-        }).catch(() => {});
-      }).catch(() => {});
+      import('../api')
+        .then(({ fetchTopicsBySubject }) => {
+          fetchTopicsBySubject()
+            .then(allTopics => {
+              const topic = allTopics.find(
+                t => String(t._id) === String(initialTopicId),
+              );
+              if (topic) {
+                console.log(
+                  '[TopicDetail] Found topic by initialTopicId:',
+                  topic.topic || topic.title,
+                );
+                setSelectedApiTopic(topic);
+              }
+            })
+            .catch(() => {});
+        })
+        .catch(() => {});
     }
   }, [initialTopicId]);
 
@@ -162,7 +187,7 @@ const TopicDetailScreen = ({
         }
         return false;
       });
-      
+
       if (matchingNudge?.apiTopic) {
         setSelectedApiTopic(matchingNudge.apiTopic);
       }
@@ -172,7 +197,12 @@ const TopicDetailScreen = ({
   // Fetch content set and learn detail when an API topic is selected
   useEffect(() => {
     if (selectedApiTopic?._id) {
-      console.log('[TopicDetail] Fetching content for topicId:', selectedApiTopic._id, '| topic:', selectedApiTopic.topic || selectedApiTopic.title);
+      console.log(
+        '[TopicDetail] Fetching content for topicId:',
+        selectedApiTopic._id,
+        '| topic:',
+        selectedApiTopic.topic || selectedApiTopic.title,
+      );
 
       const contentSetFetch = isBeyondSchool
         ? fetchBeyondSchoolContentSetByTopic(selectedApiTopic._id)
@@ -184,7 +214,10 @@ const TopicDetailScreen = ({
 
       contentSetFetch
         .then(set => {
-          console.log('[TopicDetail] ContentSet result:', set ? `found (${set.flashcards?.length} flashcards)` : 'NOT FOUND');
+          console.log(
+            '[TopicDetail] ContentSet result:',
+            set ? `found (${set.flashcards?.length} flashcards)` : 'NOT FOUND',
+          );
           setApiContentSet(set);
         })
         .catch(() => setApiContentSet(null));
@@ -197,12 +230,7 @@ const TopicDetailScreen = ({
 
   // Fix localhost URLs in content
   const fixUrl = url =>
-    url
-      ? url.replace(
-          'https://nudge2grow.com',
-          'https://nudge2grow.com',
-        )
-      : url;
+    url ? url.replace('https://nudge2grow.com', 'https://nudge2grow.com') : url;
 
   // Use allNudges if available, otherwise use topicData
   const nudgesToDisplay =
@@ -239,30 +267,35 @@ const TopicDetailScreen = ({
     const available = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
-    
+
     console.log('=== [TopicDetail] getAvailableDates START ===');
-    console.log('[TopicDetail] Today is:', today.toDateString(), '| Timestamp:', today.getTime());
-    
+    console.log(
+      '[TopicDetail] Today is:',
+      today.toDateString(),
+      '| Timestamp:',
+      today.getTime(),
+    );
+
     // Get all topics with scheduled dates from allNudges
     if (allNudges && allNudges.length > 0) {
       console.log('[TopicDetail] Processing', allNudges.length, 'nudges');
-      
+
       allNudges.forEach((nudge, idx) => {
         if (nudge.apiTopic?.scheduledDate) {
           const scheduledDate = new Date(nudge.apiTopic.scheduledDate);
           scheduledDate.setHours(0, 0, 0, 0); // Reset time for accurate comparison
-          
+
           // CRITICAL: Only include dates that are today or in the past
           // Future dates should NEVER be accessible even if topics are uploaded
           const isPastOrToday = scheduledDate <= today;
-          
+
           console.log(`[TopicDetail] Nudge ${idx + 1}:`, {
             scheduledDate: scheduledDate.toDateString(),
             timestamp: scheduledDate.getTime(),
             isPastOrToday: isPastOrToday,
             comparison: scheduledDate.getTime() <= today.getTime(),
           });
-          
+
           if (isPastOrToday) {
             available.push({
               date: scheduledDate.getDate(),
@@ -271,16 +304,22 @@ const TopicDetailScreen = ({
             });
             console.log('[TopicDetail] ✓ Added to available dates');
           } else {
-            console.log('[TopicDetail] ✗ Skipping future date:', scheduledDate.toDateString());
+            console.log(
+              '[TopicDetail] ✗ Skipping future date:',
+              scheduledDate.toDateString(),
+            );
           }
         }
       });
     }
-    
-    console.log('[TopicDetail] Total available dates (past/today only):', available.length);
+
+    console.log(
+      '[TopicDetail] Total available dates (past/today only):',
+      available.length,
+    );
     console.log('[TopicDetail] Available dates:', available);
     console.log('=== [TopicDetail] getAvailableDates END ===');
-    
+
     // If no scheduled dates found, show today only
     if (available.length === 0) {
       available.push({
@@ -289,7 +328,7 @@ const TopicDetailScreen = ({
         year: today.getFullYear(),
       });
     }
-    
+
     return available;
   };
 
@@ -299,26 +338,33 @@ const TopicDetailScreen = ({
     // Double-check: even if date is in availableDates, verify it's not in the future
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const checkDate = new Date(year, month, day);
     checkDate.setHours(0, 0, 0, 0);
-    
+
     // If the date is in the future, return false regardless of availableDates
     if (checkDate > today) {
-      console.log('[hasDataForDate] ✗ REJECTING FUTURE DATE:', checkDate.toDateString(), 
-        '| Today:', today.toDateString());
+      console.log(
+        '[hasDataForDate] ✗ REJECTING FUTURE DATE:',
+        checkDate.toDateString(),
+        '| Today:',
+        today.toDateString(),
+      );
       return false;
     }
-    
+
     // Check if date exists in availableDates
     const hasData = availableDates.some(
       d => d.date === day && d.month === month && d.year === year,
     );
-    
+
     if (hasData) {
-      console.log('[hasDataForDate] ✓ Date has data:', checkDate.toDateString());
+      console.log(
+        '[hasDataForDate] ✓ Date has data:',
+        checkDate.toDateString(),
+      );
     }
-    
+
     return hasData;
   };
 
@@ -846,7 +892,7 @@ const TopicDetailScreen = ({
     if (apiContentSet?.prompts?.length > 0) {
       return apiContentSet.prompts.map((p, i) => ({
         id: p._id || i,
-        badge: p.content || p.badge || null,  // null = no badge shown
+        badge: p.content || p.badge || null, // null = no badge shown
         prompt: p.prompt,
         hint: p.hint,
       }));
@@ -1101,7 +1147,13 @@ const TopicDetailScreen = ({
       let sections = [];
       if (apiLearnDetail.sections && apiLearnDetail.sections.length > 0) {
         sections = apiLearnDetail.sections
-          .filter(s => s.title || s.subtitle || s.description || (s.points && s.points.some(p => p)))
+          .filter(
+            s =>
+              s.title ||
+              s.subtitle ||
+              s.description ||
+              (s.points && s.points.some(p => p)),
+          )
           .map(s => ({
             heading: s.title || '',
             content: [
@@ -1133,7 +1185,11 @@ const TopicDetailScreen = ({
         ].filter(Boolean);
       }
       return {
-        title: selectedApiTopic?.topic || selectedApiTopic?.title || displayTopic?.topic || 'Topic',
+        title:
+          selectedApiTopic?.topic ||
+          selectedApiTopic?.title ||
+          displayTopic?.topic ||
+          'Topic',
         subtitle: selectedApiTopic?.description || '',
         sections,
         videoUrl: apiLearnDetail.videoUrl || null,
@@ -1285,27 +1341,67 @@ const TopicDetailScreen = ({
                   style={[
                     styles.todayButton,
                     {
-                      borderColor: hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? subjectColor : '#CCCCCC',
-                      backgroundColor: hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? `${subjectColor}10` : '#F5F5F5',
+                      borderColor: hasDataForDate(
+                        currentDay,
+                        currentDate.getMonth(),
+                        currentYear,
+                      )
+                        ? subjectColor
+                        : '#CCCCCC',
+                      backgroundColor: hasDataForDate(
+                        currentDay,
+                        currentDate.getMonth(),
+                        currentYear,
+                      )
+                        ? `${subjectColor}10`
+                        : '#F5F5F5',
                     },
                   ]}
                   onPress={() => {
-                    if (hasDataForDate(currentDay, currentDate.getMonth(), currentYear)) {
+                    if (
+                      hasDataForDate(
+                        currentDay,
+                        currentDate.getMonth(),
+                        currentYear,
+                      )
+                    ) {
                       setSelectedDate(currentDay);
                     }
                   }}
-                  disabled={!hasDataForDate(currentDay, currentDate.getMonth(), currentYear)}
+                  disabled={
+                    !hasDataForDate(
+                      currentDay,
+                      currentDate.getMonth(),
+                      currentYear,
+                    )
+                  }
                 >
                   <Icon
                     name="time-outline"
                     size={16}
-                    color={hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? subjectColor : '#CCCCCC'}
+                    color={
+                      hasDataForDate(
+                        currentDay,
+                        currentDate.getMonth(),
+                        currentYear,
+                      )
+                        ? subjectColor
+                        : '#CCCCCC'
+                    }
                     style={{ marginRight: 6 }}
                   />
                   <Text
                     style={[
-                      styles.todayButtonText, 
-                      { color: hasDataForDate(currentDay, currentDate.getMonth(), currentYear) ? subjectColor : '#CCCCCC' }
+                      styles.todayButtonText,
+                      {
+                        color: hasDataForDate(
+                          currentDay,
+                          currentDate.getMonth(),
+                          currentYear,
+                        )
+                          ? subjectColor
+                          : '#CCCCCC',
+                      },
                     ]}
                   >
                     TODAY
@@ -1317,15 +1413,22 @@ const TopicDetailScreen = ({
             <View style={styles.calendarGrid}>
               {weekDays.map((day, index) => {
                 const dateValue = dates[index];
-                
+
                 const hasData = hasDataForDate(
                   dateValue,
                   currentDate.getMonth(),
                   currentYear,
                 );
-                
-                console.log('[Calendar] Day:', day, '| Date:', dateValue, '| Has Data:', hasData);
-                
+
+                console.log(
+                  '[Calendar] Day:',
+                  day,
+                  '| Date:',
+                  dateValue,
+                  '| Has Data:',
+                  hasData,
+                );
+
                 // Only disable if there's NO data (no uploaded topic for today or past)
                 const isDisabled = !hasData;
                 const isSelected = selectedDate === dateValue;
@@ -1495,9 +1598,7 @@ const TopicDetailScreen = ({
               </Text>
 
               {displayTopic?.title && (
-                <Text style={styles.topicSubtitle}>
-                  {displayTopic.title}
-                </Text>
+                <Text style={styles.topicSubtitle}>{displayTopic.title}</Text>
               )}
 
               {(displayTopic?.description || topicData?.shortDescription) && (
@@ -1577,12 +1678,22 @@ const TopicDetailScreen = ({
             <TouchableOpacity
               style={[
                 styles.startFlashcardsButton,
-                (flashcards.length + qaFlashcards.length + prompts.length === 0) && styles.startFlashcardsButtonDisabled
+                flashcards.length + qaFlashcards.length + prompts.length ===
+                  0 && styles.startFlashcardsButtonDisabled,
               ]}
               onPress={() => {
-                const totalCards = flashcards.length + qaFlashcards.length + prompts.length;
-                console.log('[StartFlashcards] totalCards:', totalCards, '| apiContentSet:', apiContentSet ? 'SET' : 'NULL');
-                console.log('[StartFlashcards] flashcards[0]:', flashcards[0] ? JSON.stringify(flashcards[0]) : 'NONE');
+                const totalCards =
+                  flashcards.length + qaFlashcards.length + prompts.length;
+                console.log(
+                  '[StartFlashcards] totalCards:',
+                  totalCards,
+                  '| apiContentSet:',
+                  apiContentSet ? 'SET' : 'NULL',
+                );
+                console.log(
+                  '[StartFlashcards] flashcards[0]:',
+                  flashcards[0] ? JSON.stringify(flashcards[0]) : 'NONE',
+                );
                 if (totalCards === 0) {
                   return;
                 }
@@ -1604,25 +1715,38 @@ const TopicDetailScreen = ({
                     subject: displayTopic?.subject,
                   });
               }}
-              activeOpacity={(flashcards.length + qaFlashcards.length + prompts.length === 0) ? 1 : 0.85}
-              disabled={flashcards.length + qaFlashcards.length + prompts.length === 0}
+              activeOpacity={
+                flashcards.length + qaFlashcards.length + prompts.length === 0
+                  ? 1
+                  : 0.85
+              }
+              disabled={
+                flashcards.length + qaFlashcards.length + prompts.length === 0
+              }
             >
-              <Text style={[
-                styles.startFlashcardsText,
-                (flashcards.length + qaFlashcards.length + prompts.length === 0) && styles.startFlashcardsTextDisabled
-              ]}>
+              <Text
+                style={[
+                  styles.startFlashcardsText,
+                  flashcards.length + qaFlashcards.length + prompts.length ===
+                    0 && styles.startFlashcardsTextDisabled,
+                ]}
+              >
                 Start Flashcards
               </Text>
-              <Icon 
-                name="chevron-forward" 
-                size={20} 
-                color={(flashcards.length + qaFlashcards.length + prompts.length === 0) ? "#9CA3AF" : "#FFFFFF"} 
+              <Icon
+                name="chevron-forward"
+                size={20}
+                color={
+                  flashcards.length + qaFlashcards.length + prompts.length === 0
+                    ? '#9CA3AF'
+                    : '#FFFFFF'
+                }
               />
             </TouchableOpacity>
             <Text style={styles.startFlashcardsHint}>
-              {(flashcards.length + qaFlashcards.length + prompts.length === 0) 
-                ? "No cards available yet" 
-                : "Swipe through cards at your own pace"}
+              {flashcards.length + qaFlashcards.length + prompts.length === 0
+                ? 'No cards available yet'
+                : 'Swipe through cards at your own pace'}
             </Text>
             <Text style={styles.startFlashcardsCount}>
               {flashcards.length + qaFlashcards.length + prompts.length} cards
@@ -1799,9 +1923,12 @@ const TopicDetailScreen = ({
                   </Text>
                 </View>
 
-                {articleContent.videoUrls && articleContent.videoUrls.length > 0 ? (
+                {articleContent.videoUrls &&
+                articleContent.videoUrls.length > 0 ? (
                   articleContent.videoUrls.map((url, idx) => {
-                    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1];
+                    const videoId = url.match(
+                      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/,
+                    )?.[1];
                     const thumbnail = videoId
                       ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
                       : null;
@@ -1816,15 +1943,26 @@ const TopicDetailScreen = ({
                           {thumbnail ? (
                             <Image
                               source={{ uri: thumbnail }}
-                              style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: 12,
+                              }}
                               resizeMode="cover"
                             />
                           ) : null}
                           <View style={styles.modalVideoPlayOverlay}>
-                            <MaterialIcon name="play-circle" size={48} color="#FFFFFF" />
+                            <MaterialIcon
+                              name="play-circle"
+                              size={48}
+                              color="#FFFFFF"
+                            />
                           </View>
                         </View>
-                        <Text style={styles.modalVideosSectionSubtitle} numberOfLines={1}>
+                        <Text
+                          style={styles.modalVideosSectionSubtitle}
+                          numberOfLines={1}
+                        >
                           {url}
                         </Text>
                       </TouchableOpacity>

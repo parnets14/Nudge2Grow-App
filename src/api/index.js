@@ -9,12 +9,17 @@
 // ── Uncomment the one you need ──────────────────────────────────────────────
 // export const BASE_URL = 'https://nudge2grow.com/api';   // Physical device (your PC's IP)
 // export const BASE_URL = 'http://10.0.2.2:5000/api';       // Android emulator
-export const BASE_URL = 'https://nudge2grow.com/api';        // Production
+export const BASE_URL = 'https://nudge2grow.com/api'; // Production
 
 // Safely build an image URI — handles full URLs, /uploads/ paths, and filenames
-export const getImageUri = (url) => {
+export const getImageUri = url => {
   if (!url) return null;
-  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (
+    url.startsWith('data:') ||
+    url.startsWith('http://') ||
+    url.startsWith('https://')
+  )
+    return url;
   const server = BASE_URL.replace('/api', '');
   if (url.startsWith('/uploads/')) return `${server}${url}`;
   return `${server}/uploads/${url}`;
@@ -280,17 +285,23 @@ export const fetchFeaturedContent = async () => {
   }
 };
 
-export const fetchFeaturedContentDetail = async (featuredContentId) => {
+export const fetchFeaturedContentDetail = async featuredContentId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/featured-content-detail/${featuredContentId}`, {
-      signal: controller.signal,
-    });
+    const res = await fetch(
+      `${BASE_URL}/featured-content-detail/${featuredContentId}`,
+      {
+        signal: controller.signal,
+      },
+    );
     clearTimeout(timeout);
     if (!res.ok) {
       if (res.status === 404) {
-        console.log('[FeaturedContentDetail] No detail found for ID:', featuredContentId);
+        console.log(
+          '[FeaturedContentDetail] No detail found for ID:',
+          featuredContentId,
+        );
         return null;
       }
       throw new Error(`HTTP ${res.status}`);
@@ -414,9 +425,12 @@ export const fetchBeyondSchoolContentSetByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/beyond-school-content-sets/by-topic/${topicId}`, {
-      signal: controller.signal,
-    });
+    const res = await fetch(
+      `${BASE_URL}/beyond-school-content-sets/by-topic/${topicId}`,
+      {
+        signal: controller.signal,
+      },
+    );
     clearTimeout(timeout);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -432,9 +446,12 @@ export const fetchBeyondSchoolLearnDetailByTopic = async topicId => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(`${BASE_URL}/beyond-school-learn-details/by-topic/${topicId}`, {
-      signal: controller.signal,
-    });
+    const res = await fetch(
+      `${BASE_URL}/beyond-school-learn-details/by-topic/${topicId}`,
+      {
+        signal: controller.signal,
+      },
+    );
     clearTimeout(timeout);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -478,9 +495,15 @@ export const fetchContentSetByTopic = async topicId => {
       const data = await fallback.json();
       const sets = Array.isArray(data) ? data : [];
       console.log('[ContentSet] searching topicId:', topicId);
-      console.log('[ContentSet] available topicIds:', sets.map(s => s.topicId));
+      console.log(
+        '[ContentSet] available topicIds:',
+        sets.map(s => s.topicId),
+      );
       const found = sets.find(s => String(s.topicId) === String(topicId));
-      console.log('[ContentSet] found:', found ? found.topicTitle : 'NOT FOUND');
+      console.log(
+        '[ContentSet] found:',
+        found ? found.topicTitle : 'NOT FOUND',
+      );
       return found || null;
     } catch (_) {
       clearTimeout(timeout2);
@@ -544,7 +567,9 @@ export const fetchLearnDetailByTopic = async topicId => {
     const controller2 = new AbortController();
     const timeout2 = setTimeout(() => controller2.abort(), 15000);
     try {
-      const fallback = await fetch(`${BASE_URL}/learn-details`, { signal: controller2.signal });
+      const fallback = await fetch(`${BASE_URL}/learn-details`, {
+        signal: controller2.signal,
+      });
       clearTimeout(timeout2);
       if (!fallback.ok) return null;
       const ct2 = fallback.headers.get('content-type') || '';
@@ -703,7 +728,7 @@ export const fetchQuizSettings = async () => {
 };
 
 // ── Send Quiz Email ───────────────────────────────────────────────────────────
-export const sendQuizEmail = async (quizData) => {
+export const sendQuizEmail = async quizData => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
   try {
@@ -728,21 +753,29 @@ export const sendQuizEmail = async (quizData) => {
 };
 
 // ── Get Recent Quizzes ────────────────────────────────────────────────────────
-export const getRecentQuizzes = async (userEmail, userId = null, limit = 10) => {
+export const getRecentQuizzes = async (
+  userEmail,
+  userId = null,
+  limit = 10,
+) => {
   try {
     const params = new URLSearchParams();
     if (userId) params.append('userId', userId);
     if (userEmail) params.append('userEmail', userEmail);
     params.append('limit', limit);
 
-    const res = await fetch(`${BASE_URL}/quiz-questions/recent-quizzes?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    const res = await fetch(
+      `${BASE_URL}/quiz-questions/recent-quizzes?${params.toString()}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       },
-    });
+    );
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch recent quizzes');
+    if (!res.ok)
+      throw new Error(data.message || 'Failed to fetch recent quizzes');
     console.log('[QuizHistory] Recent quizzes fetched:', data);
     return data;
   } catch (err) {

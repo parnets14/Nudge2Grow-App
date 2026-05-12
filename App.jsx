@@ -70,7 +70,7 @@ const App = () => {
           if (notification.type === 'new_nudge' && notification.topicId) {
             console.log('[App] New nudge notification:', notification.title);
           }
-        });
+        }, userData?._id || userData?.id || null);
 
         setFcmUnsubscribe(() => unsubscribeFn);
 

@@ -280,10 +280,11 @@ export const getUnreadCount = async (userId = null) => {
 /**
  * Add new notification to local storage (for push notifications)
  * @param {Object} notification - Notification object
+ * @param {string|null} userId - Optional user ID for per-user storage
  */
-export const addNotificationToStorage = async (notification) => {
+export const addNotificationToStorage = async (notification, userId = null) => {
   try {
-    const notifications = await getNotificationsFromStorage();
+    const notifications = await getNotificationsFromStorage(userId);
     // Don't add if same _id already exists
     const alreadyExists = notifications.some(n => String(n._id) === String(notification._id));
     if (alreadyExists) {
@@ -291,8 +292,8 @@ export const addNotificationToStorage = async (notification) => {
       return notifications;
     }
     const updated = [notification, ...notifications];
-    await saveNotificationsToStorage(updated);
-    console.log('[NotificationService] Added new notification to storage');
+    await saveNotificationsToStorage(updated, userId);
+    console.log('[NotificationService] Added new notification to storage (userId:', userId, ')');
     return updated;
   } catch (error) {
     console.error('[NotificationService] Error adding notification:', error);
@@ -303,9 +304,10 @@ export const addNotificationToStorage = async (notification) => {
 /**
  * Create notification for new topic upload
  * @param {Object} topic - Topic object with title, subject, grade, level, scheduledDate
+ * @param {string|null} userId - User ID for per-user storage
  * @returns {Promise<boolean>} - True if notification created successfully
  */
-export const createTopicUploadNotification = async (topic) => {
+export const createTopicUploadNotification = async (topic, userId = null) => {
   try {
     console.log('[NotificationService] Creating notification for new topic:', topic.title);
     
@@ -339,7 +341,7 @@ export const createTopicUploadNotification = async (topic) => {
     };
     
     // Add to storage
-    await addNotificationToStorage(notification);
+    await addNotificationToStorage(notification, userId);
     
     // Trigger HomeScreen refresh event
     if (isToday) {
@@ -361,7 +363,7 @@ export const createTopicUploadNotification = async (topic) => {
  * @param {Array} topics - Array of topics scheduled for today
  * @returns {Promise<boolean>} - True if notifications created successfully
  */
-export const createTodaysTopicNotifications = async (topics) => {
+export const createTodaysTopicNotifications = async (topics, userId = null) => {
   try {
     if (!topics || topics.length === 0) {
       console.log('[NotificationService] No topics to create notifications for');
@@ -372,7 +374,7 @@ export const createTodaysTopicNotifications = async (topics) => {
     
     // Create notification for each topic
     for (const topic of topics) {
-      await createTopicUploadNotification(topic);
+      await createTopicUploadNotification(topic, userId);
     }
     
     console.log('[NotificationService] All topic notifications created');
@@ -407,9 +409,10 @@ export const shouldRefreshNotifications = async () => {
  * Send topic completion notification to backend
  * @param {Object} completionData - Topic completion data
  * @param {string} token - User authentication token
+ * @param {string|null} userId - User ID for per-user storage
  * @returns {Promise<boolean>} - True if notification sent successfully
  */
-export const sendTopicCompletionNotification = async (completionData, token) => {
+export const sendTopicCompletionNotification = async (completionData, token, userId = null) => {
   try {
     console.log('[NotificationService] Sending completion notification:', completionData.topicName);
 
@@ -438,7 +441,7 @@ export const sendTopicCompletionNotification = async (completionData, token) => 
         _id: result.notification._id,
         isRead: false,
       };
-      await addNotificationToStorage(backendNotification);
+      await addNotificationToStorage(backendNotification, userId);
       console.log('[NotificationService] ✅ Added backend notification to local storage');
     }
 
@@ -460,7 +463,7 @@ export const sendTopicCompletionNotification = async (completionData, token) => 
         level: completionData.level,
         topicId: completionData.topicId,
       };
-      await addNotificationToStorage(notification);
+      await addNotificationToStorage(notification, userId);
       console.log('[NotificationService] ✅ Fallback local notification created');
       return true;
     } catch (localError) {

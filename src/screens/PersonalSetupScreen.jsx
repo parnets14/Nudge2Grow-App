@@ -22,7 +22,16 @@ import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DatePicker from 'react-native-date-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { fetchGrades, fetchBoards, fetchAvatars, fetchBeyondSchool, fetchSubjects, saveProfile, checkEmail, BASE_URL } from '../api';
+import {
+  fetchGrades,
+  fetchBoards,
+  fetchAvatars,
+  fetchBeyondSchool,
+  fetchSubjects,
+  saveProfile,
+  checkEmail,
+  BASE_URL,
+} from '../api';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -30,13 +39,12 @@ const isSmallDevice = width < 375;
 
 // Build a full URL from a relative /uploads/... path stored in the DB
 const SERVER_BASE = BASE_URL.replace('/api', ''); // e.g. https://nudge2grow.com
-const getImageUrl = (url) => {
+const getImageUrl = url => {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('http')) return url;
   if (url.startsWith('/uploads/')) return `${SERVER_BASE}${url}`;
   return `${SERVER_BASE}/uploads/${url}`;
 };
-
 
 const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const [email, setEmail] = useState('');
@@ -47,7 +55,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const [showTopicPreferences, setShowTopicPreferences] = useState(false);
   const [showLifeSkills, setShowLifeSkills] = useState(false);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
-  
+
   // Toast
   const [toast, setToast] = useState(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -70,7 +78,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
       useNativeDriver: true,
     }).start(() => setToast(null));
   };
-  
+
   // Child form fields
   const [childName, setChildName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -81,11 +89,11 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [customPhoto, setCustomPhoto] = useState(null); // { uri } from gallery
   const [selectedTopics, setSelectedTopics] = useState([]);
-  
+
   // Refs
   const scrollViewRef = useRef(null);
   const childrenRef = useRef([]);
-  
+
   // Dropdown states
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
@@ -108,9 +116,20 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   useEffect(() => {
     fetchBoards()
       .then(data => setBoards(data.map(b => b.name)))
-      .catch(() => setBoards(['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other'])); // fallback
+      .catch(() =>
+        setBoards(['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'Other']),
+      ); // fallback
   }, []);
-  const faithOptions = ['Christian', 'Hindu', 'Muslim', 'Buddhist', 'Jewish', 'Sikh', 'Other', 'Prefer not to say'];
+  const faithOptions = [
+    'Christian',
+    'Hindu',
+    'Muslim',
+    'Buddhist',
+    'Jewish',
+    'Sikh',
+    'Other',
+    'Prefer not to say',
+  ];
 
   // Local fallback avatars (used if API is unreachable)
   const fallbackAvatars = [
@@ -132,24 +151,69 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
 
   // Core subjects loaded from admin panel (Learning Subjects)
   const [coreAreas, setCoreAreas] = useState([
-    { id: 'mathematics', name: 'Mathematics', icon: 'calculator', recommended: true },
+    {
+      id: 'mathematics',
+      name: 'Mathematics',
+      icon: 'calculator',
+      recommended: true,
+    },
     { id: 'science', name: 'Science', icon: 'flask', recommended: true },
-    { id: 'english', name: 'English', icon: 'book-open-page-variant', recommended: true },
-    { id: 'social-studies', name: 'Social Studies', icon: 'earth', recommended: true },
+    {
+      id: 'english',
+      name: 'English',
+      icon: 'book-open-page-variant',
+      recommended: true,
+    },
+    {
+      id: 'social-studies',
+      name: 'Social Studies',
+      icon: 'earth',
+      recommended: true,
+    },
   ]);
   useEffect(() => {
     fetchSubjects()
       .then(data => {
         if (data.length > 0) {
           // Filter to show only non-premium (core) subjects
-          const coreSubjects = data.filter(s => s.type !== 'premium' && !s.isPremium);
-          setCoreAreas(coreSubjects.map(s => ({
+          const coreSubjects = data.filter(
+            s => s.type !== 'premium' && !s.isPremium,
+          );
+          const mapped = coreSubjects.map(s => ({
             id: s._id || s.id,
             name: s.name || s.title,
             icon: s.rnIcon || 'book',
             imageUrl: s.imageUrl || null,
-            recommended: true
-          })));
+            recommended: true,
+          }));
+          setCoreAreas(mapped);
+
+          // Remap any slug-keyed subjectLevels to MongoDB _id keys.
+          // This fixes accounts registered before the API loaded where keys like
+          // "mathematics" were saved instead of the real MongoDB _id.
+          const slugAliases = {
+            mathematics: ['mathematics', 'math'],
+            science: ['science', 'science / evs', 'science/evs', 'evs'],
+            english: ['english'],
+            'social studies': ['social-studies', 'social_studies', 'socialstudies', 'social studies'],
+            'artificial intelligence': ['artificial-intelligence', 'ai', 'artificial_intelligence'],
+            'financial literacy': ['financial', 'financial-literacy', 'financial_literacy'],
+            'sex & safety education': ['safety', 'sex-safety', 'sex_safety'],
+          };
+          setSubjectLevels(prev => {
+            const remapped = {};
+            Object.entries(prev).forEach(([key, value]) => {
+              if (/^[a-f0-9]{24}$/i.test(key)) { remapped[key] = value; return; }
+              const keyLower = key.toLowerCase().trim();
+              const match = mapped.find(area => {
+                const nameLower = (area.name || '').toLowerCase().trim();
+                const aliases = slugAliases[nameLower] || [nameLower, nameLower.replace(/\s+/g, '-')];
+                return aliases.includes(keyLower);
+              });
+              remapped[match ? match.id : key] = value;
+            });
+            return remapped;
+          });
         }
       })
       .catch(() => {});
@@ -157,22 +221,28 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
 
   // Beyond School subjects loaded from admin panel
   const [exploratoryAreas, setExploratoryAreas] = useState([
-    { _id: 'ai',        name: 'Artificial Intelligence',  rnIcon: 'brain' },
-    { _id: 'financial', name: 'Financial Literacy',       rnIcon: 'wallet' },
-    { _id: 'humor',     name: 'Britannica/ Did you know', rnIcon: 'palette' },
-    { _id: 'safety',    name: 'Sex & Safety Education',   rnIcon: 'shield-check' },
+    { _id: 'ai', name: 'Artificial Intelligence', rnIcon: 'brain' },
+    { _id: 'financial', name: 'Financial Literacy', rnIcon: 'wallet' },
+    { _id: 'humor', name: 'Britannica/ Did you know', rnIcon: 'palette' },
+    { _id: 'safety', name: 'Sex & Safety Education', rnIcon: 'shield-check' },
   ]);
   useEffect(() => {
     fetchBeyondSchool()
       .then(data => {
         if (data.length > 0) {
-          setExploratoryAreas(data.map(i => ({ _id: i._id, name: i.name, rnIcon: i.rnIcon || 'book' })));
+          setExploratoryAreas(
+            data.map(i => ({
+              _id: i._id,
+              name: i.name,
+              rnIcon: i.rnIcon || 'book',
+            })),
+          );
         }
       })
       .catch(() => {});
   }, []);
 
-  const handleEmailChange = (text) => {
+  const handleEmailChange = text => {
     setEmail(text);
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     setIsValid(emailRegex.test(text));
@@ -183,7 +253,10 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     try {
       const result = await checkEmail(token, email);
       if (result.registered) {
-        showToast('This email is already registered with another account. Please use a different email.', 'error');
+        showToast(
+          'This email is already registered with another account. Please use a different email.',
+          'error',
+        );
         return;
       }
       setShowChildForm(true);
@@ -193,7 +266,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     }
   };
 
-  const handleDateConfirm = (date) => {
+  const handleDateConfirm = date => {
     setSelectedDate(new Date(date)); // Create a new Date object to ensure state updates
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -203,9 +276,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
   };
 
   const isChildFormValid = () => {
-    return childName.trim() !== '' && 
-           dateOfBirth.trim() !== '' && 
-           grade !== '';
+    return childName.trim() !== '' && dateOfBirth.trim() !== '' && grade !== '';
   };
 
   const handleContinue = () => {
@@ -224,7 +295,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     }
   };
 
-  const toggleTopic = (topicId) => {
+  const toggleTopic = topicId => {
     if (selectedTopics.includes(topicId)) {
       setSelectedTopics(selectedTopics.filter(id => id !== topicId));
     } else {
@@ -236,7 +307,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     if (selectedTopics.length > 0) {
       // Ensure all selected subjects are saved with their levels
       const finalSubjectLevels = { ...subjectLevels };
-      
+
       const newChild = {
         name: childName,
         dateOfBirth,
@@ -250,7 +321,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
       const updatedChildren = [...children, newChild];
       childrenRef.current = updatedChildren;
       setChildren(updatedChildren);
-      
+
       // Reset form
       setChildName('');
       setDateOfBirth('');
@@ -273,7 +344,7 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
     console.log('[Setup] Token:', token ? 'Present' : 'Missing');
     console.log('[Setup] Email:', email);
     console.log('[Setup] Children count:', childrenData.length);
-    
+
     // Save to backend if we have a token
     if (token) {
       try {
@@ -281,13 +352,16 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
         // Store only the avatar ID or a flag; the full URI stays in local state
         const childrenForBackend = childrenData.map(c => ({
           ...c,
-          avatar: c.avatar && c.avatar.startsWith('data:') ? 'custom' : c.avatar,
+          avatar:
+            c.avatar && c.avatar.startsWith('data:') ? 'custom' : c.avatar,
         }));
         console.log('[Setup] Calling saveProfile API...');
         const result = await saveProfile(token, email, childrenForBackend);
         console.log('[Setup] Profile saved to backend successfully:', result);
         // Merge back the original avatar (with base64) for local display
-        const savedChildren = (result?.parent?.children || childrenForBackend).map((sc, i) => ({
+        const savedChildren = (
+          result?.parent?.children || childrenForBackend
+        ).map((sc, i) => ({
           ...sc,
           avatar: childrenData[i]?.avatar || sc.avatar,
         }));
@@ -304,8 +378,14 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
         console.error('[Setup] Save failed:', err);
         console.error('[Setup] Error message:', err.message);
         console.error('[Setup] Error response:', err.response?.data);
-        if (err.message && err.message.toLowerCase().includes('email already registered')) {
-          showToast('This email is already registered with another account. Please use a different email.', 'error');
+        if (
+          err.message &&
+          err.message.toLowerCase().includes('email already registered')
+        ) {
+          showToast(
+            'This email is already registered with another account. Please use a different email.',
+            'error',
+          );
           return; // Stop — don't navigate away
         }
         // Continue to home for other non-email errors
@@ -320,594 +400,239 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
 
   return (
     <View style={{ flex: 1 }}>
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      {/* Back Button - Show on all screens except initial */}
-      {(showChildForm || showAvatarSelection || showTopicPreferences || showLifeSkills) && (
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => {
-            if (showLifeSkills) {
-              setShowLifeSkills(false);
-              setShowTopicPreferences(true);
-            } else if (showTopicPreferences) {
-              setShowTopicPreferences(false);
-              setShowAvatarSelection(true);
-            } else if (showAvatarSelection) {
-              setShowAvatarSelection(false);
-              setShowChildForm(true);
-            } else if (showChildForm) {
-              setShowChildForm(false);
-            }
-          }}
-        >
-          <Icon name="chevron-back" size={28} color="#333333" />
-        </TouchableOpacity>
-      )}
-      
-      {/* Back Button for initial screen - goes to previous screen */}
-      {!showChildForm && !showAvatarSelection && !showTopicPreferences && !showLifeSkills && !showSuccessScreen && onBack && (
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Icon name="chevron-back" size={28} color="#333333" />
-        </TouchableOpacity>
-      )}
-      
-      {!showChildForm && !showAvatarSelection && !showTopicPreferences && !showLifeSkills && !showSuccessScreen ? (
-        // Initial Screen - Email and Add Child Button
-        <>
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+        {/* Back Button - Show on all screens except initial */}
+        {(showChildForm ||
+          showAvatarSelection ||
+          showTopicPreferences ||
+          showLifeSkills) && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              if (showLifeSkills) {
+                setShowLifeSkills(false);
+                setShowTopicPreferences(true);
+              } else if (showTopicPreferences) {
+                setShowTopicPreferences(false);
+                setShowAvatarSelection(true);
+              } else if (showAvatarSelection) {
+                setShowAvatarSelection(false);
+                setShowChildForm(true);
+              } else if (showChildForm) {
+                setShowChildForm(false);
+              }
+            }}
           >
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.headerTitle}>Add Child Details</Text>
-              <Text style={styles.headerSubtitle}>
-                Tell us a little bit about your child, and we will send you content that best works for the age you are parenting.
-              </Text>
-            </View>
+            <Icon name="chevron-back" size={28} color="#333333" />
+          </TouchableOpacity>
+        )}
 
-            {/* Email Input */}
-            <View style={styles.inputSection}>
-              <TextInput
-                style={styles.emailInput}
-                placeholder="Add Your Email ID"
-                placeholderTextColor="#CCCCCC"
-                value={email}
-                onChangeText={handleEmailChange}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <View style={styles.emailUnderline} />
-              <Text style={styles.emailHint}>
-                For adoption level progress, olympiad test papers and weekly newsletters. No Spamming!
-              </Text>
-              
+        {/* Back Button for initial screen - goes to previous screen */}
+        {!showChildForm &&
+          !showAvatarSelection &&
+          !showTopicPreferences &&
+          !showLifeSkills &&
+          !showSuccessScreen &&
+          onBack && (
+            <TouchableOpacity style={styles.backButton} onPress={onBack}>
+              <Icon name="chevron-back" size={28} color="#333333" />
+            </TouchableOpacity>
+          )}
 
-            </View>
-
-            {/* Add Child Button - REMOVED */}
-
-            {/* List of Added Children */}
-            {children.length > 0 && (
-              <View style={styles.childrenList}>
-                <Text style={styles.childrenListTitle}>Added Children:</Text>
-                {children.map((child, index) => (
-                  <View key={index} style={styles.childItem}>
-                    <Text style={styles.childItemText}>
-                      {child.name} - {child.grade}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Bottom Section */}
-          <View style={styles.bottomSection}>
-            {/* Next button - always visible, changes color when email is valid */}
-            <TouchableOpacity 
-              onPress={handleNext}
-              activeOpacity={0.8}
-              disabled={!isValid}
+        {!showChildForm &&
+        !showAvatarSelection &&
+        !showTopicPreferences &&
+        !showLifeSkills &&
+        !showSuccessScreen ? (
+          // Initial Screen - Email and Add Child Button
+          <>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              {isValid ? (
-                <LinearGradient
-                  colors={['#00CED1', '#45a578', '#90EE90']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.nextButton}
-                >
-                  <Text style={styles.nextButtonTextActive}>Next</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.nextButton}>
-                  <Text style={styles.nextButtonText}>Next</Text>
+              {/* Header */}
+              <View style={styles.headerContainer}>
+                <Text style={styles.headerTitle}>Add Child Details</Text>
+                <Text style={styles.headerSubtitle}>
+                  Tell us a little bit about your child, and we will send you
+                  content that best works for the age you are parenting.
+                </Text>
+              </View>
+
+              {/* Email Input */}
+              <View style={styles.inputSection}>
+                <TextInput
+                  style={styles.emailInput}
+                  placeholder="Add Your Email ID"
+                  placeholderTextColor="#CCCCCC"
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <View style={styles.emailUnderline} />
+                <Text style={styles.emailHint}>
+                  For adoption level progress, olympiad test papers and weekly
+                  newsletters. No Spamming!
+                </Text>
+              </View>
+
+              {/* Add Child Button - REMOVED */}
+
+              {/* List of Added Children */}
+              {children.length > 0 && (
+                <View style={styles.childrenList}>
+                  <Text style={styles.childrenListTitle}>Added Children:</Text>
+                  {children.map((child, index) => (
+                    <View key={index} style={styles.childItem}>
+                      <Text style={styles.childItemText}>
+                        {child.name} - {child.grade}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               )}
-            </TouchableOpacity>
+            </ScrollView>
 
-            <View style={styles.privacyContainer}>
-              <Text style={styles.privacyText}>
-                We're committed to keeping your information safe. View our{' '}
-                <Text style={styles.privacyLink}>Privacy Policy</Text>.
-              </Text>
-            </View>
-          </View>
-        </>
-      ) : showAvatarSelection ? (
-        // Avatar Selection Screen
-        <>
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.headerTitle}>Select Avatar</Text>
-              <Text style={styles.headerSubtitle}>
-                Choose an avatar that best suits your child.
-              </Text>
-            </View>
+            {/* Bottom Section */}
+            <View style={styles.bottomSection}>
+              {/* Next button - always visible, changes color when email is valid */}
+              <TouchableOpacity
+                onPress={handleNext}
+                activeOpacity={0.8}
+                disabled={!isValid}
+              >
+                {isValid ? (
+                  <LinearGradient
+                    colors={['#00CED1', '#45a578', '#90EE90']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.nextButton}
+                  >
+                    <Text style={styles.nextButtonTextActive}>Next</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.nextButton}>
+                    <Text style={styles.nextButtonText}>Next</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
 
-            {/* Avatar Grid */}
-            <View style={styles.avatarGrid}>
-              {avatars.map((avatar) => (
+              <View style={styles.privacyContainer}>
+                <Text style={styles.privacyText}>
+                  We're committed to keeping your information safe. View our{' '}
+                  <Text style={styles.privacyLink}>Privacy Policy</Text>.
+                </Text>
+              </View>
+            </View>
+          </>
+        ) : showAvatarSelection ? (
+          // Avatar Selection Screen
+          <>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Header */}
+              <View style={styles.headerContainer}>
+                <Text style={styles.headerTitle}>Select Avatar</Text>
+                <Text style={styles.headerSubtitle}>
+                  Choose an avatar that best suits your child.
+                </Text>
+              </View>
+
+              {/* Avatar Grid */}
+              <View style={styles.avatarGrid}>
+                {avatars.map(avatar => (
+                  <TouchableOpacity
+                    key={avatar._id}
+                    style={[
+                      styles.avatarOption,
+                      selectedAvatar === avatar._id &&
+                        styles.avatarOptionSelected,
+                    ]}
+                    onPress={() => setSelectedAvatar(avatar._id)}
+                    activeOpacity={0.7}
+                  >
+                    <Image
+                      source={
+                        avatar.local ? avatar.local : { uri: avatar.image }
+                      }
+                      style={styles.avatarImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Or Text */}
+              <Text style={styles.orText}>Or</Text>
+
+              {/* Custom photo preview — shown after picking from gallery */}
+              {customPhoto && (
                 <TouchableOpacity
-                  key={avatar._id}
                   style={[
                     styles.avatarOption,
-                    selectedAvatar === avatar._id && styles.avatarOptionSelected
+                    styles.avatarOptionSelected,
+                    { alignSelf: 'center', marginBottom: 12 },
                   ]}
-                  onPress={() => setSelectedAvatar(avatar._id)}
                   activeOpacity={0.7}
+                  onPress={() => setSelectedAvatar('custom')}
                 >
-                  <Image 
-                    source={avatar.local ? avatar.local : { uri: avatar.image }}
+                  <Image
+                    source={{ uri: customPhoto }}
                     style={styles.avatarImage}
                     resizeMode="cover"
                   />
                 </TouchableOpacity>
-              ))}
-            </View>
+              )}
 
-            {/* Or Text */}
-            <Text style={styles.orText}>Or</Text>
-
-            {/* Custom photo preview — shown after picking from gallery */}
-            {customPhoto && (
+              {/* Upload Photo Button */}
               <TouchableOpacity
-                style={[styles.avatarOption, styles.avatarOptionSelected, { alignSelf: 'center', marginBottom: 12 }]}
+                style={styles.uploadPhotoButton}
                 activeOpacity={0.7}
-                onPress={() => setSelectedAvatar('custom')}
-              >
-                <Image source={{ uri: customPhoto }} style={styles.avatarImage} resizeMode="cover" />
-              </TouchableOpacity>
-            )}
-
-            {/* Upload Photo Button */}
-            <TouchableOpacity
-              style={styles.uploadPhotoButton}
-              activeOpacity={0.7}
-              onPress={() => {
-                launchImageLibrary({ mediaType: 'photo', quality: 0.5, includeBase64: true }, (response) => {
-                  if (response.didCancel || response.errorCode) return;
-                  const asset = response.assets?.[0];
-                  if (asset) {
-                    // Store as base64 data URI so it persists after app restart
-                    const base64Uri = asset.base64
-                      ? `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`
-                      : asset.uri;
-                    setCustomPhoto(base64Uri);
-                    setSelectedAvatar('custom');
-                  }
-                });
-              }}
-            >
-              <Text style={styles.uploadPhotoText}>
-                {customPhoto ? 'Change Photo' : 'Upload Photo'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          {/* Bottom Section */}
-          <View style={styles.bottomSection}>
-            <TouchableOpacity 
-              onPress={handleAvatarContinue}
-              activeOpacity={0.8}
-              disabled={!selectedAvatar}
-            >
-              {selectedAvatar ? (
-                <LinearGradient
-                  colors={['#00CED1', '#45a578', '#90EE90']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.nextButton}
-                >
-                  <Text style={styles.nextButtonTextActive}>Continue</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.nextButton}>
-                  <Text style={styles.nextButtonText}>Continue</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.privacyContainer}>
-              <Text style={styles.privacyText}>
-                We're committed to keeping your information safe. View our{' '}
-                <Text style={styles.privacyLink}>Privacy Policy</Text>.
-              </Text>
-            </View>
-          </View>
-        </>
-      ) : showTopicPreferences ? (
-        // Topic Preferences Screen
-        <>
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={true}
-            scrollEnabled={true}
-            nestedScrollEnabled={true}
-          >
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.topicHeaderTitle}>Customize Learning (Step 1/2)</Text>
-            </View>
-
-            {/* Foundation Skills Section */}
-            <View style={styles.topicSection}>
-              <Text style={styles.topicSectionTitle}>Foundation Skills · {grade || 'Grade'}</Text>
-              <Text style={styles.topicSectionHint}>Tap each subject to choose its level (all required)</Text>
-
-              <View style={styles.subjectGrid}>
-                {coreAreas.map((area) => {
-                  const chosenLevel = subjectLevels[area.id];
-                  const isSelected = !!chosenLevel;
-                  return (
-                    <TouchableOpacity
-                      key={area.id}
-                      style={[styles.subjectCard, isSelected && styles.subjectCardSelected]}
-                      onPress={() => {
-                        setSelectedSubject(area);
-                        setSelectedLevel(chosenLevel || 'Intermediate');
-                        setShowLevelModal(true);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      {area.imageUrl ? (
-                        <Image 
-                          source={{ uri: getImageUrl(area.imageUrl) }} 
-                          style={styles.subjectCardImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <MaterialIcon name={area.icon} size={32} color={isSelected ? '#4A90E2' : '#555'} />
-                      )}
-                      <Text style={[styles.subjectCardName, isSelected && styles.subjectCardNameSelected]}>
-                        {area.name}
-                      </Text>
-                      <Text style={[styles.subjectCardBadge, isSelected && styles.subjectCardBadgeSelected]}>
-                        {isSelected ? chosenLevel : 'Recommended'}
-                      </Text>
-                    </TouchableOpacity>
+                onPress={() => {
+                  launchImageLibrary(
+                    { mediaType: 'photo', quality: 0.5, includeBase64: true },
+                    response => {
+                      if (response.didCancel || response.errorCode) return;
+                      const asset = response.assets?.[0];
+                      if (asset) {
+                        // Store as base64 data URI so it persists after app restart
+                        const base64Uri = asset.base64
+                          ? `data:${asset.type || 'image/jpeg'};base64,${
+                              asset.base64
+                            }`
+                          : asset.uri;
+                        setCustomPhoto(base64Uri);
+                        setSelectedAvatar('custom');
+                      }
+                    },
                   );
-                })}
-              </View>
-            </View>
-
-            {/* Exploratory Area Section - moved to Step 2 */}
-          </ScrollView>
-
-          {/* Bottom Section */}
-          <View style={styles.bottomSection}>
-            <TouchableOpacity 
-              onPress={() => {
-                setShowTopicPreferences(false);
-                setShowLifeSkills(true);
-              }}
-              activeOpacity={0.8}
-              disabled={Object.keys(subjectLevels).length < coreAreas.length}
-            >
-              {Object.keys(subjectLevels).length >= coreAreas.length ? (
-                <LinearGradient
-                  colors={['#00CED1', '#45a578', '#90EE90']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.nextButton}
-                >
-                  <Text style={styles.nextButtonTextActive}>Next</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.nextButton}>
-                  <Text style={styles.nextButtonText}>Next</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.privacyContainer}>
-              <Text style={styles.privacyText}>
-                We're committed to keeping your information safe. View our{' '}
-                <Text style={styles.privacyLink}>Privacy Policy</Text>.
-              </Text>
-            </View>
-          </View>
-        </>
-      ) : showLifeSkills ? (
-        // Beyond School Screen - Step 2/2
-        <>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={true}
-            scrollEnabled={true}
-            nestedScrollEnabled={true}
-          >
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.topicHeaderTitle}>Customize Learning (Step 2/2)</Text>
-            </View>
-
-            {/* Beyond School Section */}
-            <View style={styles.topicSection}>
-              <Text style={styles.topicSectionTitle}>Beyond School</Text>
-
-              <View style={styles.exploratoryList}>
-                {exploratoryAreas.map((area) => (
-                  <TouchableOpacity
-                    key={area._id}
-                    style={[
-                      styles.exploratoryCard,
-                      selectedTopics.includes(area._id) && styles.exploratoryCardSelected,
-                    ]}
-                    onPress={() => toggleTopic(area._id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.exploratoryCardText}>{area.name}</Text>
-                    {selectedTopics.includes(area._id) ? (
-                      <Icon name="checkmark" size={20} color="#4A90E2" />
-                    ) : (
-                      <MaterialIcon
-                        name={area.rnIcon || 'book'}
-                        size={22}
-                        color="#666666"
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* Bottom Section */}
-          <View style={styles.bottomSection}>
-            <TouchableOpacity
-              onPress={handleTopicsComplete}
-              activeOpacity={selectedTopics.length > 0 ? 0.8 : 1}
-              disabled={selectedTopics.length === 0}
-            >
-              <LinearGradient
-                colors={selectedTopics.length > 0
-                  ? ['#00CED1', '#45a578', '#90EE90']
-                  : ['#D1D5DB', '#D1D5DB', '#D1D5DB']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.nextButton}
-              >
-                <Text style={[
-                  styles.nextButtonTextActive,
-                  selectedTopics.length === 0 && { color: '#9CA3AF' },
-                ]}>
-                  {selectedTopics.length > 0 ? 'Complete Setup' : 'Select at least one interest'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View style={styles.privacyContainer}>
-              <Text style={styles.privacyText}>
-                We're committed to keeping your information safe. View our{' '}
-                <Text style={styles.privacyLink}>Privacy Policy</Text>.
-              </Text>
-            </View>
-          </View>
-        </>
-      ) : showSuccessScreen ? (
-        // Success Screen - You're Set to Begin
-        <>
-          <ScrollView
-            contentContainerStyle={styles.successScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Top Hero */}
-            <View style={styles.successHero}>
-              <View style={styles.successIcon}>
-                <Icon name="checkmark" size={38} color="#FFFFFF" />
-              </View>
-              <Text style={styles.successTitle}>You're Set to Begin 🌱</Text>
-            </View>
-
-            {/* What to Expect Card */}
-            <View style={styles.expectCard}>
-              <View style={styles.expectHeader}>
-                <View style={styles.expectIconCircle}>
-                  <Icon name="bulb" size={18} color="#FF6B6B" />
-                </View>
-                <Text style={styles.expectTitle}>What to Expect</Text>
-              </View>
-
-              {[
-                { title: '2-3 gentle nudges a day', text: 'Short moments that fit naturally into everyday routines — no planning required.' },
-                { title: 'Conversations, not lessons', text: 'Designed to help you talk, think, and explore together — without pressure or performance.' },
-                { title: 'Screen-light, parent-led learning', text: 'No videos. No overload. Just you, your child, and shared moments that matter.' },
-                { title: 'A balanced focus on growth', text: 'Academics, values, and life skills — because learning is more than marks.' },
-              ].map((item, i) => (
-                <View key={i} style={styles.bulletItem}>
-                  <View style={styles.bulletDot} />
-                  <View style={styles.bulletContent}>
-                    <Text style={styles.bulletTitle}>{item.title}</Text>
-                    <Text style={styles.bulletText}>{item.text}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-
-          {/* Bottom Section */}
-          <View style={styles.bottomSection}>
-            <TouchableOpacity onPress={handleStartNudge} activeOpacity={0.8}>
-              <LinearGradient
-                colors={['#00CED1', '#45a578', '#90EE90']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.startNudgeButton}
-              >
-                <Text style={styles.startNudgeButtonText}>Start Today's Nudge</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <Text style={styles.successFooter}>Five minutes today can shape a lifetime.</Text>
-          </View>
-        </>
-      ) : (
-        // Child Form Screen
-        <>
-          <ScrollView 
-            ref={scrollViewRef}
-            style={styles.scrollContainer}
-            contentContainerStyle={styles.formScrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={!showDatePicker}
-          >
-            {/* Header */}
-            <View style={styles.headerContainer}>
-              <Text style={styles.headerTitle}>Add Child Details</Text>
-              <Text style={styles.headerSubtitle}>
-                Tell us a little bit about your child, and we will send you content that best works for the age you're parenting.
-              </Text>
-            </View>
-
-            {/* Child's Name */}
-            <View style={[styles.formField, styles.formFieldFirst]}>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Child's Name"
-                placeholderTextColor="#CCCCCC"
-                value={childName}
-                onChangeText={setChildName}
-              />
-              <View style={styles.formUnderline} />
-            </View>
-
-            {/* Date of Birth */}
-            <View style={styles.formField}>
-              <View style={styles.dateInputContainer}>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="Date of Birth"
-                  placeholderTextColor="#CCCCCC"
-                  value={dateOfBirth}
-                  onChangeText={setDateOfBirth}
-                  keyboardType="numeric"
-                />
-                <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-                  <Icon name="calendar-outline" size={20} color="#999999" style={styles.calendarIcon} />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.formUnderline} />
-            </View>
-
-            {/* Grade */}
-            <View style={styles.formField}>
-              <TouchableOpacity 
-                style={styles.dropdownTrigger}
-                onPress={() => {
-                  setShowGradeDropdown(!showGradeDropdown);
-                  setShowBoardDropdown(false);
                 }}
               >
-                <Text style={[styles.dropdownText, grade && styles.dropdownTextFilled]}>
-                  {grade || 'Grade'}
+                <Text style={styles.uploadPhotoText}>
+                  {customPhoto ? 'Change Photo' : 'Upload Photo'}
                 </Text>
-                <Icon name="chevron-down" size={20} color="#999999" />
               </TouchableOpacity>
-              <View style={styles.formUnderline} />
-            </View>
-            {showGradeDropdown && (
-              <View style={styles.dropdownMenuExpanded}>
-                <ScrollView 
-                  nestedScrollEnabled={true}
-                  style={styles.dropdownScrollView}
-                >
-                  {grades.map((g) => (
-                    <TouchableOpacity
-                      key={g}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setGrade(g);
-                        setShowGradeDropdown(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownItemText}>{g}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+            </ScrollView>
 
-            {/* Educational Board */}
-            <View style={styles.formField}>
-              <TouchableOpacity 
-                style={styles.dropdownTrigger}
-                onPress={() => {
-                  setShowBoardDropdown(!showBoardDropdown);
-                  setShowGradeDropdown(false);
-                }}
-              >
-                <Text style={[styles.dropdownText, educationBoard && styles.dropdownTextFilled]}>
-                  {educationBoard || 'Educational Board (Optional)'}
-                </Text>
-                <Icon name="chevron-down" size={20} color="#999999" />
-              </TouchableOpacity>
-              <View style={styles.formUnderline} />
-            </View>
-            {showBoardDropdown && (
-              <View style={styles.dropdownMenuExpanded}>
-                <ScrollView 
-                  nestedScrollEnabled={true}
-                  style={styles.dropdownScrollView}
-                >
-                  {boards.map((b) => (
-                    <TouchableOpacity
-                      key={b}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setEducationBoard(b);
-                        setShowBoardDropdown(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownItemText}>{b}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Bottom Section - Inside ScrollView */}
-            <View style={styles.bottomSectionInline}>
-              <TouchableOpacity 
-                onPress={handleContinue}
+            {/* Bottom Section */}
+            <View style={styles.bottomSection}>
+              <TouchableOpacity
+                onPress={handleAvatarContinue}
                 activeOpacity={0.8}
-                disabled={!isChildFormValid()}
+                disabled={!selectedAvatar}
               >
-                {isChildFormValid() ? (
+                {selectedAvatar ? (
                   <LinearGradient
                     colors={['#00CED1', '#45a578', '#90EE90']}
                     start={{ x: 0, y: 0 }}
@@ -930,113 +655,604 @@ const PersonalSetupScreen = ({ onFinish, onBack, token }) => {
                 </Text>
               </View>
             </View>
-          </ScrollView>
-        </>
-      )}
+          </>
+        ) : showTopicPreferences ? (
+          // Topic Preferences Screen
+          <>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
+            >
+              {/* Header */}
+              <View style={styles.headerContainer}>
+                <Text style={styles.topicHeaderTitle}>
+                  Customize Learning (Step 1/2)
+                </Text>
+              </View>
 
-      {/* Level Modal */}
-      {showLevelModal && selectedSubject && (
-        <View style={styles.levelModalOverlay}>
-          <View style={styles.levelModalContainer}>
-            {/* Header */}
-            <View style={styles.levelModalHeader}>
-              <TouchableOpacity style={styles.levelModalBack} onPress={() => setShowLevelModal(false)}>
-                <Icon name="chevron-back" size={20} color="#333" />
+              {/* Foundation Skills Section */}
+              <View style={styles.topicSection}>
+                <Text style={styles.topicSectionTitle}>
+                  Foundation Skills · {grade || 'Grade'}
+                </Text>
+                <Text style={styles.topicSectionHint}>
+                  Tap each subject to choose its level (all required)
+                </Text>
+
+                <View style={styles.subjectGrid}>
+                  {coreAreas.map(area => {
+                    const chosenLevel = subjectLevels[area.id];
+                    const isSelected = !!chosenLevel;
+                    return (
+                      <TouchableOpacity
+                        key={area.id}
+                        style={[
+                          styles.subjectCard,
+                          isSelected && styles.subjectCardSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedSubject(area);
+                          setSelectedLevel(chosenLevel || 'Intermediate');
+                          setShowLevelModal(true);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        {area.imageUrl ? (
+                          <Image
+                            source={{ uri: getImageUrl(area.imageUrl) }}
+                            style={styles.subjectCardImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <MaterialIcon
+                            name={area.icon}
+                            size={32}
+                            color={isSelected ? '#4A90E2' : '#555'}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.subjectCardName,
+                            isSelected && styles.subjectCardNameSelected,
+                          ]}
+                        >
+                          {area.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.subjectCardBadge,
+                            isSelected && styles.subjectCardBadgeSelected,
+                          ]}
+                        >
+                          {isSelected ? chosenLevel : 'Recommended'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Exploratory Area Section - moved to Step 2 */}
+            </ScrollView>
+
+            {/* Bottom Section */}
+            <View style={styles.bottomSection}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowTopicPreferences(false);
+                  setShowLifeSkills(true);
+                }}
+                activeOpacity={0.8}
+                disabled={Object.keys(subjectLevels).length < coreAreas.length}
+              >
+                {Object.keys(subjectLevels).length >= coreAreas.length ? (
+                  <LinearGradient
+                    colors={['#00CED1', '#45a578', '#90EE90']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.nextButton}
+                  >
+                    <Text style={styles.nextButtonTextActive}>Next</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.nextButton}>
+                    <Text style={styles.nextButtonText}>Next</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-              <View style={styles.levelModalTitleContainer}>
-                <Text style={styles.levelModalTitle}>{selectedSubject.name}</Text>
-                <Text style={styles.levelModalGrade}>{grade || 'Grade'}</Text>
+
+              <View style={styles.privacyContainer}>
+                <Text style={styles.privacyText}>
+                  We're committed to keeping your information safe. View our{' '}
+                  <Text style={styles.privacyLink}>Privacy Policy</Text>.
+                </Text>
               </View>
             </View>
-            <View style={styles.levelModalDivider} />
-
-            <Text style={styles.levelModalHeading}>Choose the Right Level</Text>
-            <Text style={styles.levelModalSubtext}>
-              Start with what feels comfortable.{'\n'}You can always change the level later.
-            </Text>
-
-            {/* Level Options */}
-            <View style={styles.levelOptions}>
-              {[
-                { label: 'Basic', hint: '' },
-                { label: 'Intermediate', hint: 'Most parents choose this' },
-                { label: 'Advanced', hint: '' },
-              ].map(({ label, hint }) => {
-                const active = selectedLevel === label;
-                return (
-                  <TouchableOpacity
-                    key={label}
-                    style={[styles.levelOption, active && styles.levelOptionSelected]}
-                    onPress={() => setSelectedLevel(label)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.levelOptionContent}>
-                      <Text style={[styles.levelOptionText, active && styles.levelOptionTextSelected]}>{label}</Text>
-                      {hint ? (
-                        <Text style={[styles.levelOptionHint, active && styles.levelOptionHintSelected]}>{hint}</Text>
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity
-              style={styles.levelSaveButton}
-              onPress={() => {
-                setSubjectLevels({ ...subjectLevels, [selectedSubject.id]: selectedLevel });
-                if (!selectedTopics.includes(selectedSubject.id)) {
-                  setSelectedTopics([...selectedTopics, selectedSubject.id]);
-                }
-                setShowLevelModal(false);
-              }}
-              activeOpacity={0.85}
+          </>
+        ) : showLifeSkills ? (
+          // Beyond School Screen - Step 2/2
+          <>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
             >
-              <Text style={styles.levelSaveButtonText}>Save &amp; Continue</Text>
-            </TouchableOpacity>
+              {/* Header */}
+              <View style={styles.headerContainer}>
+                <Text style={styles.topicHeaderTitle}>
+                  Customize Learning (Step 2/2)
+                </Text>
+              </View>
+
+              {/* Beyond School Section */}
+              <View style={styles.topicSection}>
+                <Text style={styles.topicSectionTitle}>Beyond School</Text>
+
+                <View style={styles.exploratoryList}>
+                  {exploratoryAreas.map(area => (
+                    <TouchableOpacity
+                      key={area._id}
+                      style={[
+                        styles.exploratoryCard,
+                        selectedTopics.includes(area._id) &&
+                          styles.exploratoryCardSelected,
+                      ]}
+                      onPress={() => toggleTopic(area._id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.exploratoryCardText}>
+                        {area.name}
+                      </Text>
+                      {selectedTopics.includes(area._id) ? (
+                        <Icon name="checkmark" size={20} color="#4A90E2" />
+                      ) : (
+                        <MaterialIcon
+                          name={area.rnIcon || 'book'}
+                          size={22}
+                          color="#666666"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Bottom Section */}
+            <View style={styles.bottomSection}>
+              <TouchableOpacity
+                onPress={handleTopicsComplete}
+                activeOpacity={selectedTopics.length > 0 ? 0.8 : 1}
+                disabled={selectedTopics.length === 0}
+              >
+                <LinearGradient
+                  colors={
+                    selectedTopics.length > 0
+                      ? ['#00CED1', '#45a578', '#90EE90']
+                      : ['#D1D5DB', '#D1D5DB', '#D1D5DB']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.nextButton}
+                >
+                  <Text
+                    style={[
+                      styles.nextButtonTextActive,
+                      selectedTopics.length === 0 && { color: '#9CA3AF' },
+                    ]}
+                  >
+                    {selectedTopics.length > 0
+                      ? 'Complete Setup'
+                      : 'Select at least one interest'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <View style={styles.privacyContainer}>
+                <Text style={styles.privacyText}>
+                  We're committed to keeping your information safe. View our{' '}
+                  <Text style={styles.privacyLink}>Privacy Policy</Text>.
+                </Text>
+              </View>
+            </View>
+          </>
+        ) : showSuccessScreen ? (
+          // Success Screen - You're Set to Begin
+          <>
+            <ScrollView
+              contentContainerStyle={styles.successScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Top Hero */}
+              <View style={styles.successHero}>
+                <View style={styles.successIcon}>
+                  <Icon name="checkmark" size={38} color="#FFFFFF" />
+                </View>
+                <Text style={styles.successTitle}>You're Set to Begin 🌱</Text>
+              </View>
+
+              {/* What to Expect Card */}
+              <View style={styles.expectCard}>
+                <View style={styles.expectHeader}>
+                  <View style={styles.expectIconCircle}>
+                    <Icon name="bulb" size={18} color="#FF6B6B" />
+                  </View>
+                  <Text style={styles.expectTitle}>What to Expect</Text>
+                </View>
+
+                {[
+                  {
+                    title: '2-3 gentle nudges a day',
+                    text: 'Short moments that fit naturally into everyday routines — no planning required.',
+                  },
+                  {
+                    title: 'Conversations, not lessons',
+                    text: 'Designed to help you talk, think, and explore together — without pressure or performance.',
+                  },
+                  {
+                    title: 'Screen-light, parent-led learning',
+                    text: 'No videos. No overload. Just you, your child, and shared moments that matter.',
+                  },
+                  {
+                    title: 'A balanced focus on growth',
+                    text: 'Academics, values, and life skills — because learning is more than marks.',
+                  },
+                ].map((item, i) => (
+                  <View key={i} style={styles.bulletItem}>
+                    <View style={styles.bulletDot} />
+                    <View style={styles.bulletContent}>
+                      <Text style={styles.bulletTitle}>{item.title}</Text>
+                      <Text style={styles.bulletText}>{item.text}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+
+            {/* Bottom Section */}
+            <View style={styles.bottomSection}>
+              <TouchableOpacity onPress={handleStartNudge} activeOpacity={0.8}>
+                <LinearGradient
+                  colors={['#00CED1', '#45a578', '#90EE90']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.startNudgeButton}
+                >
+                  <Text style={styles.startNudgeButtonText}>
+                    Start Today's Nudge
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <Text style={styles.successFooter}>
+                Five minutes today can shape a lifetime.
+              </Text>
+            </View>
+          </>
+        ) : (
+          // Child Form Screen
+          <>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.scrollContainer}
+              contentContainerStyle={styles.formScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={!showDatePicker}
+            >
+              {/* Header */}
+              <View style={styles.headerContainer}>
+                <Text style={styles.headerTitle}>Add Child Details</Text>
+                <Text style={styles.headerSubtitle}>
+                  Tell us a little bit about your child, and we will send you
+                  content that best works for the age you're parenting.
+                </Text>
+              </View>
+
+              {/* Child's Name */}
+              <View style={[styles.formField, styles.formFieldFirst]}>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Child's Name"
+                  placeholderTextColor="#CCCCCC"
+                  value={childName}
+                  onChangeText={setChildName}
+                />
+                <View style={styles.formUnderline} />
+              </View>
+
+              {/* Date of Birth */}
+              <View style={styles.formField}>
+                <View style={styles.dateInputContainer}>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Date of Birth"
+                    placeholderTextColor="#CCCCCC"
+                    value={dateOfBirth}
+                    onChangeText={setDateOfBirth}
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                    <Icon
+                      name="calendar-outline"
+                      size={20}
+                      color="#999999"
+                      style={styles.calendarIcon}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.formUnderline} />
+              </View>
+
+              {/* Grade */}
+              <View style={styles.formField}>
+                <TouchableOpacity
+                  style={styles.dropdownTrigger}
+                  onPress={() => {
+                    setShowGradeDropdown(!showGradeDropdown);
+                    setShowBoardDropdown(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      grade && styles.dropdownTextFilled,
+                    ]}
+                  >
+                    {grade || 'Grade'}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color="#999999" />
+                </TouchableOpacity>
+                <View style={styles.formUnderline} />
+              </View>
+              {showGradeDropdown && (
+                <View style={styles.dropdownMenuExpanded}>
+                  <ScrollView
+                    nestedScrollEnabled={true}
+                    style={styles.dropdownScrollView}
+                  >
+                    {grades.map(g => (
+                      <TouchableOpacity
+                        key={g}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setGrade(g);
+                          setShowGradeDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>{g}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Educational Board */}
+              <View style={styles.formField}>
+                <TouchableOpacity
+                  style={styles.dropdownTrigger}
+                  onPress={() => {
+                    setShowBoardDropdown(!showBoardDropdown);
+                    setShowGradeDropdown(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      educationBoard && styles.dropdownTextFilled,
+                    ]}
+                  >
+                    {educationBoard || 'Educational Board (Optional)'}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color="#999999" />
+                </TouchableOpacity>
+                <View style={styles.formUnderline} />
+              </View>
+              {showBoardDropdown && (
+                <View style={styles.dropdownMenuExpanded}>
+                  <ScrollView
+                    nestedScrollEnabled={true}
+                    style={styles.dropdownScrollView}
+                  >
+                    {boards.map(b => (
+                      <TouchableOpacity
+                        key={b}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setEducationBoard(b);
+                          setShowBoardDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>{b}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Bottom Section - Inside ScrollView */}
+              <View style={styles.bottomSectionInline}>
+                <TouchableOpacity
+                  onPress={handleContinue}
+                  activeOpacity={0.8}
+                  disabled={!isChildFormValid()}
+                >
+                  {isChildFormValid() ? (
+                    <LinearGradient
+                      colors={['#00CED1', '#45a578', '#90EE90']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.nextButton}
+                    >
+                      <Text style={styles.nextButtonTextActive}>Continue</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={styles.nextButton}>
+                      <Text style={styles.nextButtonText}>Continue</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.privacyContainer}>
+                  <Text style={styles.privacyText}>
+                    We're committed to keeping your information safe. View our{' '}
+                    <Text style={styles.privacyLink}>Privacy Policy</Text>.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </>
+        )}
+
+        {/* Level Modal */}
+        {showLevelModal && selectedSubject && (
+          <View style={styles.levelModalOverlay}>
+            <View style={styles.levelModalContainer}>
+              {/* Header */}
+              <View style={styles.levelModalHeader}>
+                <TouchableOpacity
+                  style={styles.levelModalBack}
+                  onPress={() => setShowLevelModal(false)}
+                >
+                  <Icon name="chevron-back" size={20} color="#333" />
+                </TouchableOpacity>
+                <View style={styles.levelModalTitleContainer}>
+                  <Text style={styles.levelModalTitle}>
+                    {selectedSubject.name}
+                  </Text>
+                  <Text style={styles.levelModalGrade}>{grade || 'Grade'}</Text>
+                </View>
+              </View>
+              <View style={styles.levelModalDivider} />
+
+              <Text style={styles.levelModalHeading}>
+                Choose the Right Level
+              </Text>
+              <Text style={styles.levelModalSubtext}>
+                Start with what feels comfortable.{'\n'}You can always change
+                the level later.
+              </Text>
+
+              {/* Level Options */}
+              <View style={styles.levelOptions}>
+                {[
+                  { label: 'Basic', hint: '' },
+                  { label: 'Intermediate', hint: 'Most parents choose this' },
+                  { label: 'Advanced', hint: '' },
+                ].map(({ label, hint }) => {
+                  const active = selectedLevel === label;
+                  return (
+                    <TouchableOpacity
+                      key={label}
+                      style={[
+                        styles.levelOption,
+                        active && styles.levelOptionSelected,
+                      ]}
+                      onPress={() => setSelectedLevel(label)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.levelOptionContent}>
+                        <Text
+                          style={[
+                            styles.levelOptionText,
+                            active && styles.levelOptionTextSelected,
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                        {hint ? (
+                          <Text
+                            style={[
+                              styles.levelOptionHint,
+                              active && styles.levelOptionHintSelected,
+                            ]}
+                          >
+                            {hint}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Save Button */}
+              <TouchableOpacity
+                style={styles.levelSaveButton}
+                onPress={() => {
+                  setSubjectLevels({
+                    ...subjectLevels,
+                    [selectedSubject.id]: selectedLevel,
+                  });
+                  if (!selectedTopics.includes(selectedSubject.id)) {
+                    setSelectedTopics([...selectedTopics, selectedSubject.id]);
+                  }
+                  setShowLevelModal(false);
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.levelSaveButtonText}>
+                  Save &amp; Continue
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
+
+        {/* Date Picker Modal */}
+        <DatePicker
+          modal
+          open={showDatePicker}
+          date={selectedDate}
+          mode="date"
+          onConfirm={handleDateConfirm}
+          onCancel={() => setShowDatePicker(false)}
+          maximumDate={new Date()}
+          title="Select Date of Birth"
+        />
+      </KeyboardAvoidingView>
+
+      {/* Toast notification */}
+      {toast && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              opacity: toastAnim,
+              transform: [
+                {
+                  translateY: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [40, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.toastInner}>
+            <Icon
+              name="alert-circle"
+              size={22}
+              color="#e53e3e"
+              style={{ marginRight: 10 }}
+            />
+            <Text style={styles.toastMessage} numberOfLines={3}>
+              {toast.message}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={dismissToast}
+            style={styles.toastDismissBtn}
+          >
+            <Text style={styles.toastDismissText}>Dismiss</Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
-
-      {/* Date Picker Modal */}
-      <DatePicker
-        modal
-        open={showDatePicker}
-        date={selectedDate}
-        mode="date"
-        onConfirm={handleDateConfirm}
-        onCancel={() => setShowDatePicker(false)}
-        maximumDate={new Date()}
-        title="Select Date of Birth"
-      />
-    </KeyboardAvoidingView>
-
-    {/* Toast notification */}
-    {toast && (
-      <Animated.View
-        style={[
-          styles.toastContainer,
-          {
-            opacity: toastAnim,
-            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }],
-          },
-        ]}
-      >
-        <View style={styles.toastInner}>
-          <Icon
-            name="alert-circle"
-            size={22}
-            color="#e53e3e"
-            style={{ marginRight: 10 }}
-          />
-          <Text style={styles.toastMessage} numberOfLines={3}>{toast.message}</Text>
-        </View>
-        <TouchableOpacity onPress={dismissToast} style={styles.toastDismissBtn}>
-          <Text style={styles.toastDismissText}>Dismiss</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    )}
     </View>
   );
 };
@@ -1898,7 +2114,10 @@ const styles = StyleSheet.create({
   // Level Modal Styles
   levelModalOverlay: {
     position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',

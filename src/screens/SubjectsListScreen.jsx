@@ -21,7 +21,14 @@ import {
   getNudgesBySubject,
   getNudgesByGradeAndLevel,
 } from '../data/nudgesData';
-import { BASE_URL, getImageUri, fetchSubjects, fetchTopicsBySubject, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject } from '../api';
+import {
+  BASE_URL,
+  getImageUri,
+  fetchSubjects,
+  fetchTopicsBySubject,
+  fetchBeyondSchool,
+  fetchBeyondSchoolTopicsBySubject,
+} from '../api';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -105,7 +112,7 @@ const SubjectsListScreen = ({
   // This helper checks if a topic has been completed regardless of timestamp
   const isTopicCompleted = (subjectName, topicName) => {
     const prefix = `${subjectName}::${topicName}::`;
-    const exact  = `${subjectName}::${topicName}`;
+    const exact = `${subjectName}::${topicName}`;
     for (const key of completedTopics) {
       if (key === exact || key.startsWith(prefix)) return true;
     }
@@ -122,7 +129,7 @@ const SubjectsListScreen = ({
           imageUrl: s.imageUrl
             ? s.imageUrl.replace(
                 'https://nudge2grow.com',
-                'https://nudge2grow.com'
+                'https://nudge2grow.com',
               )
             : s.imageUrl,
         }));
@@ -137,7 +144,7 @@ const SubjectsListScreen = ({
                 imageUrl: t.imageUrl
                   ? t.imageUrl.replace(
                       'https://nudge2grow.com',
-                      'https://nudge2grow.com'
+                      'https://nudge2grow.com',
                     )
                   : t.imageUrl,
               })),
@@ -178,7 +185,9 @@ const SubjectsListScreen = ({
         );
         Promise.all(promises).then(results => {
           const map = {};
-          results.forEach(r => { map[r.id] = r.topics; });
+          results.forEach(r => {
+            map[r.id] = r.topics;
+          });
           setBeyondSchoolTopicsMap(map);
           setBeyondSchoolLoaded(true);
         });
@@ -201,22 +210,33 @@ const SubjectsListScreen = ({
   // Filter API subjects based on student's enrolled subjects and levels
   const studentSubjectLevels = child?.subjectLevels || {};
   const enrolledSubjectIds = Object.keys(studentSubjectLevels);
-  
-  console.log('[SubjectsListScreen] Student subject levels:', studentSubjectLevels);
+
+  console.log(
+    '[SubjectsListScreen] Student subject levels:',
+    studentSubjectLevels,
+  );
   console.log('[SubjectsListScreen] Enrolled subject IDs:', enrolledSubjectIds);
-  console.log('[SubjectsListScreen] All API subjects:', apiSubjects.map(s => ({ id: s._id, name: s.name })));
-  
+  console.log(
+    '[SubjectsListScreen] All API subjects:',
+    apiSubjects.map(s => ({ id: s._id, name: s.name })),
+  );
+
   // If API returned subjects, filter to show ONLY subjects the student enrolled in
   const allSubjects =
     apiSubjects.length > 0
       ? apiSubjects.filter(subject => {
           const isEnrolled = enrolledSubjectIds.includes(subject._id);
-          console.log(`[SubjectsListScreen] Subject ${subject.name} (${subject._id}): enrolled=${isEnrolled}`);
+          console.log(
+            `[SubjectsListScreen] Subject ${subject.name} (${subject._id}): enrolled=${isEnrolled}`,
+          );
           return isEnrolled;
         })
       : localSubjects.map(s => ({ name: s.name, isFromApi: false }));
-  
-  console.log('[SubjectsListScreen] Filtered subjects to show:', allSubjects.map(s => s.name));
+
+  console.log(
+    '[SubjectsListScreen] Filtered subjects to show:',
+    allSubjects.map(s => s.name),
+  );
 
   const subjectConfig = {
     Math: {
@@ -280,14 +300,14 @@ const SubjectsListScreen = ({
   const totalTopics = regularTopicsTotal + beyondTopicsTotal;
   // Count unique completed topics (strip timestamp suffix for deduplication)
   const uniqueCompletedKeys = new Set(
-    [...completedTopics].map(k => k.split('::').slice(0, 2).join('::'))
+    [...completedTopics].map(k => k.split('::').slice(0, 2).join('::')),
   );
   const completedNudges = uniqueCompletedKeys.size;
   const overallProgress =
     totalTopics > 0 ? Math.round((completedNudges / totalTopics) * 100) : 0;
   const activeSubjects =
-    (apiSubjects.filter(s => s.type !== 'premium').length || allSubjects.length) +
-    beyondSchoolSubjects.length;
+    (apiSubjects.filter(s => s.type !== 'premium').length ||
+      allSubjects.length) + beyondSchoolSubjects.length;
 
   return (
     <View style={styles.container}>
@@ -404,9 +424,13 @@ const SubjectsListScreen = ({
               />
               <Text style={styles.emptyStateTitle}>No subjects available</Text>
               <Text style={styles.emptyStateText}>
-                {apiSubjects.length > 0 
-                  ? `No subjects found for ${child?.name || 'this student'}'s selected level. Please check your subject preferences in Settings.`
-                  : `We're preparing topics for ${child?.grade || 'this grade'}. Check back soon!`}
+                {apiSubjects.length > 0
+                  ? `No subjects found for ${
+                      child?.name || 'this student'
+                    }'s selected level. Please check your subject preferences in Settings.`
+                  : `We're preparing topics for ${
+                      child?.grade || 'this grade'
+                    }. Check back soon!`}
               </Text>
             </View>
           ) : null}
@@ -442,7 +466,7 @@ const SubjectsListScreen = ({
                 const levelKey =
                   subjectLevelKeyMap[subject.name] ||
                   subject.name?.toLowerCase().replace(/ /g, '-');
-                
+
                 // Get the student's selected level for this subject from subjectLevels
                 // subjectLevels is an object like: { "subjectId1": "Beginner", "subjectId2": "Intermediate" }
                 const childLevel = child?.subjectLevels?.[subject._id] || null;
@@ -485,9 +509,10 @@ const SubjectsListScreen = ({
                     onPress={() => {
                       const allApiTopics = subjectTopicsMap[subject._id] || [];
                       const childGradeNav = child?.grade;
-                      
+
                       // Get the student's selected level for this subject
-                      const childLevelNav = child?.subjectLevels?.[subject._id] || null;
+                      const childLevelNav =
+                        child?.subjectLevels?.[subject._id] || null;
 
                       // Filter topics by BOTH grade AND level
                       let apiTopics = allApiTopics.filter(t => {
@@ -501,7 +526,7 @@ const SubjectsListScreen = ({
                           t.level === childLevelNav;
                         return gradeMatch && levelMatch;
                       });
-                      
+
                       // Only navigate if there are matching topics for the student's grade and level
                       if (apiTopics.length > 0) {
                         onNavigate &&
@@ -670,7 +695,11 @@ const SubjectsListScreen = ({
               {/* Section header — only show in "All" tab */}
               {selectedFilter === 'all' && beyondSchoolSubjects.length > 0 && (
                 <View style={styles.sectionHeader}>
-                  <MaterialIcon name="star-circle-outline" size={18} color="#8B5CF6" />
+                  <MaterialIcon
+                    name="star-circle-outline"
+                    size={18}
+                    color="#8B5CF6"
+                  />
                   <Text style={styles.sectionHeaderText}>Beyond School</Text>
                 </View>
               )}
@@ -678,8 +707,14 @@ const SubjectsListScreen = ({
               {beyondSchoolLoaded && beyondSchoolSubjects.length === 0 ? (
                 selectedFilter === 'beyondSchool' ? (
                   <View style={styles.emptyStateCard}>
-                    <MaterialIcon name="star-circle-outline" size={40} color="#9CA3AF" />
-                    <Text style={styles.emptyStateTitle}>No Beyond School subjects</Text>
+                    <MaterialIcon
+                      name="star-circle-outline"
+                      size={40}
+                      color="#9CA3AF"
+                    />
+                    <Text style={styles.emptyStateTitle}>
+                      No Beyond School subjects
+                    </Text>
                     <Text style={styles.emptyStateText}>
                       Go to Settings to select your child's interests.
                     </Text>
@@ -693,7 +728,9 @@ const SubjectsListScreen = ({
                     isTopicCompleted(subject.name, t.topic || t.title),
                   ).length;
                   const progress =
-                    topicCount > 0 ? Math.floor((completedCount / topicCount) * 100) : 0;
+                    topicCount > 0
+                      ? Math.floor((completedCount / topicCount) * 100)
+                      : 0;
 
                   return (
                     <TouchableOpacity
@@ -722,7 +759,12 @@ const SubjectsListScreen = ({
                     >
                       <View style={styles.subjectHeader}>
                         <View style={styles.subjectLeft}>
-                          <View style={[styles.subjectIconContainer, { backgroundColor: '#F5F3FF' }]}>
+                          <View
+                            style={[
+                              styles.subjectIconContainer,
+                              { backgroundColor: '#F5F3FF' },
+                            ]}
+                          >
                             {subject.imageUrl ? (
                               <Image
                                 source={{ uri: getImageUri(subject.imageUrl) }}
@@ -731,7 +773,11 @@ const SubjectsListScreen = ({
                               />
                             ) : (
                               <MaterialIcon
-                                name={subject.rnIcon || subject.icon || 'star-circle-outline'}
+                                name={
+                                  subject.rnIcon ||
+                                  subject.icon ||
+                                  'star-circle-outline'
+                                }
                                 size={isSmallDevice ? 22 : 24}
                                 color="#8B5CF6"
                               />
@@ -739,11 +785,13 @@ const SubjectsListScreen = ({
                           </View>
                           <View style={styles.subjectInfo}>
                             <View style={styles.subjectTitleRow}>
-                              <Text style={styles.subjectName}>{subject.name}</Text>
-                              
+                              <Text style={styles.subjectName}>
+                                {subject.name}
+                              </Text>
                             </View>
                             <Text style={styles.subjectDescription}>
-                              {subject.description || 'Exploratory learning beyond the classroom'}
+                              {subject.description ||
+                                'Exploratory learning beyond the classroom'}
                             </Text>
                           </View>
                         </View>
@@ -760,7 +808,10 @@ const SubjectsListScreen = ({
                           <View
                             style={[
                               styles.progressBarFill,
-                              { width: `${progress}%`, backgroundColor: '#8B5CF6' },
+                              {
+                                width: `${progress}%`,
+                                backgroundColor: '#8B5CF6',
+                              },
                             ]}
                           />
                         </View>
@@ -782,15 +833,34 @@ const SubjectsListScreen = ({
                       <View style={styles.subjectFooter}>
                         <View style={styles.subjectStats}>
                           <View style={styles.statItem}>
-                            <Icon name="book-outline" size={isSmallDevice ? 14 : 16} color="#9CA3AF" />
+                            <Icon
+                              name="book-outline"
+                              size={isSmallDevice ? 14 : 16}
+                              color="#9CA3AF"
+                            />
                             <Text style={styles.statText}>
-                              {topicCount} {topicCount === 1 ? 'topic' : 'topics'}
+                              {topicCount}{' '}
+                              {topicCount === 1 ? 'topic' : 'topics'}
                             </Text>
                           </View>
                         </View>
-                        <View style={[styles.statusBadge, progress >= 80 && { backgroundColor: '#EDE9FE' }]}>
-                          <Text style={[styles.statusText, progress >= 80 && { color: '#8B5CF6' }]}>
-                            {progress >= 80 ? 'On Track ✓' : progress >= 50 ? 'In Progress ✓' : 'Started ✓'}
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            progress >= 80 && { backgroundColor: '#EDE9FE' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusText,
+                              progress >= 80 && { color: '#8B5CF6' },
+                            ]}
+                          >
+                            {progress >= 80
+                              ? 'On Track ✓'
+                              : progress >= 50
+                              ? 'In Progress ✓'
+                              : 'Started ✓'}
                           </Text>
                         </View>
                       </View>

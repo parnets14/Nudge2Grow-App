@@ -23,7 +23,7 @@ import { getApp } from '@react-native-firebase/app';
 import notifee, { AndroidImportance, AndroidVisibility } from '@notifee/react-native';
 import { Platform, PermissionsAndroid } from 'react-native';
 import { addNotificationToStorage } from './notificationService';
-import { saveNotificationToken, getLoginCredentials } from '../utils/secureStorage';
+import { saveNotificationToken, getLoginCredentials, getUserData } from '../utils/secureStorage';
 import { BASE_URL } from '../api';
 
 /**
@@ -68,8 +68,16 @@ try {
       };
 
       try {
-        await addNotificationToStorage(notification);
-        console.log('[FCM] Background notification saved to storage');
+        // Read userId from persisted user data so the notification lands in the
+        // correct per-user storage bucket (same key used by fetchNotifications).
+        let userId = null;
+        try {
+          const storedUser = await getUserData();
+          userId = storedUser?._id || storedUser?.id || null;
+        } catch (_) {}
+
+        await addNotificationToStorage(notification, userId);
+        console.log('[FCM] Background notification saved to storage (userId:', userId, ')');
       } catch (storageErr) {
         console.error('[FCM] Failed to save background notification:', storageErr.message);
       }
@@ -181,9 +189,10 @@ export const getFCMToken = async () => {
 /**
  * Initialize Firebase Cloud Messaging
  * @param {Function} onNotificationReceived - Callback when notification is received
+ * @param {string|null} userId - Logged-in user's ID for per-user notification storage
  * @returns {Function} - Unsubscribe function
  */
-export const initializeFCM = async (onNotificationReceived) => {
+export const initializeFCM = async (onNotificationReceived, userId = null) => {
   if (initializeFCM._unsubscribe) {
     console.log('[FCM] Already initialized, cleaning up previous listeners first');
     initializeFCM._unsubscribe();
@@ -235,8 +244,9 @@ export const initializeFCM = async (onNotificationReceived) => {
         ...(remoteMessage.data || {}),
       };
 
-      await addNotificationToStorage(notification);
-      console.log('[FCM] Foreground notification saved to storage');
+      // Save to the correct per-user storage bucket
+      await addNotificationToStorage(notification, userId);
+      console.log('[FCM] Foreground notification saved to storage (userId:', userId, ')');
 
       try {
         const channelId = await notifee.createChannel({

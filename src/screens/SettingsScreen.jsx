@@ -110,12 +110,51 @@ const SettingsScreen = ({ onBack, onNavigate, userData, onUpdateUserData }) => {
         if (data.length > 0) {
           // Filter to show only non-premium (core) subjects
           const coreSubjects = data.filter(s => s.type !== 'premium' && !s.isPremium);
-          setCoreAreas(coreSubjects.map(s => ({
+          const mapped = coreSubjects.map(s => ({
             id: s._id || s.id,
             name: s.name || s.title,
             icon: s.rnIcon || 'book-open-outline',
             imageUrl: s.imageUrl || null,
-          })));
+          }));
+          setCoreAreas(mapped);
+
+          // Remap any slug-keyed subjectLevels to MongoDB _id keys.
+          // This fixes accounts registered before the API loaded where keys like
+          // "mathematics" were saved instead of the real MongoDB _id.
+          const slugAliases = {
+            mathematics: ['mathematics', 'math'],
+            science: ['science', 'science / evs', 'science/evs', 'evs'],
+            english: ['english'],
+            'social studies': ['social-studies', 'social_studies', 'socialstudies', 'social studies'],
+            'artificial intelligence': ['artificial-intelligence', 'ai', 'artificial_intelligence'],
+            'financial literacy': ['financial', 'financial-literacy', 'financial_literacy'],
+            'sex & safety education': ['safety', 'sex-safety', 'sex_safety'],
+          };
+          const remapLevels = (levels) => {
+            const remapped = {};
+            Object.entries(levels).forEach(([key, value]) => {
+              // If key is already a MongoDB _id (24-char hex), keep it
+              if (/^[a-f0-9]{24}$/i.test(key)) {
+                remapped[key] = value;
+                return;
+              }
+              // Try to find the matching subject by slug
+              const keyLower = key.toLowerCase().trim();
+              const match = mapped.find(area => {
+                const nameLower = (area.name || '').toLowerCase().trim();
+                const aliases = slugAliases[nameLower] || [nameLower, nameLower.replace(/\s+/g, '-')];
+                return aliases.includes(keyLower);
+              });
+              if (match) {
+                remapped[match.id] = value; // replace slug with _id
+              } else {
+                remapped[key] = value; // keep as-is if no match found
+              }
+            });
+            return remapped;
+          };
+          setEditSubjectLevels(prev => remapLevels(prev));
+          setNewChildSubjectLevels(prev => remapLevels(prev));
         }
       })
       .catch(() => {});

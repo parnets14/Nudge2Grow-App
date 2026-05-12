@@ -2,7 +2,7 @@
  * Home Screen with Side Menu - Enhanced with Full Functionality
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -25,6 +26,7 @@ import { getAllNudges, getAllSubjects, getNudgesBySubject, getNudgesByGradeAndLe
 import { BASE_URL, getImageUri, fetchDidYouKnow, fetchRiddles, fetchParentingInsights, fetchPhaseCards, fetchTopicsBySubject, fetchSubjects, fetchFeaturedContent, fetchBeyondSchool, fetchBeyondSchoolTopicsBySubject, fetchFeaturedContentDetail } from '../api';
 import { createTopicUploadNotification } from '../services/notificationService';
 import { Storage } from '../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -59,6 +61,149 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
   const [featuredModalVisible, setFeaturedModalVisible] = useState(false);
   const [featuredDetailData, setFeaturedDetailData] = useState(null);
   const [featuredDetailLoading, setFeaturedDetailLoading] = useState(false);
+
+  // Track AppState to refresh topics when app comes to foreground
+  const appStateRef = useRef(AppState.currentState);
+
+  // Helper: load today's topics from API and update state
+  const loadTodaysTopics = async () => {
+    try {
+      const child = userData?.children?.[0];
+      if (!child) return;
+      const studentSubjectLevels = child?.subjectLevels || {};
+      const enrolledSubjectIds = Object.keys(studentSubjectLevels);
+      const studentGrade = child?.grade;
+
+      console.log('[HomeScreen] 🔍 Student enrolled subjects:', enrolledSubjectIds);
+      console.log('[HomeScreen] 🔍 Student grade:', studentGrade);
+      console.log('[HomeScreen] 🔍 Student subjectLevels:', JSON.stringify(studentSubjectLevels));
+
+      if (enrolledSubjectIds.length === 0) {
+        setTodaysTopics([]);
+        setUpcomingTopics([]);
+        setAllTopicsFromApi([]);
+        return;
+      }
+
+      const allTopics = await fetchTopicsBySubject();
+      console.log('[HomeScreen] 📚 Total topics fetched from API:', allTopics.length);
+
+      // Log first few topics to see structure
+      if (allTopics.length > 0) {
+        console.log('[HomeScreen] 📝 Sample topic structure:', JSON.stringify(allTopics[0]));
+      }
+
+      const studentTopics = allTopics.filter(topic => {
+        const isEnrolledSubject = enrolledSubjectIds.includes(String(topic.subjectId));
+        const gradeMatch = !topic.grade || !studentGrade || topic.grade === studentGrade;
+        const studentLevel = studentSubjectLevels[String(topic.subjectId)];
+        const levelMatch = !topic.level || !studentLevel || topic.level === studentLevel;
+
+        // Log filtering details for debugging
+        if (topic.subjectName?.toLowerCase().includes('social')) {
+          console.log('[HomeScreen] 🔍 Social topic found:', topic.topic || topic.title);
+          console.log('[HomeScreen]   - subjectId:', topic.subjectId);
+          console.log('[HomeScreen]   - subjectName:', topic.subjectName);
+          console.log('[HomeScreen]   - grade:', topic.grade, '(student:', studentGrade, ') → match:', gradeMatch);
+          console.log('[HomeScreen]   - level:', topic.level, '(student:', studentLevel, ') → match:', levelMatch);
+          console.log('[HomeScreen]   - enrolled:', isEnrolledSubject);
+          console.log('[HomeScreen]   - scheduledDate:', topic.scheduledDate);
+          console.log('[HomeScreen]   - PASSES FILTER:', isEnrolledSubject && gradeMatch && levelMatch);
+        }
+
+        return isEnrolledSubject && gradeMatch && levelMatch;
+      });
+
+      console.log('[HomeScreen] ✅ Topics after filtering:', studentTopics.length);
+
+      setAllTopicsFromApi(studentTopics);
+
+      const topicsWithDates = studentTopics.filter(t => t.scheduledDate);
+      console.log('[HomeScreen] 📅 Topics with scheduledDate:', topicsWithDates.length);
+
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+      const nudgeCards = [];
+      for (const subjectId of enrolledSubjectIds) {
+        const subjectTopics = topicsWithDates.filter(t => String(t.subjectId) === subjectId);
+        console.log(`[HomeScreen] 📖 Subject ${subjectId}: ${subjectTopics.length} topics`);
+        
+        const todayTopic = subjectTopics.find(t => {
+          const d = new Date(t.scheduledDate);
+          return d >= todayStart && d <= todayEnd;
+        });
+        if (todayTopic) { 
+          console.log(`[HomeScreen] ✅ Today's topic for subject ${subjectId}:`, todayTopic.topic || todayTopic.title);
+          nudgeCards.push({ topic: todayTopic, isToday: true }); 
+          continue; 
+        }
+        const pastTopics = subjectTopics
+          .filter(t => new Date(t.scheduledDate) < todayStart)
+          .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate));
+        if (pastTopics.length > 0) { 
+          console.log(`[HomeScreen] 📌 Most recent past topic for subject ${subjectId}:`, pastTopics[0].topic || pastTopics[0].title);
+          nudgeCards.push({ topic: pastTopics[0], isToday: false }); 
+        }
+      }
+
+      // Sort: today's topics first, then most recently scheduled past topics
+      nudgeCards.sort((a, b) => {
+        if (a.isToday && !b.isToday) return -1;
+        if (!a.isToday && b.isToday) return 1;
+        // Both today or both past — sort by scheduledDate descending (most recent first)
+        return new Date(b.topic.scheduledDate) - new Date(a.topic.scheduledDate);
+      });
+
+      // Unwrap — the card renderer expects plain topic objects
+      const sortedTopics = nudgeCards.map(c => c.topic);
+
+      setTodaysTopics(sortedTopics.slice(0, 2));
+
+      const tomorrowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      const upcomingScheduled = topicsWithDates
+        .filter(t => new Date(t.scheduledDate) >= tomorrowStart)
+        .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate));
+
+      const topicsByDate = {};
+      upcomingScheduled.forEach(topic => {
+        const dateKey = new Date(topic.scheduledDate).toDateString();
+        if (!topicsByDate[dateKey]) topicsByDate[dateKey] = topic;
+      });
+      setUpcomingTopics(Object.values(topicsByDate).slice(0, 3));
+
+      console.log('[HomeScreen] ✅ Topics loaded — today:', nudgeCards.length, 'upcoming:', Object.values(topicsByDate).length);
+    } catch (error) {
+      console.error('[HomeScreen] Error loading topics:', error);
+      setTodaysTopics([]);
+      setUpcomingTopics([]);
+      setAllTopicsFromApi([]);
+    }
+  };
+
+  // Auto-refresh topics when app comes back to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('[HomeScreen] App came to foreground — refreshing topics');
+        // Check if a new topic was added while app was in background
+        try {
+          const needsRefresh = await AsyncStorage.getItem('@nudge2grow:todaysTopicsNeedRefresh');
+          if (needsRefresh === 'true') {
+            await AsyncStorage.removeItem('@nudge2grow:todaysTopicsNeedRefresh');
+            await loadTodaysTopics();
+          }
+        } catch (_) {}
+      }
+      appStateRef.current = nextAppState;
+    });
+    return () => subscription.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData]);
 
   const toggleMenu = () => {
     const toValue = menuVisible ? -width * 0.75 : 0;
@@ -167,90 +312,10 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
 
   // Fetch topics and filter by scheduled date, student's enrolled subjects, and levels
   useEffect(() => {
-    const loadTodaysTopics = async () => {
-      try {
-        const child = userData?.children?.[0];
-        const studentSubjectLevels = child?.subjectLevels || {};
-        const enrolledSubjectIds = Object.keys(studentSubjectLevels);
-        const studentGrade = child?.grade;
-
-        if (enrolledSubjectIds.length === 0) {
-          setTodaysTopics([]);
-          setUpcomingTopics([]);
-          setAllTopicsFromApi([]);
-          return;
-        }
-
-        // Fetch all topics
-        const allTopics = await fetchTopicsBySubject();
-
-        // Filter topics by student's enrolled subjects, grade, and level
-        const studentTopics = allTopics.filter(topic => {
-          const isEnrolledSubject = enrolledSubjectIds.includes(String(topic.subjectId));
-          if (!isEnrolledSubject) return false;
-          const gradeMatch = !topic.grade || !studentGrade || topic.grade === studentGrade;
-          if (!gradeMatch) return false;
-          const studentLevel = studentSubjectLevels[String(topic.subjectId)];
-          const levelMatch = !topic.level || !studentLevel || topic.level === studentLevel;
-          return levelMatch;
-        });
-
-        setAllTopicsFromApi(studentTopics);
-
-        const topicsWithDates = studentTopics.filter(t => t.scheduledDate);
-
-        const today = new Date();
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const todayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-
-        // --- Per-subject: pick the best available topic ---
-        // Priority: today first, then the most recently scheduled past topic (no day limit)
-        const nudgeCards = [];
-
-        for (const subjectId of enrolledSubjectIds) {
-          const subjectTopics = topicsWithDates.filter(t => String(t.subjectId) === subjectId);
-
-          // 1. Try today
-          const todayTopic = subjectTopics.find(t => {
-            const d = new Date(t.scheduledDate);
-            return d >= todayStart && d <= todayEnd;
-          });
-          if (todayTopic) { nudgeCards.push(todayTopic); continue; }
-
-          // 2. Fall back to the most recently scheduled past topic (any number of days ago)
-          const pastTopics = subjectTopics
-            .filter(t => new Date(t.scheduledDate) < todayStart)
-            .sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate));
-          if (pastTopics.length > 0) { nudgeCards.push(pastTopics[0]); }
-        }
-
-        // Max 2 cards
-        setTodaysTopics(nudgeCards.slice(0, 2));
-
-        // Upcoming topics (tomorrow onwards) — 1 per day, max 3 days
-        const tomorrowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-        const upcomingScheduled = topicsWithDates
-          .filter(t => new Date(t.scheduledDate) >= tomorrowStart)
-          .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate));
-
-        const topicsByDate = {};
-        upcomingScheduled.forEach(topic => {
-          const dateKey = new Date(topic.scheduledDate).toDateString();
-          if (!topicsByDate[dateKey]) topicsByDate[dateKey] = topic;
-        });
-        setUpcomingTopics(Object.values(topicsByDate).slice(0, 3));
-
-      } catch (error) {
-        console.error('[HomeScreen] Error loading topics:', error);
-        setTodaysTopics([]);
-        setUpcomingTopics([]);
-        setAllTopicsFromApi([]);
-      }
-    };
-
     if (userData?.children?.[0]) {
       loadTodaysTopics();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
 
   // Fetch today's Beyond School nudge
@@ -330,6 +395,8 @@ const HomeScreen = ({ userData, completedTopics = new Set(), onNavigate, onMarkT
           clearTimeout(timeout);
         }
       }
+      // Re-fetch today's topics to show newly added content
+      await loadTodaysTopics();
     } catch (error) {
       // silent
     }
